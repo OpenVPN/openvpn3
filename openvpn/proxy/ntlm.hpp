@@ -152,7 +152,7 @@ class NTLM
         std::memcpy(ntlmv2_response, ntlmv2_hmacmd5, 16);
 
         // start building phase3 message (what we return to caller)
-        BufferAllocated phase3(0x40, BufferAllocated::ARRAY | BufferAllocated::CONSTRUCT_ZERO | BufferAllocated::GROW);
+        BufferAllocated phase3(0x40, BufAllocFlags::ARRAY | BufAllocFlags::CONSTRUCT_ZERO | BufAllocFlags::GROW);
         std::strcpy((char *)phase3.data(), "NTLMSSP"); // signature
         phase3[8] = 3;                                 // type 3
 

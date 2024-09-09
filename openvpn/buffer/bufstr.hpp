@@ -56,7 +56,7 @@ inline void buf_write_string(Buffer &buf, const char *str)
 inline BufferPtr buf_from_string(const std::string &str)
 {
     const size_t len = str.length();
-    BufferPtr buf(new BufferAllocated(len, 0));
+    BufferPtr buf = BufferAllocatedRc::Create(len, 0);
     buf->write((unsigned char *)str.c_str(), len);
     return buf;
 }
@@ -65,7 +65,7 @@ inline BufferPtr buf_from_string(const std::string &str)
 inline BufferPtr buf_from_string(const char *str)
 {
     const size_t len = std::strlen(str);
-    BufferPtr buf(new BufferAllocated(len, 0));
+    BufferPtr buf = BufferAllocatedRc::Create(len, 0);
     buf->write((unsigned char *)str, len);
     return buf;
 }

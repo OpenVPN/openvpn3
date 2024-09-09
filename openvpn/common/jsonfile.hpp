@@ -56,7 +56,7 @@ inline void write_atomic(const std::string &fn,
                          const size_t size_hint,
                          StrongRandomAPI &rng)
 {
-    BufferPtr bp = new BufferAllocated(size_hint, BufferAllocated::GROW);
+    auto bp = BufferAllocatedRc::Create(size_hint, BufAllocFlags::GROW);
     format_compact(root, *bp);
     write_binary_atomic(fn, tmpdir, mode, mtime_ns, *bp, rng);
 }
@@ -67,7 +67,7 @@ inline void write_fast(const std::string &fn,
                        const Json::Value &root,
                        const size_t size_hint)
 {
-    BufferPtr bp = new BufferAllocated(size_hint, BufferAllocated::GROW);
+    auto bp = BufferAllocatedRc::Create(size_hint, BufAllocFlags::GROW);
     format_compact(root, *bp);
     write_binary_unix(fn, mode, mtime_ns, *bp);
 }

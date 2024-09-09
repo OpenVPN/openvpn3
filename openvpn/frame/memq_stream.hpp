@@ -77,7 +77,7 @@ class MemQStream : public MemQBase
                 // Start a new buffer
                 while (b.size())
                 {
-                    BufferPtr newbuf(new BufferAllocated);
+                    auto newbuf = BufferAllocatedRc::Create();
                     fc.prepare(*newbuf);
                     const size_t write_size = std::min(b.size(), fc.payload());
                     const unsigned char *from = b.read_alloc(write_size);

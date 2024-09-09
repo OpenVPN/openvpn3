@@ -408,7 +408,7 @@ class ServerProto
 
             if (proto_context.primary_defined())
             {
-                BufferPtr buf(new BufferAllocated(64, 0));
+                auto buf = BufferAllocatedRc::Create(64, 0);
                 buf_append_string(*buf, "RELAY");
                 buf->null_terminate();
                 proto_context.control_send(std::move(buf));
@@ -465,7 +465,7 @@ class ServerProto
 
             proto_context.update_now();
 
-            BufferPtr buf(new BufferAllocated(128, BufferAllocated::GROW));
+            auto buf = BufferAllocatedRc::Create(128, BufAllocFlags::GROW);
             BufferStreamOut os(*buf);
 
             std::string ts;

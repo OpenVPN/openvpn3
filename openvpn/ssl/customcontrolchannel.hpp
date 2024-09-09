@@ -183,7 +183,7 @@ class AppControlMessageReceiver
     bool receive_message(const std::string &msg)
     {
         if (!recvbuf.defined())
-            recvbuf.reset(256, BufferAllocated::GROW);
+            recvbuf.reset(256, BufAllocFlags::GROW);
         // msg includes ACC, prefix
         auto parts = string::split(msg, ',', 4);
         if (parts.size() != 5 || parts[0] != "ACC")

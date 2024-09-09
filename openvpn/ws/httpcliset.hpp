@@ -835,7 +835,7 @@ class ClientSet : public RC<thread_unsafe_refcount>
         {
             if (out_iter != trans().content_out.end())
             {
-                BufferPtr ret = new BufferAllocated(**out_iter);
+                auto ret = BufferAllocatedRc::Create(**out_iter);
                 ++out_iter;
                 return ret;
             }

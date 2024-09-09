@@ -84,7 +84,7 @@ class Frame : public RC<thread_unsafe_refcount>
                 const size_t tailroom,
                 const size_t align_adjust,       // length of leading prefix data before the data that needs to be aligned on a size_t boundary
                 const size_t align_block,        // size of alignment block, usually sizeof(size_t) but sometimes the cipher block size
-                const unsigned int buffer_flags) // flags passed to BufferAllocated constructor
+                const unsigned int buffer_flags) // flags passed to BufferAllocatedRc constructor
         {
             headroom_ = headroom;
             payload_ = payload;
@@ -144,11 +144,11 @@ class Frame : public RC<thread_unsafe_refcount>
             buf.realign(actual_headroom(buf.c_data_raw()));
         }
 
-        // Return a new BufferAllocated object initialized with the given data.
+        // Return a new BufferAllocatedRc object initialized with the given data.
         BufferPtr copy(const unsigned char *data, const size_t size) const
         {
             const size_t cap = size + headroom() + tailroom();
-            BufferPtr b = new BufferAllocated(cap, buffer_flags());
+            auto b = BufferAllocatedRc::Create(cap, buffer_flags());
             b->init_headroom(actual_headroom(b->c_data_raw()));
             b->write(data, size);
             return b;
@@ -164,13 +164,13 @@ class Frame : public RC<thread_unsafe_refcount>
             return b;
         }
 
-        // Return a new BufferAllocated object initialized with
+        // Return a new BufferAllocatedRc object initialized with
         // the data in given buffer.  buf may be empty or undefined.
         BufferPtr copy(const BufferPtr &buf) const
         {
             const size_t size = buf ? buf->size() : 0;
             const size_t cap = size + headroom() + tailroom();
-            BufferPtr b = new BufferAllocated(cap, buffer_flags());
+            auto b = BufferAllocatedRc::Create(cap, buffer_flags());
             b->init_headroom(actual_headroom(b->c_data_raw()));
             if (size)
                 b->write(buf->c_data(), size);
@@ -280,7 +280,7 @@ class Frame : public RC<thread_unsafe_refcount>
 
     BufferPtr prepare(const unsigned int context) const
     {
-        BufferPtr buf(new BufferAllocated());
+        auto buf = BufferAllocatedRc::Create();
         prepare(context, *buf);
         return buf;
     }

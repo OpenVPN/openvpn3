@@ -755,7 +755,7 @@ class GeNL : public RC<thread_unsafe_refcount>
     void reset_buffer()
     {
         // good enough values to handle control packets
-        buf.reset(512, 3072, BufferAllocated::GROW | BufferAllocated::CONSTRUCT_ZERO | BufferAllocated::DESTRUCT_ZERO);
+        buf.reset(512, 3072, BufAllocFlags::GROW | BufAllocFlags::CONSTRUCT_ZERO | BufAllocFlags::DESTRUCT_ZERO);
     }
 
     /**

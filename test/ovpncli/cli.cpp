@@ -533,7 +533,7 @@ class Client : public ClientBase
     {
         using PKEY_CTX_unique_ptr = std::unique_ptr<::EVP_PKEY_CTX, decltype(&::EVP_PKEY_CTX_free)>;
 
-        BufferAllocated signdata(256, BufferAllocated::GROW);
+        BufferAllocated signdata(256, BufAllocFlags::GROW);
         base64->decode(signdata, signreq.data);
 
         EVP_PKEY *pkey = epki_pkey.obj();
@@ -572,7 +572,7 @@ class Client : public ClientBase
             throw Exception("epki_sign failed, error signing data: " + openssl_error());
         }
 
-        BufferAllocated sig(outlen, BufferAllocated::ARRAY);
+        BufferAllocated sig(outlen, BufAllocFlags::ARRAY);
 
         if ((EVP_PKEY_sign(pkey_ctx.get(), sig.data(), &outlen, signdata.c_data(), signdata.size())) < 0)
         {
@@ -598,7 +598,7 @@ class Client : public ClientBase
     void doOpenSSLDigestSignature(ClientAPI::ExternalPKISignRequest &signreq)
     {
         EVP_PKEY_CTX *pkey_ctx = nullptr;
-        BufferAllocated signdata(256, BufferAllocated::GROW);
+        BufferAllocated signdata(256, BufAllocFlags::GROW);
         base64->decode(signdata, signreq.data);
 
         using MD_unique_ptr = std::unique_ptr<::EVP_MD_CTX, decltype(&::EVP_MD_CTX_free)>;
@@ -660,7 +660,7 @@ class Client : public ClientBase
             throw Exception("epki_sign failed, error signing data: " + openssl_error());
         }
 
-        BufferAllocated sig(outlen, BufferAllocated::ARRAY);
+        BufferAllocated sig(outlen, BufAllocFlags::ARRAY);
 
         if (EVP_DigestSign(md.get(), sig.data(), &outlen, signdata.data(), signdata.size()) < 0)
         {
@@ -694,7 +694,7 @@ class Client : public ClientBase
             try
             {
                 // decode base64 sign request
-                BufferAllocated signdata(256, BufferAllocated::GROW);
+                BufferAllocated signdata(256, BufAllocFlags::GROW);
                 base64->decode(signdata, signreq.data);
 
                 // get MD alg
@@ -704,7 +704,7 @@ class Client : public ClientBase
                 OPENVPN_LOG("SIGN[" << PKCS1::DigestPrefix::MbedTLSParse::to_string(md_alg) << ',' << signdata.size() << "]: " << render_hex_generic(signdata));
 
                 // allocate buffer for signature
-                BufferAllocated sig(mbedtls_pk_get_len(epki_ctx.get()), BufferAllocated::ARRAY);
+                BufferAllocated sig(mbedtls_pk_get_len(epki_ctx.get()), BufAllocFlags::ARRAY);
 
                 // sign it
                 size_t sig_size = 0;

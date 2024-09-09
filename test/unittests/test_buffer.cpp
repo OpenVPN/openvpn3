@@ -14,7 +14,7 @@ TEST(buffer, const_buffer_ref_1)
     EXPECT_EQ(buf_to_string(buf), buf_to_string(cbuf));
 }
 
-// test equality of BufferAllocated and ConstBuffer
+// test equality of BufferAllocatedRc and ConstBuffer
 TEST(buffer, const_buffer_ref_2)
 {
     BufferAllocated buf(64, 0);
@@ -165,7 +165,7 @@ TEST(buffer, alloc_buffer_access1)
 // Test read/write access and bounds check
 TEST(buffer, alloc_buffer_access2)
 {
-    BufferAllocated buf(64, BufferAllocated::CONSTRUCT_ZERO | BufferAllocated::DESTRUCT_ZERO);
+    BufferAllocated buf(64, BufAllocFlags::CONSTRUCT_ZERO | BufAllocFlags::DESTRUCT_ZERO);
     buf_append_string(buf, "hello world");
 
     buf[0] = 'j';

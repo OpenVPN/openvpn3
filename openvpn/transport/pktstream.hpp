@@ -203,9 +203,9 @@ class PacketStream
 
     static void validate_size(const size_t size, const Frame::Context &frame_context)
     {
-        // Don't validate upper bound on size if BufferAllocated::GROW is set,
+        // Don't validate upper bound on size if BufAllocFlags::GROW is set,
         // allowing it to range up to larger sizes.
-        if (!size || (!(frame_context.buffer_flags() & BufferAllocated::GROW) && size > frame_context.payload()))
+        if (!size || (!(frame_context.buffer_flags() & BufAllocFlags::GROW) && size > frame_context.payload()))
             throw embedded_packet_size_error();
     }
 

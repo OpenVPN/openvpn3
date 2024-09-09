@@ -51,7 +51,7 @@ class CompressLZO : public Compress
           asym(asym_arg)
     {
         OVPN_LOG_INFO("LZO init swap=" << support_swap_arg << " asym=" << asym_arg);
-        lzo_workspace.init(LZO1X_1_15_MEM_COMPRESS, BufferAllocated::ARRAY);
+        lzo_workspace.init(LZO1X_1_15_MEM_COMPRESS, BufAllocFlags::ARRAY);
     }
 
     static void init_static()

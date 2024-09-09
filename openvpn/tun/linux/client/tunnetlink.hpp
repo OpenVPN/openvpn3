@@ -512,7 +512,7 @@ inline int iface_del(std::ostringstream &os, const std::string &dev)
 
 /*inline IPv4::Addr cvt_pnr_ip_v4(const std::string& hexaddr)
 {
-  BufferAllocated v(4, BufferAllocated::CONSTRUCT_ZERO);
+  BufferAllocated v(4, BufAllocFlags::CONSTRUCT_ZERO);
   parse_hex(v, hexaddr);
   if (v.size() != 4)
 throw tun_linux_error("bad hex address");

@@ -230,7 +230,7 @@ class HTTPBase : public REFCOUNT_BASE
         if (ssl_sess)
         {
             // HTTPS
-            BufferPtr buf(new BufferAllocated());
+            auto buf = BufferAllocatedRc::Create();
             buf->swap(b); // take ownership
             ssl_sess->write_ciphertext(buf);
             ssl_up_stack();
@@ -252,10 +252,10 @@ class HTTPBase : public REFCOUNT_BASE
     //   void base_http_content_out_needed();
     //   void base_http_out_eof();
     //   bool base_http_headers_received();
-    //   void base_http_content_in(BufferAllocated& buf);
-    //   bool base_link_send(BufferAllocated& buf);
+    //   void base_http_content_in(BufferAllocatedRc& buf);
+    //   bool base_link_send(BufferAllocatedRc& buf);
     //   bool base_send_queue_empty();
-    //   void base_http_done_handler(BufferAllocated& residual)
+    //   void base_http_done_handler(BufferAllocatedRc& residual)
     //   void base_error_handler(const int errcode, const std::string& err);
 
     // protected member vars

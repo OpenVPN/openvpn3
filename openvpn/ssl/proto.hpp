@@ -1595,7 +1595,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
     void write_control_string(const S &str)
     {
         const size_t len = str.length();
-        BufferPtr bp = new BufferAllocated(len + 1, 0);
+        auto bp = BufferAllocatedRc::Create(len + 1, 0);
         write_control_string(str, *bp);
         control_send(std::move(bp));
     }
@@ -1623,7 +1623,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
         {
             Packet pkt;
             pkt.opcode = opcode;
-            pkt.buf.reset(new BufferAllocated(*buf));
+            pkt.buf = BufferAllocatedRc::Create(*buf);
             return pkt;
         }
 
@@ -1636,7 +1636,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
         void frame_prepare(const Frame &frame, const unsigned int context)
         {
             if (!buf)
-                buf.reset(new BufferAllocated());
+                buf = BufferAllocatedRc::Create();
             frame.prepare(context, *buf);
         }
 
@@ -2864,7 +2864,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
 
         void send_auth()
         {
-            BufferPtr buf = new BufferAllocated();
+            auto buf = BufferAllocatedRc::Create();
             proto.config->frame->prepare(Frame::WRITE_SSL_CLEARTEXT, *buf);
             buf->write(proto_context_private::auth_prefix, sizeof(proto_context_private::auth_prefix));
             tlsprf->self_randomize(*proto.config->rng);
@@ -2874,7 +2874,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
             if (!proto.is_server())
             {
                 OVPN_LOG_INFO("Tunnel Options:" << options);
-                buf->or_flags(BufferAllocated::DESTRUCT_ZERO);
+                buf->or_flags(BufAllocFlags::DESTRUCT_ZERO);
                 if (proto.config->xmit_creds)
                     proto.client_auth(*buf);
                 else
@@ -3223,7 +3223,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
 
         bool decapsulate_tls_crypt(Packet &pkt)
         {
-            BufferAllocated &recv = *pkt.buf;
+            auto &recv = *pkt.buf;
             const unsigned char *orig_data = recv.data();
             const size_t orig_size = recv.size();
 
@@ -3357,7 +3357,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
             if ((wkc_len - sizeof(uint16_t)) != wkc_raw_size)
                 return false;
 
-            BufferAllocated plaintext(wkc_len, BufferAllocated::CONSTRUCT_ZERO);
+            BufferAllocated plaintext(wkc_len, BufAllocFlags::CONSTRUCT_ZERO);
             // plaintext will be used to compute the Auth Tag, therefore start by prepending
             // the WKc length in network order
             wkc_len = htons(wkc_len);
@@ -4096,7 +4096,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
 
     void control_send(BufferAllocated &&app_buf)
     {
-        control_send(app_buf.move_to_ptr());
+        control_send(BufferAllocatedRc::Create(std::move(app_buf)));
     }
 
     // validate a control channel network packet
@@ -4109,14 +4109,14 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
 
     bool control_net_recv(const PacketType &type, BufferAllocated &&net_buf)
     {
-        Packet pkt(net_buf.move_to_ptr(), type.opcode);
+        Packet pkt(BufferAllocatedRc::Create(std::move(net_buf)), type.opcode);
         if (type.is_soft_reset() && !renegotiate_request(pkt))
             return false;
         return select_key_context(type, true).net_recv(std::move(pkt));
     }
 
     // this version only appears to support test_proto.cpp; suggest creating a
-    // local BufferAllocated and move the BufferPtr contents into it; then use
+    // local BufferAllocatedRc and move the BufferPtr contents into it; then use
     // the version above
     bool control_net_recv(const PacketType &type, BufferPtr &&net_bp)
     {

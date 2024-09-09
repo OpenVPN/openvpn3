@@ -129,7 +129,7 @@ static OptionList random_optionlist(RandomAPI &prng)
 static void test_roundtrip(const OptionList &opt_orig)
 {
     // first render to CSV
-    BufferAllocated buf(opt_orig.size() * 128, BufferAllocated::GROW);
+    BufferAllocated buf(opt_orig.size() * 128, BufAllocFlags::GROW);
     buf_append_string(buf, "PUSH_REPLY,");
     buf_append_string(buf, opt_orig.render_csv());
 
@@ -186,7 +186,7 @@ TEST(continuation, test1)
 // push-list for further testing
 TEST(continuation, test2)
 {
-    BufferAllocated buf(65536, BufferAllocated::GROW);
+    BufferAllocated buf(65536, BufAllocFlags::GROW);
     buf_append_string(buf, "PUSH_REPLY,route-gateway 10.213.0.1,ifconfig 10.213.0.48 255.255.0.0,ifconfig-ipv6 fdab::48/64 fdab::1,client-ip 192.168.4.1,ping 1,ping-restart 8,reneg-sec 60,cipher AES-128-GCM,compress stub-v2,peer-id 4,topology subnet,explicit-exit-notify");
 
     // pack the buffers, so several reach the maximum

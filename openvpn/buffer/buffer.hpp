@@ -45,7 +45,7 @@
 // Buffer            : a simple buffer of unsigned char without ownership semantics
 // ConstBuffer       : like buffer but where the data pointed to by the buffer is read-only
 // BufferAllocated   : an allocated Buffer with ownership semantics
-// BufferPtr         : a smart, reference-counted pointer to a BufferAllocated
+// BufferPtr         : a smart, reference-counted pointer to a BufferAllocatedRc
 
 #pragma once
 
@@ -63,6 +63,7 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/rc.hpp>
 #include <openvpn/buffer/bufclamp.hpp>
+#include <openvpn/common/make_rc.hpp>
 
 #ifdef OPENVPN_BUFFER_ABORT
 #define OPENVPN_BUFFER_THROW(exc) \
@@ -204,7 +205,7 @@ class BufferException : public std::exception
 //  ===============================================================================================
 //  ===============================================================================================
 
-template <typename T, typename R>
+template <typename T>
 class BufferAllocatedType;
 
 template <typename T>
@@ -868,12 +869,24 @@ class BufferType : public ConstBufferType<T>
 //  class BufferAllocatedType
 //  ===============================================================================================
 
-template <typename T, typename R>
-class BufferAllocatedType : public BufferType<T>, public RC<R>
+// Allocation and security for the buffer
+struct BufAllocFlags
+{
+    enum
+    {
+        CONSTRUCT_ZERO = (1 << 0), ///< if enabled, constructors/init will zero allocated space
+        DESTRUCT_ZERO = (1 << 1),  ///< if enabled, destructor will zero data before deletion
+        GROW = (1 << 2),           ///< if enabled, buffer will grow (otherwise buffer_full exception will be thrown)
+        ARRAY = (1 << 3),          ///< if enabled, use as array
+    };
+};
+
+template <typename T>
+class BufferAllocatedType : public BufferType<T>
 {
   private:
     // Friend to all specializations of this template allows access to other.data_
-    template <typename, typename>
+    template <typename>
     friend class BufferAllocatedType;
 
   public:
@@ -887,14 +900,6 @@ class BufferAllocatedType : public BufferType<T>, public RC<R>
     using BufferType<T>::data;
     using BufferType<T>::c_data;
     using BufferType<T>::swap;
-
-    enum
-    {
-        CONSTRUCT_ZERO = (1 << 0), ///< if enabled, constructors/init will zero allocated space
-        DESTRUCT_ZERO = (1 << 1),  ///< if enabled, destructor will zero data before deletion
-        GROW = (1 << 2),           ///< if enabled, buffer will grow (otherwise buffer_full exception will be thrown)
-        ARRAY = (1 << 3),          ///< if enabled, use as array
-    };
 
     /**
      * @brief Default constructor.
@@ -979,14 +984,8 @@ class BufferAllocatedType : public BufferType<T>, public RC<R>
      * @tparam R_ The template parameter type of the other BufferAllocatedType object.
      * @param other The other BufferAllocatedType object to move from.
      */
-    template <typename T_, typename R_>
-    void move(BufferAllocatedType<T_, R_> &other);
-
-    /**
-     * @brief Moves the contents of this BufferAllocatedType object into a new RCPtr object.
-     * @return A new RCPtr object containing the contents of this BufferAllocatedType object.
-     */
-    RCPtr<BufferAllocatedType<T, R>> move_to_ptr();
+    template <typename T_>
+    void move(BufferAllocatedType<T_> &other);
 
     /**
      * @brief Swaps the contents of this BufferAllocatedType object with another BufferAllocatedType object.
@@ -994,8 +993,8 @@ class BufferAllocatedType : public BufferType<T>, public RC<R>
      * @tparam R_ The template parameter type of the other BufferAllocatedType object.
      * @param other The other BufferAllocatedType object to swap with.
      */
-    template <typename T_, typename R_>
-    void swap(BufferAllocatedType<T_, R_> &other);
+    template <typename T_>
+    void swap(BufferAllocatedType<T_> &other);
 
     /**
      * @brief Move constructor.
@@ -1003,8 +1002,8 @@ class BufferAllocatedType : public BufferType<T>, public RC<R>
      * @tparam R_ The template parameter type of the other BufferAllocatedType object.
      * @param other The other BufferAllocatedType object to move from.
      */
-    template <typename T_, typename R_>
-    BufferAllocatedType(BufferAllocatedType<T_, R_> &&other) noexcept;
+    template <typename T_>
+    BufferAllocatedType(BufferAllocatedType<T_> &&other) noexcept;
 
     /**
      * @brief Move assignment operator.
@@ -1641,48 +1640,48 @@ ConstBufferType<T>::ConstBufferType(const U *data, const size_t offset, const si
     : ConstBufferType(const_cast<U *>(data), offset, size, capacity){};
 
 //  ===============================================================================================
-//  BufferAllocatedType<T, R> member function definitions
+//  BufferAllocatedType<T> member function definitions
 //  ===============================================================================================
 
-template <typename T, typename R>
-BufferAllocatedType<T, R>::BufferAllocatedType(const size_t offset, const size_t size, const size_t capacity, const unsigned int flags)
+template <typename T>
+BufferAllocatedType<T>::BufferAllocatedType(const size_t offset, const size_t size, const size_t capacity, const unsigned int flags)
     : BufferType<T>(capacity ? new T[capacity] : nullptr, offset, size, capacity), flags_(flags)
 {
-    if (flags & CONSTRUCT_ZERO)
+    if (flags & BufAllocFlags::CONSTRUCT_ZERO)
         std::memset(data_raw(), 0, capacity * sizeof(T));
 }
 
-template <typename T, typename R>
-BufferAllocatedType<T, R>::BufferAllocatedType()
+template <typename T>
+BufferAllocatedType<T>::BufferAllocatedType()
     : BufferAllocatedType(0, 0, 0, 0)
 {
     static_assert(std::is_nothrow_move_constructible_v<BufferAllocatedType>,
                   "class BufferAllocatedType not noexcept move constructable");
 }
 
-template <typename T, typename R>
-BufferAllocatedType<T, R>::BufferAllocatedType(const size_t capacity, const unsigned int flags)
-    : BufferAllocatedType(0, flags & ARRAY ? capacity : 0, capacity, flags){};
+template <typename T>
+BufferAllocatedType<T>::BufferAllocatedType(const size_t capacity, const unsigned int flags)
+    : BufferAllocatedType(0, flags & BufAllocFlags::ARRAY ? capacity : 0, capacity, flags){};
 
-template <typename T, typename R>
-BufferAllocatedType<T, R>::BufferAllocatedType(const T *data, const size_t size, const unsigned int flags)
+template <typename T>
+BufferAllocatedType<T>::BufferAllocatedType(const T *data, const size_t size, const unsigned int flags)
     : BufferAllocatedType(0, size, size, flags)
 {
-    if (size)
+    if (size && data)
         std::memcpy(data_raw(), data, size * sizeof(T));
 }
 
-template <typename T, typename R>
-BufferAllocatedType<T, R>::BufferAllocatedType(const BufferAllocatedType &other)
+template <typename T>
+BufferAllocatedType<T>::BufferAllocatedType(const BufferAllocatedType &other)
     : BufferAllocatedType(other.offset(), other.size(), other.capacity(), other.flags_)
 {
     if (size())
         std::memcpy(data(), other.c_data(), size() * sizeof(T));
 }
 
-template <typename T, typename R>
+template <typename T>
 template <typename T_>
-BufferAllocatedType<T, R>::BufferAllocatedType(const BufferType<T_> &other, const unsigned int flags)
+BufferAllocatedType<T>::BufferAllocatedType(const BufferType<T_> &other, const unsigned int flags)
     : BufferAllocatedType(other.offset(), other.size(), other.capacity(), flags)
 {
     static_assert(sizeof(T) == sizeof(T_), "size inconsistency");
@@ -1690,8 +1689,8 @@ BufferAllocatedType<T, R>::BufferAllocatedType(const BufferType<T_> &other, cons
         std::memcpy(data(), other.c_data(), size() * sizeof(T));
 }
 
-template <typename T, typename R>
-void BufferAllocatedType<T, R>::operator=(const BufferAllocatedType &other)
+template <typename T>
+void BufferAllocatedType<T>::operator=(const BufferAllocatedType &other)
 {
     if (this != &other)
     {
@@ -1702,74 +1701,68 @@ void BufferAllocatedType<T, R>::operator=(const BufferAllocatedType &other)
     }
 }
 
-template <typename T, typename R>
-void BufferAllocatedType<T, R>::init(const size_t capacity, const unsigned int flags)
+template <typename T>
+void BufferAllocatedType<T>::init(const size_t capacity, const unsigned int flags)
 {
     auto tempBuffer = BufferAllocatedType(capacity, flags);
     swap(tempBuffer);
 }
 
-template <typename T, typename R>
-void BufferAllocatedType<T, R>::init(const T *data, const size_t size, const unsigned int flags)
+template <typename T>
+void BufferAllocatedType<T>::init(const T *data, const size_t size, const unsigned int flags)
 {
     auto tempBuffer = BufferAllocatedType(data, size, flags);
     swap(tempBuffer);
 }
 
-template <typename T, typename R>
-void BufferAllocatedType<T, R>::realloc(const size_t newcap)
+template <typename T>
+void BufferAllocatedType<T>::realloc(const size_t newcap)
 {
     if (newcap > capacity())
         realloc_(newcap);
 }
 
-template <typename T, typename R>
-void BufferAllocatedType<T, R>::reset(const size_t min_capacity, const unsigned int flags)
+template <typename T>
+void BufferAllocatedType<T>::reset(const size_t min_capacity, const unsigned int flags)
 {
     if (min_capacity > capacity())
         init(min_capacity, flags);
 }
 
-template <typename T, typename R>
-void BufferAllocatedType<T, R>::reset(const size_t headroom, const size_t min_capacity, const unsigned int flags)
+template <typename T>
+void BufferAllocatedType<T>::reset(const size_t headroom, const size_t min_capacity, const unsigned int flags)
 {
     reset(min_capacity, flags);
     init_headroom(headroom);
 }
 
-template <typename T, typename R>
-template <typename T_, typename R_>
-void BufferAllocatedType<T, R>::move(BufferAllocatedType<T_, R_> &other)
+template <typename T>
+template <typename T_>
+void BufferAllocatedType<T>::move(BufferAllocatedType<T_> &other)
 {
     auto temp = BufferAllocatedType();
     swap(other);
     other.swap(temp);
 }
 
-template <typename T, typename R>
-RCPtr<BufferAllocatedType<T, R>> BufferAllocatedType<T, R>::move_to_ptr()
-{
-    return RCPtr<BufferAllocatedType<T, R>>(new BufferAllocatedType<T, R>(std::move(*this)));
-}
-
-template <typename T, typename R>
-template <typename T_, typename R_>
-void BufferAllocatedType<T, R>::swap(BufferAllocatedType<T_, R_> &other)
+template <typename T>
+template <typename T_>
+void BufferAllocatedType<T>::swap(BufferAllocatedType<T_> &other)
 {
     BufferType<T>::swap(other);
     std::swap(flags_, other.flags_);
 }
 
-template <typename T, typename R>
-template <typename T_, typename R_>
-BufferAllocatedType<T, R>::BufferAllocatedType(BufferAllocatedType<T_, R_> &&other) noexcept
+template <typename T>
+template <typename T_>
+BufferAllocatedType<T>::BufferAllocatedType(BufferAllocatedType<T_> &&other) noexcept
     : BufferAllocatedType()
 {
     move(other);
 }
 
-template <typename T, typename R>
-BufferAllocatedType<T, R> &BufferAllocatedType<T, R>::operator=(BufferAllocatedType &&other) noexcept
+template <typename T>
+BufferAllocatedType<T> &BufferAllocatedType<T>::operator=(BufferAllocatedType &&other) noexcept
 {
     if (this != &other)
     {
@@ -1778,53 +1771,53 @@ BufferAllocatedType<T, R> &BufferAllocatedType<T, R>::operator=(BufferAllocatedT
     return *this;
 }
 
-template <typename T, typename R>
-void BufferAllocatedType<T, R>::clear()
+template <typename T>
+void BufferAllocatedType<T>::clear()
 {
     auto tempBuffer = BufferAllocatedType(0, 0, 0, 0);
     swap(tempBuffer);
 }
 
-template <typename T, typename R>
-void BufferAllocatedType<T, R>::or_flags(const unsigned int flags)
+template <typename T>
+void BufferAllocatedType<T>::or_flags(const unsigned int flags)
 {
     flags_ |= flags;
 }
 
-template <typename T, typename R>
-void BufferAllocatedType<T, R>::and_flags(const unsigned int flags)
+template <typename T>
+void BufferAllocatedType<T>::and_flags(const unsigned int flags)
 {
     flags_ &= flags;
 }
 
-template <typename T, typename R>
-BufferAllocatedType<T, R>::~BufferAllocatedType()
+template <typename T>
+BufferAllocatedType<T>::~BufferAllocatedType()
 {
     if (data_raw())
         free_data();
 }
 
-template <typename T, typename R>
-void BufferAllocatedType<T, R>::reset_impl(const size_t min_capacity, const unsigned int flags)
+template <typename T>
+void BufferAllocatedType<T>::reset_impl(const size_t min_capacity, const unsigned int flags)
 {
     init(min_capacity, flags);
 }
 
-template <typename T, typename R>
-void BufferAllocatedType<T, R>::resize(const size_t new_capacity)
+template <typename T>
+void BufferAllocatedType<T>::resize(const size_t new_capacity)
 {
     const size_t newcap = std::max(new_capacity, capacity() * 2);
     if (newcap > capacity())
     {
-        if (flags_ & GROW)
+        if (flags_ & BufAllocFlags::GROW)
             realloc_(newcap);
         else
             buffer_full_error(newcap, true);
     }
 }
 
-template <typename T, typename R>
-void BufferAllocatedType<T, R>::realloc_(const size_t newcap)
+template <typename T>
+void BufferAllocatedType<T>::realloc_(const size_t newcap)
 {
     auto tempBuffer = BufferAllocatedType(offset(), size(), newcap, flags_);
     if (size())
@@ -1832,10 +1825,10 @@ void BufferAllocatedType<T, R>::realloc_(const size_t newcap)
     swap(tempBuffer);
 }
 
-template <typename T, typename R>
-void BufferAllocatedType<T, R>::free_data()
+template <typename T>
+void BufferAllocatedType<T>::free_data()
 {
-    if (size() && (flags_ & DESTRUCT_ZERO))
+    if (size() && (flags_ & BufAllocFlags::DESTRUCT_ZERO))
         std::memset(data_raw(), 0, capacity() * sizeof(T));
     delete[] data_raw();
 }
@@ -1844,17 +1837,18 @@ void BufferAllocatedType<T, R>::free_data()
 //  specializations of BufferType for unsigned char
 //  ===============================================================================================
 
-typedef BufferType<unsigned char> Buffer;
-typedef ConstBufferType<unsigned char> ConstBuffer;
-typedef BufferAllocatedType<unsigned char, thread_unsafe_refcount> BufferAllocated;
-typedef RCPtr<BufferAllocated> BufferPtr;
+using Buffer = BufferType<unsigned char>;
+using ConstBuffer = ConstBufferType<unsigned char>;
+using BufferAllocated = BufferAllocatedType<unsigned char>;
+using BufferAllocatedRc = RcEnable<BufferAllocated, RC<thread_unsafe_refcount>>;
+using BufferPtr = RCPtr<BufferAllocatedRc>;
 
 //  ===============================================================================================
-//  BufferAllocated with thread-safe refcount
+//  BufferAllocated + RC  with thread-safe refcount
 //  ===============================================================================================
 
-typedef BufferAllocatedType<unsigned char, thread_safe_refcount> BufferAllocatedTS;
-typedef RCPtr<BufferAllocatedTS> BufferPtrTS;
+using BufferAllocatedTS = RcEnable<BufferAllocated, RC<thread_safe_refcount>>;
+using BufferPtrTS = RCPtr<BufferAllocatedTS>;
 
 //  ===============================================================================================
 //  cast BufferType<T> to ConstBufferType<T>

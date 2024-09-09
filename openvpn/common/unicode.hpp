@@ -231,7 +231,7 @@ inline BufferPtr string_to_utf16(const STRING &str)
                                                     dest + str.length(),
                                                     lenientConversion);
     conversion_result_throw(res);
-    BufferPtr ret(new BufferAllocated((dest - utf16_dest.get()) * 2, BufferAllocated::ARRAY));
+    auto ret = BufferAllocatedRc::Create((dest - utf16_dest.get()) * 2, BufAllocFlags::ARRAY);
     UTF8 *d = ret->data();
     for (const UTF16 *s = utf16_dest.get(); s < dest; ++s)
     {

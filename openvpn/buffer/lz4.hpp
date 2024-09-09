@@ -45,7 +45,7 @@ inline BufferPtr compress(const ConstBuffer &src,
         OPENVPN_THROW(lz4_error, "compress buffer size=" << src.size() << " exceeds LZ4_MAX_INPUT_SIZE=" << LZ4_MAX_INPUT_SIZE);
 
     // allocate dest buffer
-    BufferPtr dest = new BufferAllocated(sizeof(std::uint32_t) + headroom + tailroom + LZ4_COMPRESSBOUND(src.size()), 0);
+    auto dest = BufferAllocatedRc::Create(sizeof(std::uint32_t) + headroom + tailroom + LZ4_COMPRESSBOUND(src.size()), 0);
     dest->init_headroom(headroom);
 
     // as a hint to receiver, write the decompressed size
@@ -83,7 +83,7 @@ inline BufferPtr decompress(const ConstBuffer &source,
         OPENVPN_THROW(lz4_error, "decompress expansion size=" << size << " is too large (must be <= " << max_decompressed_size << ')');
 
     // allocate dest buffer
-    BufferPtr dest = new BufferAllocated(headroom + tailroom + size, 0);
+    auto dest = BufferAllocatedRc::Create(headroom + tailroom + size, 0);
     dest->init_headroom(headroom);
 
     // decompress

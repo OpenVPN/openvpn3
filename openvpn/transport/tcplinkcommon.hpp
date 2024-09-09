@@ -153,7 +153,7 @@ class LinkCommon : public LinkBase
         }
         else
         {
-            buf.reset(new BufferAllocated());
+            buf = BufferAllocatedRc::Create();
         }
         buf->swap(b);
         if (!is_raw_mode_write())

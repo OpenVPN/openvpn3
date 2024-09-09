@@ -1095,7 +1095,7 @@ class HTTPCore : public Base, public TransportClientParent
         const Request req = http_request();
         content_info = http_content_info();
 
-        outbuf.reset(new BufferAllocated(512, BufferAllocated::GROW));
+        outbuf = BufferAllocatedRc::Create(512, BufAllocFlags::GROW);
         BufferStreamOut os(*outbuf);
 
         if (content_info.websocket)

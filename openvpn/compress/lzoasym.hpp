@@ -22,6 +22,7 @@
 #ifndef OPENVPN_COMPRESS_LZOASYM_H
 #define OPENVPN_COMPRESS_LZOASYM_H
 
+#include <openvpn/buffer/buffer.hpp>
 #include <openvpn/compress/lzoasym_impl.hpp>
 
 // Implement asymmetrical LZO compression (only uncompress, don't compress)

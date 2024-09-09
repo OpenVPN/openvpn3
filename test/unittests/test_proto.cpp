@@ -391,7 +391,7 @@ class TestProto : public ProtoContextCallbackInterface
     {
         proto_context.start();
         const size_t msglen = std::strlen(msg) + 1;
-        templ.reset(new BufferAllocated((unsigned char *)msg, msglen, 0));
+        templ = BufferAllocatedRc::Create((unsigned char *)msg, msglen, 0);
         proto_context.flush(true);
     }
 
@@ -434,7 +434,7 @@ class TestProto : public ProtoContextCallbackInterface
 
     BufferPtr data_encrypt_string(const char *str)
     {
-        BufferPtr bp = new BufferAllocated();
+        BufferPtr bp = BufferAllocatedRc::Create();
         frame->prepare(Frame::READ_LINK_UDP, *bp);
         bp->write((unsigned char *)str, std::strlen(str));
         data_encrypt(*bp);
@@ -512,7 +512,7 @@ class TestProto : public ProtoContextCallbackInterface
         if (disable_xmit_)
             return;
         net_bytes_ += net_buf.size();
-        net_out.push_back(BufferPtr(new BufferAllocated(net_buf, 0)));
+        net_out.push_back(BufferAllocatedRc::Create(net_buf, 0));
     }
 
     void control_recv(BufferPtr &&app_bp) override
@@ -1349,12 +1349,12 @@ TEST(proto, controlmessage_invalidchar)
     std::string only_whitespace{"\n\n\r\n\r\n\r\n"};
     std::string empty{""};
 
-    BufferAllocated valid_auth_fail_buf{reinterpret_cast<const unsigned char *>(valid_auth_fail.c_str()), valid_auth_fail.size(), BufferAllocated::GROW};
-    BufferAllocated valid_auth_fail_newline_end_buf{reinterpret_cast<const unsigned char *>(valid_auth_fail_newline_end.c_str()), valid_auth_fail_newline_end.size(), BufferAllocated::GROW};
-    BufferAllocated invalid_auth_fail_buf{reinterpret_cast<const unsigned char *>(invalid_auth_fail.c_str()), invalid_auth_fail.size(), BufferAllocated::GROW};
-    BufferAllocated lot_of_whitespace_buf{reinterpret_cast<const unsigned char *>(lot_of_whitespace.c_str()), lot_of_whitespace.size(), BufferAllocated::GROW};
-    BufferAllocated only_whitespace_buf{reinterpret_cast<const unsigned char *>(only_whitespace.c_str()), only_whitespace.size(), BufferAllocated::GROW};
-    BufferAllocated empty_buf{reinterpret_cast<const unsigned char *>(empty.c_str()), empty.size(), BufferAllocated::GROW};
+    BufferAllocated valid_auth_fail_buf{reinterpret_cast<const unsigned char *>(valid_auth_fail.c_str()), valid_auth_fail.size(), BufAllocFlags::GROW};
+    BufferAllocated valid_auth_fail_newline_end_buf{reinterpret_cast<const unsigned char *>(valid_auth_fail_newline_end.c_str()), valid_auth_fail_newline_end.size(), BufAllocFlags::GROW};
+    BufferAllocated invalid_auth_fail_buf{reinterpret_cast<const unsigned char *>(invalid_auth_fail.c_str()), invalid_auth_fail.size(), BufAllocFlags::GROW};
+    BufferAllocated lot_of_whitespace_buf{reinterpret_cast<const unsigned char *>(lot_of_whitespace.c_str()), lot_of_whitespace.size(), BufAllocFlags::GROW};
+    BufferAllocated only_whitespace_buf{reinterpret_cast<const unsigned char *>(only_whitespace.c_str()), only_whitespace.size(), BufAllocFlags::GROW};
+    BufferAllocated empty_buf{reinterpret_cast<const unsigned char *>(empty.c_str()), empty.size(), BufAllocFlags::GROW};
 
     auto msg = ProtoContext::read_control_string<std::string>(valid_auth_fail_buf);
     EXPECT_EQ(msg, valid_auth_fail);

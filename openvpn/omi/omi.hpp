@@ -930,7 +930,7 @@ class OMICore : public Acceptor::ListenerBase
     {
         if (!is_sock_open() || recv_queued)
             return;
-        BufferPtr buf(new BufferAllocated(256, 0));
+        BufferPtr buf = BufferAllocatedRc::Create(256, 0);
         socket->async_receive(buf->mutable_buffer_clamp(),
                               [self = Ptr(this), sock = socket, buf](const openvpn_io::error_code &error, const size_t bytes_recvd)
                               {
@@ -990,7 +990,7 @@ class OMICore : public Acceptor::ListenerBase
     {
         if (!is_sock_open())
             return;
-        BufferAllocated &buf = *content_out.front();
+        auto &buf = *content_out.front();
         socket->async_send(buf.const_buffer_clamp(),
                            [self = Ptr(this), sock = socket](const openvpn_io::error_code &error, const size_t bytes_sent)
                            {

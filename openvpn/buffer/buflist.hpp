@@ -56,7 +56,7 @@ struct BufferCollection : public COLLECTION<BufferPtr>
         const size_t size = join_size();
 
         // allocate buffer
-        BufferPtr big = new BufferAllocated(size + headroom + tailroom, 0);
+        auto big = BufferAllocatedRc::Create(size + headroom + tailroom, 0);
         big->init_headroom(headroom);
 
         // second pass -- copy data
@@ -89,7 +89,7 @@ struct BufferCollection : public COLLECTION<BufferPtr>
     {
         BufferCollection ret;
         for (auto &b : *this)
-            ret.emplace_back(new BufferAllocated(*b));
+            ret.emplace_back(BufferAllocatedRc::Create(*b));
         return ret;
     }
 
@@ -111,7 +111,7 @@ struct BufferCollection : public COLLECTION<BufferPtr>
                 return;
             }
         }
-        emplace_back(new BufferAllocated(std::move(buf)));
+        emplace_back(BufferAllocatedRc::Create(std::move(buf)));
     }
 };
 

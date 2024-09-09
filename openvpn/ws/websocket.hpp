@@ -333,7 +333,7 @@ class Receiver
         if (!buf.allocated())
         {
             buf = std::move(inbuf);
-            buf.or_flags(BufferAllocated::GROW);
+            buf.or_flags(BufAllocFlags::GROW);
         }
         else
             buf.append(inbuf);

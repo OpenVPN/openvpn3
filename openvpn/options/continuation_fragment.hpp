@@ -97,7 +97,7 @@ class PushContinuationFragment : public std::vector<BufferPtr>
             total_size += e->size();
 
         // allocate return buffer
-        BufferPtr ret(new BufferAllocated(total_size, 0));
+        auto ret = BufferAllocatedRc::Create(total_size, 0);
         buf_append_string(*ret, "PUSH_REPLY");
 
         // terminators
@@ -163,7 +163,7 @@ class PushContinuationFragment : public std::vector<BufferPtr>
     void append_new_buffer()
     {
         // include extra byte for null termination
-        BufferPtr bp = new BufferAllocated(FRAGMENT_SIZE + 1, 0);
+        auto bp = BufferAllocatedRc::Create(FRAGMENT_SIZE + 1, 0);
         buf_append_string(*bp, "PUSH_REPLY");
         push_back(std::move(bp));
     }

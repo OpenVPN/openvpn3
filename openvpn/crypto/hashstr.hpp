@@ -61,7 +61,7 @@ class HashString
 
     BufferPtr final()
     {
-        BufferPtr ret(new BufferAllocated(ctx->size(), BufferAllocated::ARRAY));
+        auto ret = BufferAllocatedRc::Create(ctx->size(), BufAllocFlags::ARRAY);
         ctx->final(ret->data());
         return ret;
     }

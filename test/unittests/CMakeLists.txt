@@ -74,6 +74,7 @@ add_executable(coreUnitTests
         test_statickey.cpp
         test_streq.cpp
         test_time.cpp
+        test_make_rc.cpp
         test_typeindex.cpp
         test_tun_builder.cpp
         test_userpass.cpp

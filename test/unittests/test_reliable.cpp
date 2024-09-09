@@ -248,7 +248,7 @@ void test(MTRand &rand,
             std::ostringstream os;
             os << "Test packet #" << count;
             const std::string s = os.str();
-            BufferPtr buffer(new BufferAllocated((unsigned char *)s.c_str(), s.length() + 1, 0));
+            auto buffer = BufferAllocatedRc::Create((unsigned char *)s.c_str(), s.length() + 1, 0);
             ReliableSend::Message &m = send.send(now, Time::Duration());
             m.packet.buf = buffer;
             Message msg;

@@ -47,7 +47,7 @@ class StaticKey
     {
     }
     StaticKey(const unsigned char *key_data, const size_t key_size)
-        : key_data_(key_data, key_size, key_t::DESTRUCT_ZERO)
+        : key_data_(key_data, key_size, BufAllocFlags::DESTRUCT_ZERO)
     {
     }
 
@@ -71,7 +71,7 @@ class StaticKey
 
     void parse_from_base64(const std::string &b64, const size_t capacity)
     {
-        key_data_.reset(capacity, key_t::DESTRUCT_ZERO);
+        key_data_.reset(capacity, BufAllocFlags::DESTRUCT_ZERO);
         base64->decode(key_data_, b64);
     }
 
@@ -82,7 +82,7 @@ class StaticKey
 
     void init_from_rng(StrongRandomAPI &rng, const size_t key_size)
     {
-        key_data_.init(key_size, key_t::DESTRUCT_ZERO);
+        key_data_.init(key_size, BufAllocFlags::DESTRUCT_ZERO);
         rng.rand_bytes(key_data_.data(), key_size);
         key_data_.set_size(key_size);
     }
@@ -151,7 +151,7 @@ class OpenVPNStaticKey
     void parse(const std::string &key_text)
     {
         SplitLines in(key_text, 0);
-        key_t data(KEY_SIZE, key_t::DESTRUCT_ZERO);
+        key_t data(KEY_SIZE, BufAllocFlags::DESTRUCT_ZERO);
         bool in_body = false;
         while (in(true))
         {
@@ -182,7 +182,7 @@ class OpenVPNStaticKey
 
     unsigned char *raw_alloc()
     {
-        key_data_.init(KEY_SIZE, key_t::DESTRUCT_ZERO | key_t::ARRAY);
+        key_data_.init(KEY_SIZE, BufAllocFlags::DESTRUCT_ZERO | BufAllocFlags::ARRAY);
         return key_data_.data();
     }
 

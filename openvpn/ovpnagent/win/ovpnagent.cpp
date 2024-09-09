@@ -812,7 +812,7 @@ class MyClientInstance : public WS::Server::Listener::Client
     void http_content_in(BufferAllocated &buf) override
     {
         if (buf.defined())
-            in.emplace_back(new BufferAllocated(std::move(buf)));
+            in.emplace_back(BufferAllocatedRc::Create(std::move(buf)));
     }
 
     BufferPtr http_content_out() override

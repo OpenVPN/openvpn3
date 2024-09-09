@@ -853,7 +853,7 @@ inline void to_uchar(const Json::Value &root,
     auto temp = get_int(root, name, title);
     dest = clamp_notify<unsigned char>(temp,
                                        [](decltype(temp) temp) -> unsigned char
-                                       { 
+                                       {
         auto why = std::string("Conversion error [" + std::to_string(temp) + "] to unsigned char");
         throw json_parse(std::move(why)); });
 }
@@ -911,9 +911,9 @@ inline void format_compact(const Json::Value &root, Buffer &buf)
 inline std::string format_compact(const Json::Value &root,
                                   const size_t size_hint = 256)
 {
-    BufferPtr bp = new BufferAllocated(size_hint, BufferAllocated::GROW);
-    format_compact(root, *bp);
-    return buf_to_string(*bp);
+    auto bp = BufferAllocated(size_hint, BufAllocFlags::GROW);
+    format_compact(root, bp);
+    return buf_to_string(bp);
 }
 
 inline void format(const Json::Value &root, Buffer &buf)

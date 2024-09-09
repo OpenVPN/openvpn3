@@ -30,10 +30,13 @@
 #include <openvpn/buffer/bufstr.hpp>
 
 namespace openvpn {
+/**
+    @brief A string-like type that clears the buffer contents on delete
+*/
 class SafeString
 {
     static constexpr size_t INITIAL_CAPACITY = 32;
-    static constexpr unsigned int BUF_FLAGS = BufferAllocated::DESTRUCT_ZERO | BufferAllocated::GROW;
+    static constexpr unsigned int BUF_FLAGS = BufAllocFlags::DESTRUCT_ZERO | BufAllocFlags::GROW;
 
   public:
     SafeString()

@@ -132,9 +132,9 @@ inline AccHandshaker::MsgT AccHandshaker::process_msg(const MsgT &msg)
     auto &api = mSslApi->get();
     if (msg)
     {
-        api.write_ciphertext(new BufferAllocated(reinterpret_cast<const unsigned char *>(msg->c_str()),
-                                                 msg->size(),
-                                                 0));
+        api.write_ciphertext(BufferAllocatedRc::Create(reinterpret_cast<const unsigned char *>(msg->c_str()),
+                                                       msg->size(),
+                                                       0));
 
         // Won't handshake without this even though there is no data available.
         uint8_t cleartext[8];

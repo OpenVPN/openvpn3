@@ -86,7 +86,7 @@ inline BufferPtr read_binary(const std::string &filename,
     ifs.seekg(0, std::ios::beg);
 
     // allocate buffer
-    BufferPtr b = new BufferAllocated(size_t(length), buffer_flags | BufferAllocated::ARRAY);
+    auto b = BufferAllocatedRc::Create(size_t(length), buffer_flags | BufAllocFlags::ARRAY);
 
     // read data
     ifs.read((char *)b->data(), length);
@@ -114,7 +114,7 @@ inline BufferPtr read_binary_linear(const std::string &filename,
     std::streamsize total_size = 0;
     while (true)
     {
-        BufferPtr b = new BufferAllocated(block_size, 0);
+        auto b = BufferAllocatedRc::Create(block_size, 0);
         ifs.read((char *)b->data(), b->remaining());
         const std::streamsize size = ifs.gcount();
         if (size)

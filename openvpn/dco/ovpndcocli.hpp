@@ -643,7 +643,7 @@ class OvpnDcoClient : public Client,
         // good enough values for control channel packets
         pkt->buf.reset(512,
                        3072,
-                       BufferAllocated::GROW | BufferAllocated::CONSTRUCT_ZERO | BufferAllocated::DESTRUCT_ZERO);
+                       BufAllocFlags::GROW | BufAllocFlags::CONSTRUCT_ZERO | BufAllocFlags::DESTRUCT_ZERO);
         pipe->async_read_some(
             pkt->buf.mutable_buffer(),
             [self = Ptr(this),

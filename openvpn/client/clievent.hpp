@@ -416,7 +416,7 @@ struct InfoJSON : public Base
 
     virtual std::string render() const
     {
-        BufferAllocated buf(512, BufferAllocated::GROW);
+        BufferAllocated buf(512, BufAllocFlags::GROW);
         buf_append_string(buf, msg_type);
         buf_append_string(buf, ":");
         json::format_compact(jdata, buf);

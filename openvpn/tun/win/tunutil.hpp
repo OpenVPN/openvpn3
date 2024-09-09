@@ -475,7 +475,7 @@ struct DeviceInstanceIdInterfaceList : public std::vector<DeviceInstanceIdInterf
             LONG status = RegQueryValueExA(regkey(), "NetCfgInstanceId", NULL, NULL, NULL, &size);
             if (status != ERROR_SUCCESS)
                 continue;
-            BufferAllocatedType<char, thread_unsafe_refcount> buf_net_cfg_inst_id(size, BufferAllocated::CONSTRUCT_ZERO);
+            BufferAllocatedType<char> buf_net_cfg_inst_id(size, BufAllocFlags::CONSTRUCT_ZERO);
 
             status = RegQueryValueExA(regkey(), "NetCfgInstanceId", NULL, NULL, (LPBYTE)buf_net_cfg_inst_id.data(), &size);
             if (status == ERROR_SUCCESS)
@@ -490,7 +490,7 @@ struct DeviceInstanceIdInterfaceList : public std::vector<DeviceInstanceIdInterf
             if (res != FALSE && GetLastError() != ERROR_INSUFFICIENT_BUFFER)
                 continue;
 
-            BufferAllocatedType<char, thread_unsafe_refcount> buf_dev_inst_id(size, BufferAllocated::CONSTRUCT_ZERO);
+            BufferAllocatedType<char> buf_dev_inst_id(size, BufAllocFlags::CONSTRUCT_ZERO);
             if (!SetupDiGetDeviceInstanceId(device_info_set, &dev_info_data, buf_dev_inst_id.data(), size, &size))
                 continue;
             buf_dev_inst_id.set_size(size);
@@ -504,7 +504,7 @@ struct DeviceInstanceIdInterfaceList : public std::vector<DeviceInstanceIdInterf
             if (cr != CR_SUCCESS)
                 continue;
 
-            BufferAllocatedType<char, thread_unsafe_refcount> buf_dev_iface_list(dev_interface_list_size, BufferAllocated::CONSTRUCT_ZERO);
+            BufferAllocatedType<char> buf_dev_iface_list(dev_interface_list_size, BufAllocFlags::CONSTRUCT_ZERO);
             cr = CM_Get_Device_Interface_List((LPGUID)&GUID_DEVINTERFACE_NET,
                                               buf_dev_inst_id.data(),
                                               buf_dev_iface_list.data(),

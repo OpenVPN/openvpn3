@@ -58,7 +58,7 @@ inline Frame::Ptr frame_init(const bool align_adjust_3_1,
                                                           tailroom,
                                                           0,
                                                           align_block,
-                                                          BufferAllocated::GROW);
+                                                          BufAllocFlags::GROW);
     frame->standardize_capacity(~0);
 
     if (verbose)

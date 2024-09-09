@@ -156,7 +156,7 @@ class TLSPRF
                                  + client_seed_len
                                  + server_seed_len
                                  + ProtoSessionID::SIZE * 2,
-                             BufferAllocated::DESTRUCT_ZERO);
+                             BufAllocFlags::DESTRUCT_ZERO);
         seed.write((unsigned char *)label, label_len);
         seed.write(client_seed, client_seed_len);
         seed.write(server_seed, server_seed_len);

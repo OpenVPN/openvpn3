@@ -306,7 +306,7 @@ class Listener : public ProxyListener
 
             content_info = std::move(ci);
 
-            outbuf.reset(new BufferAllocated(512, BufferAllocated::GROW));
+            outbuf = BufferAllocatedRc::Create(512, BufAllocFlags::GROW);
             BufferStreamOut os(*outbuf);
 
             // websocket?

@@ -451,7 +451,7 @@ class ProtoStackBase
             while (ssl_->read_cleartext_ready())
             {
                 ssize_t size;
-                to_app_buf.reset(new BufferAllocated());
+                to_app_buf = BufferAllocatedRc::Create();
                 frame_->prepare(Frame::READ_SSL_CLEARTEXT, *to_app_buf);
                 try
                 {
