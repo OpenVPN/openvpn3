@@ -27,7 +27,7 @@ jobs:
         vcpkgJsonGlob: '**/windows/vcpkg.json'
 
     - name: Run CMake with vcpkg.json manifest
-      uses: lukka/run-cmake@2ce8982be71b8e9a3c4d5e432135035afd1e76a7 # v10.7
+      uses: lukka/run-cmake@af1be47fd7c933593f687731bc6fdbee024d3ff4 # v10.8
       if: ${{ matrix.arch != 'amd64_arm64' }}
       with:
         configurePreset: win-${{ matrix.arch }}-release
@@ -35,7 +35,7 @@ jobs:
         testPreset: win-${{ matrix.arch }}-release
 
     - name: Run CMake with vcpkg.json manifest (NO TESTS)
-      uses: lukka/run-cmake@2ce8982be71b8e9a3c4d5e432135035afd1e76a7 # v10.7
+      uses: lukka/run-cmake@af1be47fd7c933593f687731bc6fdbee024d3ff4 # v10.8
       if: ${{ matrix.arch == 'amd64_arm64' }}
       with:
         configurePreset: win-${{ matrix.arch }}-release
@@ -74,7 +74,7 @@ jobs:
         vcpkgJsonGlob: '**/mingw/vcpkg.json'
 
     - name: Run CMake with vcpkg.json manifest
-      uses: lukka/run-cmake@2ce8982be71b8e9a3c4d5e432135035afd1e76a7 # v10.7
+      uses: lukka/run-cmake@af1be47fd7c933593f687731bc6fdbee024d3ff4 # v10.8
       with:
         configurePreset: mingw-${{ matrix.arch }}-release
         buildPreset: mingw-${{ matrix.arch }}-release
