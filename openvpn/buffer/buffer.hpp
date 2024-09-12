@@ -50,6 +50,7 @@
 #pragma once
 
 #include <string>
+#include <cstdlib> // defines std::abort()
 #include <cstring>
 #include <algorithm>
 #include <type_traits> // for std::is_nothrow_move_constructible_v, std::remove_const, std::enable_if_t, and std::is_const_v
@@ -59,7 +60,6 @@
 #endif
 
 #include <openvpn/common/size.hpp>
-#include <openvpn/common/abort.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/rc.hpp>
 #include <openvpn/buffer/bufclamp.hpp>

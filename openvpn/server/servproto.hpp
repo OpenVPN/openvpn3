@@ -24,6 +24,7 @@
 #ifndef OPENVPN_SERVER_SERVPROTO_H
 #define OPENVPN_SERVER_SERVPROTO_H
 
+#include <cstdlib> // defines std::abort()
 #include <memory>
 #include <utility> // for std::move
 
@@ -31,7 +32,6 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/rc.hpp>
 #include <openvpn/common/unicode.hpp>
-#include <openvpn/common/abort.hpp>
 #include <openvpn/common/link.hpp>
 #include <openvpn/common/string.hpp>
 #include <openvpn/buffer/bufstream.hpp>

@@ -23,13 +23,13 @@
 
 // Get info about named pipe peer
 
+#include <cstdlib> // defines std::abort()
 #include <windows.h>
 #include <sddl.h>
 #include <aclapi.h>
 
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/hexstr.hpp>
-#include <openvpn/common/abort.hpp>
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/win/winerr.hpp>
 #include <openvpn/win/scoped_handle.hpp>
