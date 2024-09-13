@@ -23,7 +23,7 @@ jobs:
     - name: Restore from cache and install vcpkg
       uses: lukka/run-vcpkg@5e0cab206a5ea620130caf672fce3e4a6b5666a1 # v11.5
       with:
-        vcpkgGitCommitId: b4624c3a701b11248d88aab08744a37ee7aea1cc
+        vcpkgGitCommitId: 29b2ea2d4b6197e66ef346e62ccbba35b55b7de5
         vcpkgJsonGlob: '**/windows/vcpkg.json'
 
     - name: Run CMake with vcpkg.json manifest
@@ -70,7 +70,7 @@ jobs:
     - name: Restore from cache and install vcpkg
       uses: lukka/run-vcpkg@5e0cab206a5ea620130caf672fce3e4a6b5666a1 # v11.5
       with:
-        vcpkgGitCommitId: b4624c3a701b11248d88aab08744a37ee7aea1cc
+        vcpkgGitCommitId: 29b2ea2d4b6197e66ef346e62ccbba35b55b7de5
         vcpkgJsonGlob: '**/mingw/vcpkg.json'
 
     - name: Run CMake with vcpkg.json manifest
