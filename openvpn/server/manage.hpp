@@ -43,7 +43,7 @@
 
 namespace openvpn::AuthStatus {
 // Auth constants
-enum Type : unsigned char;
+enum Type : unsigned short;
 } // namespace openvpn::AuthStatus
 
 
