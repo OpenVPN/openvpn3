@@ -8,8 +8,8 @@ http://developercertificate.org/.
 In this contributor agreement, "This project" refers to the OpenVPN
 project and
 "open source license indicated in `the file <LICENSE.rst>`_" refers to
-the AGPLv3 license with an additional permission that allows linking
-the OpenSSL software, https://www.openssl.org/, with the OpenVPN
+the AGPLv3 or MPLv2 license with an additional permission that allows
+linking the OpenSSL software, https://www.openssl.org/, with the OpenVPN
 software.
 
 Part I
