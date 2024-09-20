@@ -174,7 +174,6 @@ class ClientOptions : public RC<thread_unsafe_refcount>
         bool alt_proxy = false;
         bool synchronous_dns_lookup = false;
         int default_key_direction = -1;
-        bool allow_local_lan_access = false;
 
         PeerInfo::Set::Ptr extra_peer_info;
 #ifdef OPENVPN_PLATFORM_ANDROID
@@ -402,7 +401,7 @@ class ClientOptions : public RC<thread_unsafe_refcount>
                 tunconf->builder = config.builder;
                 tunconf->tun_prop.session_name = session_name;
                 tunconf->tun_prop.google_dns_fallback = config.clientconf.googleDnsFallback;
-                tunconf->tun_prop.allow_local_lan_access = config.allow_local_lan_access;
+                tunconf->tun_prop.allow_local_lan_access = config.clientconf.allowLocalLanAccess;
                 if (tun_mtu)
                     tunconf->tun_prop.mtu = tun_mtu;
                 tunconf->tun_prop.mtu_max = tun_mtu_max;
