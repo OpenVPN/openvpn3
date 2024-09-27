@@ -66,10 +66,12 @@ class RangeType
             next();
             return *this;
         }
+
         const ADDR &operator*() const
         {
             return addr_;
         }
+
         bool operator!=(const Iterator &rhs) const
         {
             return remaining_ != rhs.remaining_ || addr_ != rhs.addr_;
@@ -99,6 +101,7 @@ class RangeType
     {
         return Iterator(*this);
     }
+
     Iterator end() const
     {
         RangeType end_range = *this;
@@ -106,6 +109,7 @@ class RangeType
         end_range.extent_ = 0;
         return Iterator(end_range);
     }
+
     Iterator iterator() const
     {
         return Iterator(*this);
@@ -115,10 +119,12 @@ class RangeType
     {
         return extent_ > 0;
     }
+
     const ADDR &start() const
     {
         return start_;
     }
+
     size_t extent() const
     {
         return extent_;
