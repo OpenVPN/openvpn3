@@ -106,6 +106,19 @@ TEST(IPAddr, pool)
               s.str());
 }
 
+TEST(Pool, AcquiringNotAvailableAddressReturnsFalse)
+{
+    auto pool = IP::Pool{};
+    pool.add_range(IP::Range(IP::Addr::from_string("1.2.3.4"), 16));
+    ASSERT_FALSE(pool.acquire_specific_addr(IP::Addr::from_string("1.2.3.42")));
+}
+
+TEST(Range, EmptyRangeBeginEndIteratorsAreEqual)
+{
+    auto empty_range = IP::Range{};
+    ASSERT_FALSE(empty_range.begin() != empty_range.end()); // Because using ASSERT_EQ or ASSERT_TRUE with == would require implementing operator==
+}
+
 struct test_case
 {
     int shift;
