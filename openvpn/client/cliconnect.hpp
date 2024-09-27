@@ -650,6 +650,14 @@ class ClientConnect : ClientProto::NotifyCallback,
                         stop();
                     }
                     break;
+                case Error::NEED_CREDS:
+                    {
+                        ClientEvent::Base::Ptr ev = new ClientEvent::NeedCreds();
+                        client_options->events().add_event(std::move(ev));
+                        client_options->stats().error(Error::NEED_CREDS);
+                        stop();
+                    }
+                    break;
                 default:
                     throw client_connect_unhandled_exception();
                 }

@@ -164,12 +164,14 @@ class ClientCreds : public RC<thread_unsafe_refcount>
 
     void purge_session_id()
     {
+        OPENVPN_LOG("Clearing session-id");
         session_id.clear();
         session_id_username.clear();
     }
 
     void purge_user_pass()
     {
+        OPENVPN_LOG("Clearing credentials");
         username.clear();
         password.clear();
     }
@@ -206,9 +208,13 @@ class ClientCreds : public RC<thread_unsafe_refcount>
         }
         else if (response.empty())
         {
-            if (!session_id_username.empty() || !username.empty())
+            if (!username.empty())
             {
                 ret += "Username";
+            }
+            else if (!session_id_username.empty())
+            {
+                ret += "UsernameSessionId";
             }
             else
             {

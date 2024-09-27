@@ -1181,6 +1181,10 @@ class Session : ProtoContextCallbackInterface,
         if (creds && !proto_context.conf().relay_mode)
         {
             OPENVPN_LOG("Creds: " << creds->auth_info());
+            if (!creds->session_id_defined() && creds->password_needed() && !creds->password_defined())
+            {
+                throw ErrorCode(Error::NEED_CREDS, true, "missing password");
+            }
             proto_context.write_auth_string(creds->get_username(), buf);
 #ifdef OPENVPN_DISABLE_AUTH_TOKEN // debugging only
             if (creds->session_id_defined())
