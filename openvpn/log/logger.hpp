@@ -87,7 +87,7 @@ class Logger
      * @param msg   the message to print
      */
     template <int LEVEL, typename T>
-    void log(T &&msg)
+    void log(T &&msg) const
     {
         /* this ensures that the function is empty if MAX_LEVEL excludes this level */
         if constexpr (max_log_level >= LEVEL)
@@ -103,7 +103,7 @@ class Logger
      * @param msg   the message to print
      */
     template <typename T>
-    void log_trace(T &&msg)
+    void log_trace(T &&msg) const
     {
         log<LOG_LEVEL_TRACE>(std::forward<T>(msg));
     }
@@ -114,7 +114,7 @@ class Logger
      * @param msg   the message to print
      */
     template <typename T>
-    void log_debug(T &&msg)
+    void log_debug(T &&msg) const
     {
         log<LOG_LEVEL_DEBUG>(std::forward<T>(msg));
     }
@@ -125,7 +125,7 @@ class Logger
      * @param msg   the message to print
      */
     template <typename T>
-    void log_info(T &&msg)
+    void log_info(T &&msg) const
     {
         log<LOG_LEVEL_INFO>(std::forward<T>(msg));
     }
@@ -135,7 +135,7 @@ class Logger
      * @param msg   the message to log
      */
     template <typename T>
-    void log_verbose(T &&msg)
+    void log_verbose(T &&msg) const
     {
         log<LOG_LEVEL_VERB>(std::forward<T>(msg));
     }
@@ -145,7 +145,7 @@ class Logger
      * @param msg   the message to log
      */
     template <typename T>
-    void log_error(T &&msg)
+    void log_error(T &&msg) const
     {
         log<LOG_LEVEL_ERROR>(std::forward<T>(msg));
     }
