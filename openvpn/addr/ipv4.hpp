@@ -105,6 +105,10 @@ class Addr // NOTE: must be union-legal, so default constructor does not initial
         ret.sin_family = AF_INET;
         ret.sin_port = htons(port);
         ret.sin_addr.s_addr = htonl(u.addr);
+#if defined(__APPLE__) || defined(__FreeBSD__)
+        /* macOS and FreeBSD have the sin_len member */
+        ret.sin_len = sizeof(struct sockaddr_in);
+#endif
         return ret;
     }
 
