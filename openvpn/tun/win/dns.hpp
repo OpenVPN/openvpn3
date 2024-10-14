@@ -422,49 +422,6 @@ class Dns
     }
 
 
-    /**
-     * @brief Signal the DNS resolver to reload its settings
-     *
-     * @return bool to indicate if the reload was initiated
-     */
-    static bool apply_dns_settings()
-    {
-        bool res = false;
-        SC_HANDLE scm = static_cast<SC_HANDLE>(INVALID_HANDLE_VALUE);
-        SC_HANDLE dnssvc = static_cast<SC_HANDLE>(INVALID_HANDLE_VALUE);
-
-        scm = ::OpenSCManager(NULL, NULL, SC_MANAGER_ALL_ACCESS);
-        if (scm == NULL)
-        {
-            goto out;
-        }
-
-        dnssvc = ::OpenServiceA(scm, "Dnscache", SERVICE_PAUSE_CONTINUE);
-        if (dnssvc == NULL)
-        {
-            goto out;
-        }
-
-        SERVICE_STATUS status;
-        if (::ControlService(dnssvc, SERVICE_CONTROL_PARAMCHANGE, &status) == 0)
-        {
-            goto out;
-        }
-
-        res = true;
-
-    out:
-        if (dnssvc != INVALID_HANDLE_VALUE)
-        {
-            ::CloseServiceHandle(dnssvc);
-        }
-        if (scm != INVALID_HANDLE_VALUE)
-        {
-            ::CloseServiceHandle(scm);
-        }
-        return res;
-    }
-
     class ActionCreate : public Action
     {
       public:
@@ -482,7 +439,6 @@ class Dns
         {
             log << to_string() << std::endl;
             set_search_domains(itf_name_, search_domains_);
-            apply_dns_settings();
         }
 
         /**
@@ -521,7 +477,6 @@ class Dns
         {
             log << to_string() << std::endl;
             remove_search_domains(itf_name_, search_domains_);
-            apply_dns_settings();
         }
 
         /**
@@ -541,6 +496,75 @@ class Dns
       private:
         const std::string itf_name_;
         const std::string search_domains_;
+    };
+
+    class ActionApply : public Action
+    {
+      public:
+        /**
+         * @brief Apply any modification to the DNS settings by signaling the resolver.
+         *
+         * @param log   where the log message goes
+         */
+        void execute(std::ostream &log) override
+        {
+            const char *status = apply_dns_settings() ? "successful" : "failed";
+            log << to_string() << ": " << status << std::endl;
+        }
+
+        /**
+         * @brief Return the log message
+         *
+         * @return std::string
+         */
+        std::string to_string() const override
+        {
+            return "DNS::ActionApply";
+        }
+
+      private:
+        /**
+         * @brief Signal the DNS resolver to reload its settings
+         *
+         * @return bool to indicate if the reload was initiated
+         */
+        bool apply_dns_settings()
+        {
+            bool res = false;
+            SC_HANDLE scm = static_cast<SC_HANDLE>(INVALID_HANDLE_VALUE);
+            SC_HANDLE dnssvc = static_cast<SC_HANDLE>(INVALID_HANDLE_VALUE);
+
+            scm = ::OpenSCManager(NULL, NULL, SC_MANAGER_ALL_ACCESS);
+            if (scm == NULL)
+            {
+                goto out;
+            }
+
+            dnssvc = ::OpenServiceA(scm, "Dnscache", SERVICE_PAUSE_CONTINUE);
+            if (dnssvc == NULL)
+            {
+                goto out;
+            }
+
+            SERVICE_STATUS status;
+            if (::ControlService(dnssvc, SERVICE_CONTROL_PARAMCHANGE, &status) == 0)
+            {
+                goto out;
+            }
+
+            res = true;
+
+        out:
+            if (dnssvc != INVALID_HANDLE_VALUE)
+            {
+                ::CloseServiceHandle(dnssvc);
+            }
+            if (scm != INVALID_HANDLE_VALUE)
+            {
+                ::CloseServiceHandle(scm);
+            }
+            return res;
+        }
     };
 };
 
