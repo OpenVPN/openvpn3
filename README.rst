@@ -207,26 +207,11 @@ a valid state.
 The OpenVPN protocol implementation that is being tested
 is here: `<openvpn/ssl/proto.hpp>`_
 
-The test code itself is here: `<test/ssl/proto.cpp>`_
+The test code itself is here: `<test/unittests/test_proto.cpp>`_
+It will be built and run as part of the unit test suite.
 
-Build the test::
-
-    $ cd $O3
-    $ cmake --build . -- test/ssl/proto
-
-Run the test::
-
-    $ cd test/ssl
-    $ time ./proto
-    *** app bytes=72777936 net_bytes=122972447 data_bytes=415892854 prog=0000216599/0000216598 D=12700/600/12700/600 N=109/109 SH=17400/15300 HE=0/0
-
-    real        0m15.813s
-    user        0m15.800s
-    sys         0m0.004s
-
-The OpenVPN 3 core also includes unit tests, which are based on
-Google Test framework. To run unit tests, you need to install
-CMake and build Google Test.
+The unit tests are based on Google Test framework. To run unit tests,
+you need to install CMake and build Google Test.
 
 Build and run tests on Linux::
 
@@ -276,8 +261,7 @@ testing the API.  See `<test/ovpncli/cli.cpp>`_.
 The basic approach to building an OpenVPN 3 client is
 to define a client class that derives from
 :code:`ClientAPI::OpenVPNClient`, then provide implementations
-for callbacks including event and logging notifications:
-::
+for callbacks including event and logging notifications::
 
     class Client : public ClientAPI::OpenVPNClient
     {
@@ -293,23 +277,20 @@ for callbacks including event and logging notifications:
     };
 
 To start the client, first create a :code:`ClientAPI::ProtoConfig` object
-and initialize it with the OpenVPN config file and other options:
-::
+and initialize it with the OpenVPN config file and other options::
 
     ClientAPI::ProtoConfig config;
     config.content = <config_file_content_as_multiline_string>;
     ...
 
-Next, create a client object and evaluate the configuration:
-::
+Next, create a client object and evaluate the configuration::
 
     Client client;
     ClientAPI::EvalConfig eval = client.eval_config(config);
     if (eval.error)
         throw ...;
 
-Finally, in a new worker thread, start the connection:
-::
+Finally, in a new worker thread, start the connection::
 
     ClientAPI::Status connect_status = client.connect();
 
@@ -456,11 +437,10 @@ Here is a brief set of guidelines:
 
 * Never use :code:`malloc` or :code:`free`.  When allocating objects,
   use the C++ :code:`new` operator and then immediately construct
-  a smart pointer to reference the object:
-  ::
+  a smart pointer to reference the object::
 
-    std::unique_ptr<MyObject> ptr = new MyObject();
-    ptr->method();
+        std::unique_ptr<MyObject> ptr = new MyObject();
+        ptr->method();
 
 * When interfacing with C functions that deal with
   raw pointers, memory allocation, etc., consider wrapping
@@ -478,13 +458,12 @@ Here is a brief set of guidelines:
 * When grabbing random entropy that is to be used
   for cryptographic purposes (i.e. for keys, tokens, etc.),
   always ensure that the RNG is crypto-grade by using
-  :code:`class StrongRandomAPI` as the RNG type:
-  ::
+  :code:`class StrongRandomAPI` as the RNG type::
 
-    StrongRandomAPI::Ptr rng;
-    void set_rng(StrongRandomAPI::Ptr rng_arg) {
-        rng = std::move(rng_arg);
-    }
+        StrongRandomAPI::Ptr rng;
+        void set_rng(StrongRandomAPI::Ptr rng_arg) {
+            rng = std::move(rng_arg);
+        }
 
 * Any variable whose value is not expected to change should
   be declared :code:`const`.
@@ -494,21 +473,19 @@ Here is a brief set of guidelines:
 
 * When formatting strings, don't use :code:`snprintf`.  Instead, use
   :code:`std::ostringstream` or build the string using the :code:`+`
-  :code:`std::string` operator:
-  ::
+  :code:`std::string` operator::
 
-    std::string format_reconnecting(const int n_seconds) {
-        return "Reconnecting in " + openvpn::to_string(n_seconds) + " seconds.";
-    }
+        std::string format_reconnecting(const int n_seconds) {
+            return "Reconnecting in " + openvpn::to_string(n_seconds) + " seconds.";
+        }
 
-  or:
-  ::
+  or::
 
-    std::string format_reconnecting(const int n_seconds) {
-        std::ostringstream os;
-        os << "Reconnecting in " << n_seconds << " seconds.";
-        return os.str();
-    }
+        std::string format_reconnecting(const int n_seconds) {
+            std::ostringstream os;
+            os << "Reconnecting in " << n_seconds << " seconds.";
+            return os.str();
+        }
 
 * OpenVPN 3 is a "header-only" library, therefore all free functions
   outside of classes should have the :code:`inline` attribute.
@@ -567,22 +544,20 @@ Conventions
   use :code:`Cleanup` in `<openvpn/common/cleanup.hpp>`_ when
   you need to specify a code block to execute prior to scope
   exit.  For example, ensure that the file :code:`pid_fn` is
-  deleted before scope exit:
-  ::
+  deleted before scope exit::
 
-    auto clean = Cleanup([pid_fn]() {
-        if (pid_fn)
-            ::unlink(pid_fn);
-    });
+        auto clean = Cleanup([pid_fn]() {
+            if (pid_fn)
+                ::unlink(pid_fn);
+        });
 
 * When calling global methods (such as libc :code:`fork`),
-  prepend :code:`::` to the symbol name, e.g.:
-  ::
+  prepend :code:`::` to the symbol name, e.g.::
 
-    struct dirent *e;
-    while ((e = ::readdir(dir.get())) != nullptr) {
-        ...
-    }
+        struct dirent *e;
+        while ((e = \::readdir(dir.get())) != nullptr) {
+            ...
+        }
 
 * Use :code:`nullptr` instead of :code:`NULL`.
 
