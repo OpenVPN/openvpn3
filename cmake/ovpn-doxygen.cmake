@@ -22,6 +22,8 @@ function(configure_doxygen projname outputdir)
     set(DOXYGEN_CALL_GRAPH "NO" CACHE STRING "Generate call graph images (value: YES/NO)")
     set(DOXYGEN_CALLER_GRAPH "YES" CACHE STRING "Generate caller graph images (value: YES/NO)")
     set(DOXYGEN_FILE_PATTERNS *.c *.h *.cc *.hh *.cpp *.hpp *.java *.i *.md *.rst)
+    set(DOXYGEN_DOT_GRAPH_MAX_NODES 500)
+    set(DOXYGEN_WARN_AS_ERROR YES)
 
     doxygen_add_docs(doxygen ALL
         "${DOXYGEN_USE_MDFILE_AS_MAINPAGE}" "${CMAKE_CURRENT_SOURCE_DIR}"
