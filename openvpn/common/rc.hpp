@@ -185,7 +185,7 @@ RCPtr<T>::RCPtr() noexcept
   The key logic is:
     - The px member is assigned the provided pointer p.
     - If add_ref is true, and px is non-null, the reference count of px is incremented
-    via intrusive_ptr_add_ref(px).
+    via openvpn::intrusive_ptr_add_ref().
 
   This achieves the goal of constructing an RCPtr that points to the provided object pointer
   p. If add_ref is true, it will also increment the ref count of p, indicating that RCPtr
@@ -225,9 +225,9 @@ RCPtr<T>::RCPtr(RCPtr &&rhs) noexcept
   @brief Construct a new RCPtr<T>::RCPtr object to type T and make it track an object of type U
   @tparam T an RC enabled type
   @tparam U an RC enabled type
-  @param rhs RCPtr<U> pointing to the object the new RCPtr<T> will reference as well
+  @param rhs "RCPtr<U>" pointing to the object the new RCPtr<T> will reference as well
 
-  This achieves the goal of creating an RCPtr<T> that points to the same object as the RCPtr<U>.
+  This achieves the goal of creating an RCPtr<T> that points to the same object as the "RCPtr<U>".
 */
 template <typename T>
 template <typename U>
@@ -243,7 +243,7 @@ RCPtr<T>::RCPtr(const RCPtr<U> &rhs) noexcept
 
   This achieves the goal of reducing the refcount when the RCPtr is destructed, possibly deleting
   the object if no other RCPtrs reference it anymore. The key data transformation is decrementing
-  the refcount via intrusive_ptr_release(px).
+  the refcount via openvpn::intrusive_ptr_release().
 */
 template <typename T>
 RCPtr<T>::~RCPtr()
@@ -395,12 +395,12 @@ RCPtr<T> RCPtr<T>::move_strong() noexcept
     return RCPtr<T>(p, false);
 }
 /**
-  @brief Returns a RCPtr<U> that points to our T object
+  @brief Returns a "RCPtr<U>" that points to our T object
   @tparam T an RC enabled type
   @tparam U an RC enabled type
-  @return RCPtr<U> that points to the same object this points to
+  @return "RCPtr<U>" that points to the same object this points to
 
-  Performs a static_cast from T * to U * and then wraps the cast pointer in a new RCPtr<U>
+  Performs a static_cast from T * to U * and then wraps the cast pointer in a new "RCPtr<U>"
 */
 template <typename T>
 template <typename U>
@@ -409,13 +409,13 @@ RCPtr<U> RCPtr<T>::static_pointer_cast() const noexcept
     return RCPtr<U>(static_cast<U *>(px));
 }
 /**
-  @brief Returns a RCPtr<U> that points to our T object
+  @brief Returns a "RCPtr<U>" that points to our T object
   @tparam T an RC enabled type
   @tparam U an RC enabled type
-  @return RCPtr<U> that points to the same object this points to, or nullptr
+  @return "RCPtr<U>" that points to the same object this points to, or nullptr
 
-  Performs a dynamic_cast from T * to U * and then wraps the cast pointer in a new RCPtr<U>,
-  or if the dynamic_cast fails the result will equal nullptr cast to U * in a new RCPtr<U>.
+  Performs a dynamic_cast from T * to U * and then wraps the cast pointer in a new "RCPtr<U>",
+  or if the dynamic_cast fails the result will equal nullptr cast to U * in a new "RCPtr<U>".
 */
 template <typename T>
 template <typename U>
@@ -480,7 +480,7 @@ RCWeakPtr<T>::RCWeakPtr() noexcept {};
 /**
   @brief Construct a new RCWeakPtr<T>::RCWeakPtr object
   @tparam T RCWeak enabled type
-  @param p RCPtr<> that holds a reference to an RCWeak::Controller
+  @param p RCPtr that holds a reference to an RCWeak::Controller
 */
 template <typename T>
 RCWeakPtr<T>::RCWeakPtr(const Strong &p) noexcept
@@ -537,7 +537,7 @@ void RCWeakPtr<T>::reset() noexcept
 /**
   @brief Swaps thing pointed to by *this withthing pointed to by other
   @tparam T RCWeak enabled type
-  @param other the WeakPtr with which *this is to be swapped
+  @param other the RCWeakPtr with which *this is to be swapped
 */
 template <typename T>
 void RCWeakPtr<T>::swap(RCWeakPtr &other) noexcept
@@ -924,9 +924,9 @@ class RC
 
   private:
     template <typename R>
-    friend void intrusive_ptr_add_ref(R *p) noexcept;
+    friend void intrusive_ptr_add_ref(R *rcptr) noexcept;
     template <typename R>
-    friend void intrusive_ptr_release(R *p) noexcept;
+    friend void intrusive_ptr_release(R *rcptr) noexcept;
     RCImpl refcount_;
 };
 /**
@@ -989,9 +989,9 @@ class RCCopyable
 
   private:
     template <typename R>
-    friend void intrusive_ptr_add_ref(R *p) noexcept;
+    friend void intrusive_ptr_add_ref(R *rcptr) noexcept;
     template <typename R>
-    friend void intrusive_ptr_release(R *p) noexcept;
+    friend void intrusive_ptr_release(R *rcptr) noexcept;
     RCImpl refcount_;
 };
 

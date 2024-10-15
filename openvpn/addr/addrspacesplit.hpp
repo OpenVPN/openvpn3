@@ -50,11 +50,12 @@ class AddressSpaceSplitter : public RouteList
         LEAF,
     };
     /**
-     * This method construct a non-overlapping list of routes spanning the address
-     * space in @param route.  The routes are constructed in a way that each
-     * route in the returned list is smaller or equalto each route in
-     * parameter @param in
+     * This method constructs a non-overlapping list of routes spanning the address
+     * space in \p route.  The routes are constructed in a way that each
+     * route in the returned list is smaller or equal to each route in
+     * parameter \p in.
      *
+     * @param in Existing routes
      * @param route The route we currently are looking at and split if it does
      *	      not meet the requirements
      */

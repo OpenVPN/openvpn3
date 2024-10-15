@@ -192,7 +192,7 @@ class XKeyExternalPKIImpl : public std::enable_shared_from_this<XKeyExternalPKII
      *                      on successful return size of signature
      * @param tbs           hash or message to be signed
      * @param tbslen        len of data in dgst
-     * @param sigalg        extra signature parameters
+     * @param alg           extra signature parameters
      *
      * @return              signature length or -1 on error.
      */

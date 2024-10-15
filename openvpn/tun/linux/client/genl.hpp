@@ -165,8 +165,8 @@ class GeNL : public RC<thread_unsafe_refcount>
     /**
      * Add peer information to kernel module
      *
-     * @param id Peer ID of the peer being created
-     * @param transport_fd socket to be used to communicate with the peer
+     * @param peer_id Peer ID of the peer being created
+     * @param fd socket to be used to communicate with the peer
      * @param sa sockaddr object representing the remote endpoint
      * @param salen length of sa (either sizeof(sockaddr_in) or
      * sizeof(sockaddr_in6)
@@ -383,6 +383,7 @@ class GeNL : public RC<thread_unsafe_refcount>
      * Retrieve he current status of a peer.
      *
      * @param peer_id the ID of the peer to query
+     * @param sync When true the method waits for the reply before returning
      * @throws netlink_error thrown if error occurs during sending netlink message
      */
     void get_peer(int peer_id, bool sync)
@@ -758,7 +759,7 @@ class GeNL : public RC<thread_unsafe_refcount>
      * @param arg argument passed by \c nl_cb_err()
      * @return int callback action
      */
-    static int ovpn_nl_cb_error(struct sockaddr_nl * /*nla*/,
+    static int ovpn_nl_cb_error(struct sockaddr_nl *nla,
                                 struct nlmsgerr *err,
                                 void *arg)
     {

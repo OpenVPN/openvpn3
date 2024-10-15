@@ -124,7 +124,6 @@ class PacketIDControlSend
     }
 
     /**
-     * @param form PacketID::LONG_FORM or PacketID::SHORT_FORM
      * @param start_at initial id for the sending
      */
     void init(PacketIDControl::id_t start_at = 0)

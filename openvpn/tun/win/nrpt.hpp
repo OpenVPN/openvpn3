@@ -68,7 +68,7 @@ class Nrpt
      *
      * @param rule_id       the unique rule id
      * @param domains       domains the rule applies to as wide MULTI_SZ
-     * @param dns_servers   list of name server addresses, separated by semicolon
+     * @param servers       list of name server addresses, separated by semicolon
      * @param dnssec        whether DNSSEC should be enabled for the rule
      */
     static void create_rule(const std::string &rule_id,

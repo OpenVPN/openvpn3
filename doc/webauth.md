@@ -384,7 +384,7 @@ we might get a challenge instead:
     </Error>
 
 
-a challenge is indicated by the "CRV1:" prefix in the <Message> (meaning
+a challenge is indicated by the "CRV1:" prefix in the `<Message>` (meaning
 Challenge Response protocol Version 1).  The CRV1 message is formatted
 as follows:
 

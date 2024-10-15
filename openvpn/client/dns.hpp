@@ -31,7 +31,8 @@
 namespace openvpn {
 
 /**
- * @class A name server address and optional port
+ * @class DnsAddress
+ * @brief A name server address and optional port
  */
 struct DnsAddress
 {
@@ -84,7 +85,8 @@ struct DnsAddress
 };
 
 /**
- * @class A DNS domain name
+ * @class DnsDomain
+ * @brief A DNS domain name
  */
 struct DnsDomain
 {
@@ -123,7 +125,8 @@ struct DnsDomain
 };
 
 /**
- * @class DNS settings for a name server
+ * @class DnsServer
+ * @brief DNS settings for a name server
  */
 struct DnsServer
 {
@@ -353,7 +356,8 @@ struct DnsOptionsMerger : public PushOptionsMerger
 };
 
 /**
- * @class All options set with the --dns directive
+ * @class DnsOptions
+ * @brief All options set with the --dns directive
  */
 struct DnsOptions
 {

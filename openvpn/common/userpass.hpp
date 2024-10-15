@@ -43,10 +43,12 @@ enum Flags
  * to have exactly one argument.
  *
  * The argument might be specified as a multiline argument. I.e.
+ * \code{.unparsed}
  * <opt_name>
  * username
  * password
  * </opt_name>
+ * \endcode
  *
  * The multiline argument is allowed to be 1024 UTF-8 characters in
  * length. If it is longer, the function will throw an exception.
@@ -65,7 +67,7 @@ enum Flags
  *
  * @param options   parsed option list
  * @param opt_name  name of the option to interpret
- * @param flags     SplitLines::Flags, only OPT_REQUIRED and TRY_FILE are used
+ * @param flags     openvpn::UserPass::Flags, only OPT_REQUIRED and TRY_FILE are used
  * @param user_pass vector of strings, user and password will be appended if present
  * @return bool     True if the option was present, False otherwise
  */
@@ -106,10 +108,12 @@ inline bool parse(const OptionList &options,
  * to have exactly one argument.
  *
  * The argument might be specified as a multiline argument. I.e.
+ * \code{.unparsed}
  * <opt_name>
  * username
  * password
  * </opt_name>
+ * \endcode
  *
  * The multiline argument is allowed to be 1024 UTF-8 characters in
  * length. If it is longer, the function will throw an exception.
@@ -133,7 +137,7 @@ inline bool parse(const OptionList &options,
  *
  * @param options   parsed option list
  * @param opt_name  name of the option to interpret
- * @param flags     SplitLines::Flags, all flags are used
+ * @param flags     openvpn::UserPass::Flags, all flags are used
  * @param user      Returns the username, if present. Otherwise empty
  * @param pass      Returns the password, if present. Otherwise empty
  */

@@ -10,7 +10,7 @@
 //
 
 /**
- * @file   randapi.cpp
+ * @file   randapi.hpp
  * @brief  Implementation of the base classes for random number generators
  */
 

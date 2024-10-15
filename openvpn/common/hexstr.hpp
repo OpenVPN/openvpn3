@@ -105,7 +105,8 @@ class RenderHexByte
 
     /**
      *  Retrieve the hexadecimal representation of the value.
-     *  Warning: The result is a non-NULL terminated string.
+     *
+     *  @warning The result is a non-NULL terminated string.
      *
      *  @return Returns a non-NULL terminated 2 byte string with the hexadecimal
      *          representation of the initial value.  The return value is guaranteed
@@ -164,7 +165,7 @@ inline std::string render_hex(const void *data, const size_t size, const bool ca
 
 
 /**
- *  Variant of @render_hex(const unsiged char *,...) which adds a
+ *  Variant of \c render_hex(const unsiged char *,...) which adds a
  *  separator between each byte
  *
  *  @param data  Unsigned char pointer to buffer to render.
@@ -196,7 +197,7 @@ inline std::string render_hex_sep(const unsigned char *data, size_t size, const 
 }
 
 /**
- *  Variant of @render_hex(const void *,...) which adds a
+ *  Variant of \c render_hex(const void *,...) which adds a
  *  separator between each byte
 
  *  @param data  Void pointer to buffer to render.
@@ -304,7 +305,7 @@ inline std::string dump_hex(void *data, size_t size)
  *  with the typical 16 bytes split between hexadecimal and character
  *  separation per line.
  *
- *  @param  data  std::string containing the buffer to render
+ *  @param  str  std::string containing the buffer to render
  *
  *  @return Returns a string containing a preformatted output of the
  *          hexadecimal dump.
@@ -372,7 +373,7 @@ inline void parse_hex(V &dest, const std::string &str)
  *  string into a templated (T) variable.  The input buffer
  *  MUST be NULL terminated.
  *
- *  WARNING: There are _NO_ overflow checks.
+ *  @warning There are _NO_ overflow checks.
  *
  *  @param str    Char pointer (char *) to the buffer to be parsed.
  *  @param retval Return buffer where the parsed value is stored.
@@ -407,7 +408,7 @@ inline bool parse_hex_number(const char *str, T &retval)
 
 
 /**
- *  Variant of @parse_hex_number(const char *, ...) which takes a std::string
+ *  Variant of \c parse_hex_number(const char *, ...) which takes a std::string
  *  as the input.
  *
  *  @param str    std::string containing the hexadecimal string to be parsed.
@@ -426,7 +427,7 @@ inline bool parse_hex_number(const std::string &str, T &retval)
  *  Parses a std::string containing a hexadecimal
  *  string into a templated (T) variable.
  *
- *  NOTE:  Currently doesn't detect overflow
+ *  @remark Currently doesn't detect overflow
  *
  *  @param str    std::string containing the hexadecimal
  *                string to be parsed.
@@ -473,7 +474,7 @@ std::string render_hex_number(T value, const bool caps = false)
 /**
  *  Renders a single byte as a hexadecimal string
  *
- *  @param value  Unsigned char (byte) to be represented as hexadecimal.
+ *  @param uc     Unsigned char (byte) to be represented as hexadecimal.
  *  @param caps   Boolean (default false) which sets the outout to
  *                be either lower case (false) or upper case (true).
  *

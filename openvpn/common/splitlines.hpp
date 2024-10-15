@@ -29,10 +29,11 @@ class SplitLinesType
     /**
      * Initialises SplitLinesType object with pointer to str
      *
-     * Note: string/buffer passed to constructor is not locally stored,
+     * @remark Note: string/buffer passed to constructor is not locally stored,
      * so it must remain in scope and not be modified during the lifetime
      * of the SplitLines object.
      *
+     * @param str Input string.
      * @param max_line_len_arg If not 0, specifies line length that
      *                         will trigger overflow error.
      */
@@ -48,7 +49,7 @@ class SplitLinesType
      *
      * If max_line_len is greater zero, read at most max_line_len characters.
      *
-     * @param trim If true, remove trailing \n or \r\n
+     * @param trim If true, remove trailing \\n or \\r\\n
      * @return Returns true if any characters were read.
      */
     bool operator()(const bool trim = true)
@@ -144,7 +145,7 @@ class SplitLinesType
      * are not intended to be mixed.
      *
      * @param ln   string to move the line into.
-     * @param trim If true, remove trailing \n or \r\n
+     * @param trim If true, remove trailing \\n or \\r\\n
      * @return Returns S_OKAY if a line was moved into ln.
      */
     Status next(std::string &ln, const bool trim = true)

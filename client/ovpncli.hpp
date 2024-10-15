@@ -686,6 +686,7 @@ class OpenVPNClient : public TunBuilderBase,             // expose tun builder v
       @param client_cert String containing the properly encoded client certificate
       @param clientkey String containing the properly encoded private key for \p client_cert
       @param ca Optional string containing the properly encoded authority
+      @param disableTLS13 disable TLS 1.3 support
 
       This function forwards to ClientProto::Session::start_acc_certcheck, which sets up the
       session ACC certcheck TLS handshake object. Every time this function is called the state of
@@ -698,8 +699,9 @@ class OpenVPNClient : public TunBuilderBase,             // expose tun builder v
 
     /**
       @brief Start up the cert check handshake using the given epki_alias string
-      @param alias     string containing the epki used for callbacks for certificate and signing operations
+      @param alias String containing the epki used for callbacks for certificate and signing operations
       @param ca Optional string containing the properly encoded authority
+      @param disableTLS13 disable TLS 1.3 support
 
       This function forwards to ClientProto::Session::start_acc_certcheck, which sets up the
       session ACC certcheck TLS handshake object. Every time this function is called the state of

@@ -693,7 +693,7 @@ class SITNL
      * Return interface primary address/netmask given interface index.
      * @param ifindex interface to probe
      * @param family address family
-     * @param [out] address/netmask of interface
+     * @param[out] route address/netmask of interface
      * @return success if 0, error if < 0
      */
     static int

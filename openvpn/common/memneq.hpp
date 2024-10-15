@@ -59,11 +59,11 @@ namespace openvpn::crypto {
 /**
  * memneq - Compare two areas of memory in constant time
  *
- * @a: first area of memory
- * @b: second area of memory
- * @size: The length of the memory area to compare
+ * @param a first area of memory
+ * @param b second area of memory
+ * @param size The length of the memory area to compare
  *
- * Returns false when data is equal, true otherwise
+ * @return Returns false when data is equal, true otherwise
  */
 inline bool memneq(const void *a, const void *b, size_t size);
 

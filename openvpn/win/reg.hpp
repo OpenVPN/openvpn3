@@ -32,12 +32,14 @@ static void check_reg_error(DWORD status, const std::string &key)
 }
 
 /**
- * @class Reg   Abstraction of Windows Registry operations
+ * @class Reg
+ * @brief Abstraction of Windows Registry operations
  */
 struct Reg
 {
     /**
-     * @class Key    Wrapper class for a Registry key handle
+     * @class Key
+     * @brief Wrapper class for a Registry key handle
      */
     class Key
     {
@@ -160,10 +162,11 @@ struct Reg
     };
 
     /**
-     * @class KeyEnumerator     Wrapper for Registry subkey enumeration
+     * @class KeyEnumerator
+     * @brief Wrapper for Registry subkey enumeration
      *
      * The class is based on a std::vector and supports range based for
-     * loops. This makes it easy to enumerator over a range of subkeys.
+     * loops. This makes it easy to enumerate over a range of subkeys.
      */
     class KeyEnumerator : public std::vector<std::wstring>
     {

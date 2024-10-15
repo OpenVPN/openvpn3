@@ -1037,7 +1037,7 @@ class BestGateway
      * is in local network, no gateway is selected and "local_route" flag is set.
      *
      * @param af address family, AF_INET or AF_INET6
-     * @param dest destination IPv4/IPv6 address
+     * @param dest_str destination IPv4/IPv6 address
      * @param vpn_interface_index index of VPN interface which is excluded from gateway selection
      */
     BestGateway(ADDRESS_FAMILY af, const std::string &dest_str, DWORD vpn_interface_index)

@@ -853,7 +853,7 @@ class Addr
     }
 
     /**
-     * Determines if the IP address is a mapped IP address (e.g. ::ffff:127.0.0.1)
+     * Determines if the IP address is a mapped IP address (e.g. \::ffff:127.0.0.1)
      */
     bool is_mapped_address() const
     {

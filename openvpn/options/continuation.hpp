@@ -68,7 +68,7 @@ class OptionListContinuation : public OptionList
      * prefixed with "?" are considered optional and might be ignored if update is not
      * supported.
      *
-     * @param opts Incoming list of options
+     * @param other Incoming list of options
      * @param filt Options filter
      * @param push_update true if this is PUSH_UPDATE, false if PUSH_REPLY
      */

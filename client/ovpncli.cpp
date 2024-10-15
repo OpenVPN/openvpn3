@@ -1351,17 +1351,6 @@ static SSLLib::SSLAPI::Config::Ptr setup_certcheck_ssl_config(const std::string 
     return config;
 }
 
-/**
-  @brief Start up the cert check handshake using the given certs and key
-  @param client_cert String containing the properly encoded client certificate
-  @param clientkey String containing the properly encoded private key for \p client_cert
-  @param ca String containing the properly encoded authority
-  @param disableTLS13 disable TLS 1.3 support
-
-      Creates, initializes,and installs an SSLLib::SSLAPI::Config object into the TLS
-      handshake object we use for the certcheck function. Then begins the handshake
-      with Client Hello via the ACC by calling start_acc_certcheck.
-*/
 OPENVPN_CLIENT_EXPORT void OpenVPNClient::start_cert_check(const std::string &client_cert,
                                                            const std::string &clientkey,
                                                            const std::optional<const std::string> &ca,
