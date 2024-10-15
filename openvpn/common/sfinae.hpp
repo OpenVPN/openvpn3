@@ -13,10 +13,13 @@
 
 namespace openvpn::SFINAE {
 
+/// \cond KNOWN_WARNINGS
+/// error: Detected potential recursive class relation between class openvpn::SFINAE::Rank and base class openvpn::SFINAE::Rank< I - 1 >!
 template <int I>
 struct Rank : Rank<I - 1>
 {
 };
+/// \endcond
 template <>
 struct Rank<0>
 {

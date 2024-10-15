@@ -26,6 +26,8 @@
 #include <openvpn/crypto/cryptoalgs.hpp>
 #include <openvpn/apple/cf/error.hpp>
 
+/// \cond KNOWN_WARNINGS
+/// error: no matching file member found for openvpn::AppleCrypto::DigestCTX::@9::OPENVPN_DIGEST_CONTEXT(MD4)
 #define OPENVPN_DIGEST_CONTEXT(TYPE) CC_##TYPE##_CTX TYPE##_ctx
 
 #define OPENVPN_DIGEST_ALG_CLASS(TYPE)                                                    \
@@ -87,6 +89,8 @@ OPENVPN_DIGEST_ALG_CLASS(SHA224);
 OPENVPN_DIGEST_ALG_CLASS(SHA256);
 OPENVPN_DIGEST_ALG_CLASS(SHA384);
 OPENVPN_DIGEST_ALG_CLASS(SHA512);
+
+/// \endcond
 
 class DigestInfo
 {

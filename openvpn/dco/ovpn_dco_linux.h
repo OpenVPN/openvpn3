@@ -15,6 +15,8 @@
 
 #define OVPN_NL_MULTICAST_GROUP_PEERS "peers"
 
+/// \cond KNOWN_WARNINGS
+/// error: Found unknown command '@OVPN_CIPHER_ALG_NONE'
 /**
  * enum ovpn_nl_commands - supported netlink commands
  */
@@ -252,5 +254,7 @@ enum ovpn_mode {
 
 	__OVPN_MODE_AFTER_LAST,
 };
+
+/// \endcond
 
 #endif /* _UAPI_LINUX_OVPN_DCO_H_ */
