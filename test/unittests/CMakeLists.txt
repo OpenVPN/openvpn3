@@ -87,18 +87,20 @@ add_executable(coreUnitTests
 )
 
 # The compile flags for test_proto.cpp, prefixed with PROTO_ to avoid collision with other defines
+set(PROTO_COMPILE_DEFINITIONS PROTO_N_THREADS=${TEST_PROTO_NTHREADS})
+list(APPEND PROTO_COMPILE_DEFINITIONS PROTO_RENEG=${TEST_PROTO_RENEG})
+list(APPEND PROTO_COMPILE_DEFINITIONS PROTO_ITER=${TEST_PROTO_ITER})
+list(APPEND PROTO_COMPILE_DEFINITIONS TEST_KEYCERT_DIR="${TEST_KEYCERT_DIR}/")
+
 if (${TEST_PROTO_VERBOSE})
-        set(PROTO_CFLAGS_VERBOSE -DPROTO_VERBOSE)
+    list(APPEND PROTO_COMPILE_DEFINITIONS PROTO_VERBOSE)
 endif()
 
-target_compile_definitions(coreUnitTests PRIVATE
-        ${PROTO_CFLAGS_VERBOSE}
-        -DPROTO_N_THREADS=${TEST_PROTO_NTHREADS}
-        -DPROTO_RENEG=${TEST_PROTO_RENEG}
-        -DPROTO_ITER=${TEST_PROTO_ITER}
-        -DPROTO_SITER=${TEST_PROTO_SITER}
-        -DTEST_KEYCERT_DIR=\"${TEST_KEYCERT_DIR}/\"
-)
+# Warning: When defines are only set for one specific test, we need to make sure they do
+# not affect any symbols used by other tests. So be careful before adding more.
+SET_SOURCE_FILES_PROPERTIES(test_proto.cpp PROPERTIES COMPILE_DEFINITIONS
+    "${PROTO_COMPILE_DEFINITIONS}"
+    )
 
 if (${USE_MBEDTLS})
     target_sources(coreUnitTests PRIVATE
