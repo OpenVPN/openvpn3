@@ -128,14 +128,14 @@ class TunProp
             // query local lan exclude routes and then
             // copy option list to construct a copy with the excluded routes as route options
             OptionList excludedRoutesOptions = opt;
-            for (const std::string &exRoute : tb->tun_builder_get_local_networks(false))
+            for (const auto &exRoute : tb->tun_builder_get_local_networks(false))
             {
                 /* We abuse here the fact that OpenVPN3 core parses "route", "192.168.0.0/24", "", "net_gateway"
                  * in the same way as the correct "route 192.168.0.0.0 255.255.255.0 net_gateway statement */
                 excludedRoutesOptions.add_item(Option{"route", exRoute, "", "net_gateway"});
             }
 
-            for (const std::string &exRoute : tb->tun_builder_get_local_networks(true))
+            for (const auto &exRoute : tb->tun_builder_get_local_networks(true))
             {
                 excludedRoutesOptions.add_item(Option{"route-ipv6", exRoute, "net_gateway"});
             }
