@@ -585,7 +585,7 @@ class TunBuilderBase
     virtual void tun_builder_dco_establish()
     {
     }
-#endif // ENABLE_DCO
+#endif // ENABLE_OVPNDCO
 };
 } // namespace openvpn
 
