@@ -442,7 +442,7 @@ class TunBuilderBase
      * @return A vector containing CIDR representations of the local networks
      * (e.g., "192.168.0.0/24")
      */
-    virtual const std::vector<std::string> tun_builder_get_local_networks(bool ipv6)
+    virtual std::vector<std::string> tun_builder_get_local_networks(bool ipv6)
     {
         return {};
     }
