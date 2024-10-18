@@ -48,7 +48,12 @@ if (ENABLE_DOXYGEN)
     set(DOXYGEN_EXCLUDE_PATTERNS
         "*/vcpkg_installed/*"
         "*/googletest-src/*"
-        "${PROJECT_SOURCE_DIR}/deps/*")
+        "${PROJECT_SOURCE_DIR}/deps/*"
+        "*/test/unittests/comp-testdata/*"
+        "*/test/unittests/input/*"
+        "*/test/unittests/output/*"
+        "*/test/unittests/userpass/*"
+        )
 
     # Use README.rst as the Doxygen main page
     # Due to some doxygen oddities, it rejects processing README.rst, but a .md file is fine
