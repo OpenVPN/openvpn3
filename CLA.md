@@ -5,8 +5,8 @@ This Contributor Agreement consists of two parts. Part I is the
 Developer Certificate of Origin available at
 <http://developercertificate.org/>.
 
-In this contributor agreement, \"This project\" refers to the OpenVPN
-project and \"open source license indicated in [the file](LICENSE.rst)\"
+In this contributor agreement, **This project** refers to the OpenVPN
+project and **open source license indicated in [the file](LICENSE.md)**
 refers to the AGPLv3 or MPLv2 license with an additional permission that
 allows linking the OpenSSL software, <https://www.openssl.org/>, with
 the OpenVPN software.
@@ -22,7 +22,7 @@ Letterman Drive Suite D4700 San Francisco, CA, 94129
 Everyone is permitted to copy and distribute verbatim copies of this
 license document, but changing it is not allowed.
 
-Developer\'s Certificate of Origin 1.1
+Developer's Certificate of Origin 1.1
 
 By making a contribution to this project, I certify that:
 

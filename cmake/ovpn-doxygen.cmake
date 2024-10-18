@@ -28,7 +28,7 @@ function(configure_doxygen projname outputdir)
     set(DOXYGEN_WARN_AS_ERROR YES)
 
     doxygen_add_docs(doxygen ALL
-        "${DOXYGEN_USE_MDFILE_AS_MAINPAGE}" "${CMAKE_CURRENT_SOURCE_DIR}"
+        "${CMAKE_CURRENT_SOURCE_DIR}"
         WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
         COMMENT "Generate Doxygen documentation")
 endfunction ()

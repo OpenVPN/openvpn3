@@ -12,4 +12,4 @@ Patches sent to the mailing list must be prefixed with
 `[PATCH OpenVPN3]`.
 
 Note that by contributing to the OpenVPN 3 project you accept the
-Contributor License Agreement described in [CLA.rst](CLA.rst).
+Contributor License Agreement described in [CLA.md](CLA.md).

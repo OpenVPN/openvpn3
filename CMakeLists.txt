@@ -54,14 +54,7 @@ if (ENABLE_DOXYGEN)
         "*/test/unittests/output/*"
         "*/test/unittests/userpass/*"
         )
-
-    # Use README.rst as the Doxygen main page
-    # Due to some doxygen oddities, it rejects processing README.rst, but a .md file is fine
-    # So we copy it into our build tree as a .md file and use that
-    configure_file("${CMAKE_CURRENT_SOURCE_DIR}/README.rst"
-        "${CMAKE_CURRENT_BINARY_DIR}/doxygen/mainpage.md"
-        COPYONLY)
-    set(DOXYGEN_USE_MDFILE_AS_MAINPAGE "${CMAKE_CURRENT_BINARY_DIR}/doxygen/mainpage.md")
+    set(DOXYGEN_USE_MDFILE_AS_MAINPAGE "${PROJECT_SOURCE_DIR}/README.md")
 
     configure_doxygen("OpenVPN 3 Core Library" "doxygen/core")
 endif ()

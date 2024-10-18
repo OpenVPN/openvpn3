@@ -12,9 +12,7 @@ Connect clients for iOS, Android, Linux, Windows, and Mac OS X.
 
 NOTE: OpenVPN 3 does not currently implement server functionality.
 
-::: {.contents}
-Table of Contents
-:::
+[TOC]
 
 OpenVPN 3 Client API
 --------------------
@@ -68,7 +66,7 @@ Options used:
 
 ovpn-dco is a kernel module which optimises data channel encryption and
 transport, providing better performance. The cli will detect when the
-kernel module is available and enable dco automatically (use \--no-dco
+kernel module is available and enable dco automatically (use `--no-dco`
 to disable this).
 
 Download, build and install ovpn-dco:
@@ -111,7 +109,7 @@ Clone the OpenVPN 3 repo:
 
 Install the dependencies:
 
-Ensure that \[homebrew\](<https://brew.sh/>) is set up.
+Ensure that [homebrew](<https://brew.sh/>) is set up.
 
     $  brew install asio cmake jsoncpp lz4 openssl pkg-config xxhash
 
@@ -151,7 +149,7 @@ To connect:
 Building the OpenVPN 3 client for Windows
 -----------------------------------------
 
-![image](../../../actions/workflows/msbuild.yml/badge.svg)
+![image](https://github.com/OpenVPN/openvpn3/actions/workflows/msbuild.yml/badge.svg)
 
 ### Building with Visual Studio
 
@@ -162,9 +160,8 @@ Prerequisites:
 -   vcpkg
 -   git
 
-```{=html}
-<!-- -->
-```
+To build:
+
     > git clone https://github.com/OpenVPN/openvpn3.git core && cd core
     > set VCPKG_ROOT=<path to vcpkg checkout>
     > cmake --preset win-amd64-release
@@ -181,13 +178,13 @@ Prerequisites:
 -   vcpkg
 -   git
 
-```{=html}
-<!-- -->
-```
+To build:
+
     $ git clone https://github.com/OpenVPN/openvpn3.git core && cd core
     $ export VCPKG_ROOT=<path to vcpkg checkout>
     $ cmake --preset mingw-x64-release
     $ cmake --build --preset mingw-x64-release --target ovpncli
+
 
 Testing
 -------
@@ -220,9 +217,8 @@ Developer Guide
 
 OpenVPN 3 is written in C++17 and developers who are moving from C to
 C++ should take some time to familiarize themselves with key C++ design
-patterns such as *RAII*:
-
-<https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization>
+patterns such as
+[*RAII*](https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization).
 
 ### OpenVPN 3 Client Core
 
@@ -330,7 +326,7 @@ used:
     [openvpn/ssl/protostack.hpp](openvpn/ssl/protostack.hpp) --- The
     bottom-layer class that implements the basic functionality of
     tunneling a protocol over a reliable or unreliable transport layer,
-    but isn\'t specific to OpenVPN per-se.
+    but isn't specific to OpenVPN per-se.
 
 ### Transport Layer
 
@@ -398,7 +394,7 @@ API using [javacli/ovpncli.i](javacli/ovpncli.i).
 Security
 --------
 
-When developing security software in C++, it\'s very important to take
+When developing security software in C++, it's very important to take
 advantage of the language and OpenVPN library code to insulate code from
 the kinds of bugs that can introduce security vulnerabilities.
 
@@ -414,7 +410,7 @@ Here is a brief set of guidelines:
     [openvpn/buffer/buffer.hpp](openvpn/buffer/buffer.hpp) for the
     OpenVPN `Buffer` classes.
 
--   When it\'s necessary to have a pointer to an object, use
+-   When it's necessary to have a pointer to an object, use
     `std::unique_ptr<>` for non-shared objects and reference-counted
     smart pointers for shared objects. For shared-pointers, OpenVPN code
     should use the smart pointer classes defined in
@@ -450,10 +446,10 @@ Here is a brief set of guidelines:
 -   Any variable whose value is not expected to change should be
     declared `const`.
 
--   Don\'t use non-const global or static variables unless absolutely
+-   Don't use non-const global or static variables unless absolutely
     necessary.
 
--   When formatting strings, don\'t use `snprintf`. Instead, use
+-   When formatting strings, don't use `snprintf`. Instead, use
     `std::ostringstream` or build the string using the `+` `std::string`
     operator:
 
@@ -469,20 +465,20 @@ Here is a brief set of guidelines:
             return os.str();
         }
 
--   OpenVPN 3 is a \"header-only\" library, therefore all free functions
+-   OpenVPN 3 is a *header-only* library, therefore all free functions
     outside of classes should have the `inline` attribute.
 
 ### Conventions
 
--   Use the **Asio** library for I/O and timers. Don\'t deal with
+-   Use the **Asio** library for I/O and timers. Don't deal with
     sockets directly.
 
 -   Never block. If you need to wait for something, use **Asio** timers
     or sockets.
 
--   Use the `OPENVPN_LOG()` macro to log stuff. Don\'t use `printf`.
+-   Use the `OPENVPN_LOG()` macro to log stuff. Don't use `printf`.
 
--   Don\'t call crypto/ssl libraries directly. Instead use the
+-   Don't call crypto/ssl libraries directly. Instead use the
     abstraction layers ([openvpn/crypto](openvpn/crypto) and
     [openvpn/ssl](openvpn/ssl)) that allow OpenVPN to link with
     different crypto/ssl libraries (such as **OpenSSL** or **mbed
@@ -503,7 +499,7 @@ Here is a brief set of guidelines:
 
 -   In general, if you need a general-purpose library class or function,
     look under [openvpn/common](openvpn/common). Chances are good that
-    it\'s already been implemented.
+    it's already been implemented.
 
 -   The OpenVPN 3 approach to errors is to count them, rather than
     unconditionally log them. If you need to add a new error counter,
@@ -537,7 +533,7 @@ Here is a brief set of guidelines:
     the symbol name, e.g.:
 
         struct dirent *e;
-        while ((e = \::readdir(dir.get())) != nullptr) {
+        while ((e = ::readdir(dir.get())) != nullptr) {
             ...
         }
 
@@ -549,15 +545,15 @@ The OpenVPN 3 client core is designed to run in a single thread, with
 the UI or controller driving the OpenVPN API running in a different
 thread.
 
-It\'s almost never necessary to create additional threads within the
+It's almost never necessary to create additional threads within the
 OpenVPN 3 client core.
 
 Contributing
 ------------
 
-See [CONTRIBUTING.rst](CONTRIBUTING.rst).
+See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 License
 -------
 
-See [LICENSE.rst](LICENSE.rst).
+See [LICENSE.md](LICENSE.md).
