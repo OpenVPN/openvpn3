@@ -9,7 +9,10 @@
 //    SPDX-License-Identifier: MPL-2.0 OR AGPL-3.0-only WITH openvpn3-openssl-exception
 //
 
-// Unit test for OpenVPN Protocol implementation (class ProtoContext)
+/**
+   @file
+   @brief Unit test for OpenVPN Protocol implementation (class ProtoContext)
+*/
 
 #include "test_common.h"
 
