@@ -71,9 +71,17 @@
 #include <openvpn/apple/reach.hpp>
 
 namespace openvpn {
+#if defined(__APPLE__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
 namespace CF {
 OPENVPN_CF_WRAP(NetworkReachability, network_reachability_cast, SCNetworkReachabilityRef, SCNetworkReachabilityGetTypeID);
 }
+
+#if defined(__APPLE__)
+#pragma clang diagnostic pop
+#endif
 
 class ReachabilityBase
 {
@@ -110,6 +118,10 @@ class ReachabilityBase
         return vstatus(flags());
     }
 
+#if defined(__APPLE__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
     SCNetworkReachabilityFlags flags() const
     {
         SCNetworkReachabilityFlags f = 0;
@@ -118,6 +130,9 @@ class ReachabilityBase
         else
             return 0;
     }
+#if defined(__APPLE__)
+#pragma clang diagnostic pop
+#endif
 
     static std::string render_type(Type type)
     {
@@ -203,6 +218,10 @@ class ReachabilityBase
 class ReachabilityViaInternet : public ReachabilityBase
 {
   public:
+#if defined(__APPLE__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
     ReachabilityViaInternet()
     {
         struct sockaddr_in addr;
@@ -211,6 +230,9 @@ class ReachabilityViaInternet : public ReachabilityBase
         addr.sin_family = AF_INET;
         reach.reset(SCNetworkReachabilityCreateWithAddress(kCFAllocatorDefault, (struct sockaddr *)&addr));
     }
+#if defined(__APPLE__)
+#pragma clang diagnostic pop
+#endif
 
     Type vtype() const override
     {
@@ -277,7 +299,14 @@ class ReachabilityViaWiFi : public ReachabilityBase
         addr.sin_len = sizeof(addr);
         addr.sin_family = AF_INET;
         addr.sin_addr.s_addr = htonl(IN_LINKLOCALNETNUM); // 169.254.0.0.
+#if defined(__APPLE__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
         reach.reset(SCNetworkReachabilityCreateWithAddress(kCFAllocatorDefault, (struct sockaddr *)&addr));
+#if defined(__APPLE__)
+#pragma clang diagnostic pop
+#endif
     }
 
     Type vtype() const override
@@ -418,6 +447,10 @@ class ReachabilityTracker
         SCNetworkReachabilityContext context = {0, this, nullptr, nullptr, nullptr};
         if (rb.reach.defined())
         {
+#if defined(__APPLE__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
             if (SCNetworkReachabilitySetCallback(rb.reach(),
                                                  cb,
                                                  &context)
@@ -429,16 +462,26 @@ class ReachabilityTracker
                 == FALSE)
                 return false;
             return true;
+#if defined(__APPLE__)
+#pragma clang diagnostic pop
+#endif
         }
         else
             return false;
     }
 
+#if defined(__APPLE__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
     void cancel(ReachabilityBase &rb)
     {
         if (rb.reach.defined())
             SCNetworkReachabilityUnscheduleFromRunLoop(rb.reach(), CFRunLoopGetCurrent(), kCFRunLoopCommonModes);
     }
+#if defined(__APPLE__)
+#pragma clang diagnostic pop
+#endif
 
     static void internet_callback_static(SCNetworkReachabilityRef target,
                                          SCNetworkReachabilityFlags flags,
