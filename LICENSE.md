@@ -1,11 +1,8 @@
-OpenVPN 3 is distributed under
-`GNU Affero General Public License version 3 <LICENSES/AGPL-3.0-only.txt>`_
-or
-`Mozilla Public License Version 2.0 <LICENSES/MPL-2.0.txt>` _
+OpenVPN 3 is distributed under [GNU Affero General Public License
+version 3](LICENSES/AGPL-3.0-only.txt) or [Mozilla Public License
+Version 2.0 \<LICENSES/MPL-2.0.txt\>]{.title-ref} \_
 
 with a special permission to link against OpenSSL when using AGPLv3:
-
-::
 
     Additional permission under GNU AGPL version 3 section 7
 
@@ -17,7 +14,6 @@ with a special permission to link against OpenSSL when using AGPLv3:
     combination shall include the source code for the parts of OpenSSL used as
     well as that of the covered work.
 
-
-
-Note that this special permission is only needed for OpenSSL versions older than
-OpenSSL 3.0 as OpenSSL 3.0 uses the Apache 2.0 license instead.
+Note that this special permission is only needed for OpenSSL versions
+older than OpenSSL 3.0 as OpenSSL 3.0 uses the Apache 2.0 license
+instead.
