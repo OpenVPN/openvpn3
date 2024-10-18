@@ -223,31 +223,31 @@ patterns such as
 ### OpenVPN 3 Client Core
 
 OpenVPN 3 is designed as a class library, with an API that is
-essentially defined inside of namespace `ClientAPI` with headers and
+essentially defined inside of **namespace openvpn::ClientAPI** with headers and
 implementation in [client](client) and header-only library files under
 [openvpn](openvpn).
 
 The consise definition of the client API is essentially
-`class OpenVPNClient` in [client/ovpncli.hpp](client/ovpncli.hpp) with
+**class openvpn::ClientAPI::OpenVPNClient** in [client/ovpncli.hpp](client/ovpncli.hpp) with
 several imporant extensions to the API found in:
 
--   `class TunBuilderBase` in
+-   **class openvpn::TunBuilderBase** in
     [openvpn/tun/builder/base.hpp](openvpn/tun/builder/base.hpp) ---
     Provides an abstraction layer defining the *tun* interface, and is
     especially useful for interfacing with an OS-layer VPN API.
--   `class ExternalPKIBase` in
+-   **class openvpn::ExternalPKIBase** in
     [openvpn/pki/epkibase.hpp](openvpn/pki/epkibase.hpp) --- Provides a
     callback for external private key operations, and is useful for
     interfacing with an OS-layer Keychain such as the Keychain on iOS,
     Mac OS X, and Android, and the Crypto API on Windows.
--   `class LogReceiver` in [client/ovpncli.hpp](client/ovpncli.hpp) ---
+-   **class openvpn::ClientAPI::LogReceiver** in [client/ovpncli.hpp](client/ovpncli.hpp) ---
     Provides an abstraction layer for the delivery of logging messages.
 
 OpenVPN 3 includes a command-line reference client (`cli`) for testing
 the API. See [test/ovpncli/cli.cpp](test/ovpncli/cli.cpp).
 
 The basic approach to building an OpenVPN 3 client is to define a client
-class that derives from `ClientAPI::OpenVPNClient`, then provide
+class that derives from openvpn::ClientAPI::OpenVPNClient, then provide
 implementations for callbacks including event and logging notifications:
 
     class Client : public ClientAPI::OpenVPNClient
@@ -263,10 +263,10 @@ implementations for callbacks including event and logging notifications:
         ...
     };
 
-To start the client, first create a `ClientAPI::ProtoConfig` object and
+To start the client, first create a **openvpn::ProtoContext::ProtoConfig** object and
 initialize it with the OpenVPN config file and other options:
 
-    ClientAPI::ProtoConfig config;
+    ProtoContext::ProtoConfig config;
     config.content = <config_file_content_as_multiline_string>;
     ...
 
@@ -294,7 +294,7 @@ higher-level objects that implement the OpenVPN client session.
 
 ### Connection
 
-`class ClientConnect` in
+**class openvpn::ClientConnect** in
 [openvpn/client/cliconnect.hpp](openvpn/client/cliconnect.hpp)
 implements the top-level connection logic for an OpenVPN client
 connection. It is concerned with starting, stopping, pausing, and
@@ -312,17 +312,17 @@ thread-safe function posts a message to the actual connection thread.
 In an OpenVPN client connection, the following object stack would be
 used:
 
-1.  `class ClientConnect` in
+1.  **class openvpn::ClientConnect** in
     [openvpn/client/cliconnect.hpp](openvpn/client/cliconnect.hpp) ---
     The top-layer object in an OpenVPN client connection.
-2.  `class ClientProto::Session` in
+2.  **class openvpn::ClientProto::Session** in
     [openvpn/client/cliproto.hpp](openvpn/client/cliproto.hpp) --- The
     OpenVPN client protocol object that subinstantiates the transport
     and tun layer objects.
-3.  `class ProtoContext` in
+3.  **class openvpn::ProtoContext** in
     [openvpn/ssl/proto.hpp](openvpn/ssl/proto.hpp) --- The core OpenVPN
     protocol implementation that is common to both client and server.
-4.  `class ProtoStackBase<Packet>` in
+4.  **openvpn::ProtoStackBase** (with **openvpn::Packet**) in
     [openvpn/ssl/protostack.hpp](openvpn/ssl/protostack.hpp) --- The
     bottom-layer class that implements the basic functionality of
     tunneling a protocol over a reliable or unreliable transport layer,
@@ -351,7 +351,7 @@ OpenVPN 3 defines abstract base classes for Tun layer implementations in
 There are two possible approaches to define a Tun layer implementation:
 
 1.  Use a VPN API-centric model (such as for Android or iOS). These
-    models derive from **class TunBuilderBase** in
+    models derive from **class openvpn::TunBuilderBase** in
     [openvpn/tun/builder/base.hpp](openvpn/tun/builder/base.hpp)
 2.  Use an OS-specific model such as:
     -   **Linux** ---
@@ -363,13 +363,13 @@ There are two possible approaches to define a Tun layer implementation:
 
 ### Protocol Layer
 
-The OpenVPN protocol is implemented in **class ProtoContext** in
+The OpenVPN protocol is implemented in **class openvpn::ProtoContext** in
 [openvpn/ssl/proto.hpp](openvpn/ssl/proto.hpp).
 
 ### Options Processing
 
 The parsing and query of the OpenVPN config file is implemented by
-`class OptionList` in
+**class openvpn::OptionList** in
 [openvpn/common/options.hpp](openvpn/common/options.hpp).
 
 Note that OpenVPN 3 always assumes an *inline* style of configuration,
@@ -377,13 +377,14 @@ where all certs, keys, etc. are defined inline rather than through an
 external file reference.
 
 For config files that do use external file references,
-`class ProfileMerge` in
+**class openvpn::ProfileMerge** in
 [openvpn/options/merge.hpp](openvpn/options/merge.hpp) is provided to
 merge those external file references into an inline form.
 
 ### Calling the Client API from other languages
 
-The OpenVPN 3 client API, as defined by `class OpenVPNClient` in
+The OpenVPN 3 client API, as defined by
+**class openvpn::ClientAPI::OpenVPNClient** in
 [client/ovpncli.hpp](client/ovpncli.hpp), can be wrapped by the
 [Swig](http://www.swig.org/) tool to create bindings for other
 languages.
@@ -404,7 +405,8 @@ Here is a brief set of guidelines:
     `char *`.
 
 -   When dealing with binary data or buffers, always try to use a
-    `Buffer`, `ConstBuffer`, `BufferAllocatedRc`, or `BufferPtr` object
+    `openvpn::Buffer`, `openvpn::ConstBuffer`, `openvpn::BufferAllocatedRc`,
+    or `openvpn::BufferPtr` object
     to provide managed access to the buffer, to protect against security
     bugs that arise when using raw buffer pointers. See
     [openvpn/buffer/buffer.hpp](openvpn/buffer/buffer.hpp) for the
@@ -436,7 +438,7 @@ Here is a brief set of guidelines:
 
 -   When grabbing random entropy that is to be used for cryptographic
     purposes (i.e. for keys, tokens, etc.), always ensure that the RNG
-    is crypto-grade by using `class StrongRandomAPI` as the RNG type:
+    is crypto-grade by using **class openvpn::StrongRandomAPI** as the RNG type:
 
         StrongRandomAPI::Ptr rng;
         void set_rng(StrongRandomAPI::Ptr rng_arg) {
@@ -484,11 +486,11 @@ Here is a brief set of guidelines:
     different crypto/ssl libraries (such as **OpenSSL** or **mbed
     TLS**).
 
--   Use `RandomAPI` as a wrapper for random number generators
+-   Use openvpn::RandomAPI as a wrapper for random number generators
     ([openvpn/random/randapi.hpp](openvpn/random/randapi.hpp)).
 
 -   If you need to deal with configuration file options, see
-    `class OptionList` in
+    class openvpn::OptionList in
     [openvpn/common/options.hpp](openvpn/common/options.hpp).
 
 -   If you need to deal with time or time durations, use the classes
@@ -515,11 +517,11 @@ Here is a brief set of guidelines:
     object is also a common use case for weak pointers.
 
 -   Use C++ exceptions for error handling and as an alternative to
-    `goto`. See OpenVPN\'s general exception classes and macros in
+    `goto`. See OpenVPN's general exception classes and macros in
     [openvpn/common/exception.hpp](openvpn/common/exception.hpp).
 
 -   Use C++ destructors for automatic object cleanup, and so that thrown
-    exceptions will not leak objects. Alternatively, use `Cleanup` in
+    exceptions will not leak objects. Alternatively, use openvpn::Cleanup in
     [openvpn/common/cleanup.hpp](openvpn/common/cleanup.hpp) when you
     need to specify a code block to execute prior to scope exit. For
     example, ensure that the file `pid_fn` is deleted before scope exit:
