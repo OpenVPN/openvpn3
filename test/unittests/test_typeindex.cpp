@@ -121,7 +121,7 @@ TEST(typeindex, test)
     }
 }
 
-#ifndef HAVE_VALGRIND
+#ifndef INSTRUMENTATION_SLOWDOWN
 
 // test performance of self() as alternative to dynamic_cast
 TEST(typeindex, perf_test_fast)

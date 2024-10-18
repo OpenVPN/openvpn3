@@ -17,7 +17,7 @@
 
 namespace openvpn {
 
-#ifdef HAVE_VALGRIND
+#ifdef INSTRUMENTATION_SLOWDOWN
 static constexpr unsigned int WAIT_BARRIER_TIMEOUT = 300;
 #else
 static constexpr unsigned int WAIT_BARRIER_TIMEOUT = 30;

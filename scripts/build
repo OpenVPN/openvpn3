@@ -316,13 +316,14 @@ fi
 # ASAN requested -- ensure higher-fidelity stacks
 if [ "$ASAN" = "1" ]; then
     FLAGS+=" -ggdb3 -fno-omit-frame-pointer -fsanitize=address"
+    CPPFLAGS="$CPPFLAGS -DINSTRUMENTATION_SLOWDOWN"
 else
     ASAN=
 fi
 
 # Valgrind -- but only if ASAN is not enabled
 if [ "$ASAN" = "" -a "$VAL" ]; then
-    CPPFLAGS="$CPPFLAGS -DHAVE_VALGRIND"
+    CPPFLAGS="$CPPFLAGS -DHAVE_VALGRIND -DINSTRUMENTATION_SLOWDOWN"
 fi
 
 # JVM

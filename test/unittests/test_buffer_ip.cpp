@@ -40,7 +40,7 @@ TEST(buffer_ip, hex)
     }
 }
 
-#ifdef HAVE_VALGRIND
+#ifdef INSTRUMENTATION_SLOWDOWN
 static constexpr int ITER = 10000;
 #else
 static constexpr int ITER = 1000000;

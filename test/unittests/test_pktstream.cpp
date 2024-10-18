@@ -30,7 +30,7 @@ static size_t rand_size(RandomAPI &prng)
 template <typename PKTSTREAM>
 static void do_test(const bool grow, const bool verbose)
 {
-#ifdef HAVE_VALGRIND
+#ifdef INSTRUMENTATION_SLOWDOWN
     const int n_iter = 500;
 #else
     const int n_iter = 250000;
