@@ -12,6 +12,7 @@
 #ifndef OPENVPN_ADDR_RANGE_H
 #define OPENVPN_ADDR_RANGE_H
 
+#include <cstddef> // for std::size_t
 #include <string>
 #include <sstream>
 
@@ -74,7 +75,7 @@ class RangeType
         }
 
         ADDR addr_;
-        size_t remaining_;
+        std::size_t remaining_;
     };
 
     RangeType()
@@ -82,7 +83,7 @@ class RangeType
     {
     }
 
-    RangeType(const ADDR &start, const size_t extent)
+    RangeType(const ADDR &start, const std::size_t extent)
         : start_(start), extent_(extent)
     {
     }
@@ -115,12 +116,12 @@ class RangeType
         return start_;
     }
 
-    size_t extent() const
+    std::size_t extent() const
     {
         return extent_;
     }
 
-    RangeType pull_front(size_t extent)
+    RangeType pull_front(std::size_t extent)
     {
         if (extent > extent_)
             extent = extent_;
@@ -139,14 +140,14 @@ class RangeType
 
   private:
     ADDR start_;
-    size_t extent_;
+    std::size_t extent_;
 };
 
 template <typename ADDR>
 class RangePartitionType
 {
   public:
-    RangePartitionType(const RangeType<ADDR> &src_range, const size_t n_partitions)
+    RangePartitionType(const RangeType<ADDR> &src_range, const std::size_t n_partitions)
         : range(src_range),
           remaining(n_partitions)
     {
@@ -169,7 +170,7 @@ class RangePartitionType
 
   private:
     RangeType<ADDR> range;
-    size_t remaining;
+    std::size_t remaining;
 };
 
 typedef RangeType<IP::Addr> Range;
