@@ -48,6 +48,7 @@ if (ENABLE_DOXYGEN)
     set(DOXYGEN_EXCLUDE_PATTERNS
         "*/vcpkg_installed/*"
         "*/googletest-src/*"
+        "*/rapidcheck-src/*"
         "${PROJECT_SOURCE_DIR}/deps/*"
         "*/test/unittests/comp-testdata/*"
         "*/test/unittests/input/*"
