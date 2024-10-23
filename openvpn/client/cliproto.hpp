@@ -433,12 +433,21 @@ class Session : ProtoContextCallbackInterface,
             if (buf.size())
             {
                 const ProtoContext::ProtoConfig &c = proto_context.conf();
+
+                bool df = true;
+
+                if (IPCommon::version(buf[0]) == IPCommon::IPv4 && buf.size() >= sizeof(struct IPv4Header))
+                {
+                    df = IPv4Header::is_df_set(buf.c_data());
+                }
+
                 // when calculating mss, we take IPv4 and TCP headers into account
                 // here we need to add it back since we check the whole IP packet size, not just TCP payload
                 constexpr size_t MinTcpHeader = 20;
                 constexpr size_t MinIpHeader = 20;
                 size_t mss_no_tcp_ip_encap = c.mss_fix + (MinTcpHeader + MinIpHeader);
-                if (c.mss_fix > 0 && buf.size() > mss_no_tcp_ip_encap)
+
+                if (df && c.mss_fix > 0 && buf.size() > mss_no_tcp_ip_encap)
                 {
                     Ptb::generate_icmp_ptb(buf, clamp_to_typerange<unsigned short>(mss_no_tcp_ip_encap));
                     tun->tun_send(buf);
@@ -1200,6 +1209,10 @@ class Session : ProtoContextCallbackInterface,
         if (creds && !proto_context.conf().relay_mode)
         {
             OPENVPN_LOG("Creds: " << creds->auth_info());
+            if (!creds->session_id_defined() && creds->password_needed() && !creds->password_defined())
+            {
+                throw ErrorCode(Error::NEED_CREDS, true, "missing password");
+            }
             proto_context.write_auth_string(creds->get_username(), buf);
 #ifdef OPENVPN_DISABLE_AUTH_TOKEN // debugging only
             if (creds->session_id_defined())

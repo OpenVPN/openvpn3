@@ -60,6 +60,20 @@
             }
         },
         {
+            "name": "base-mac",
+            "hidden": true,
+            "binaryDir": "${sourceDir}/out/build/${presetName}",
+            "cacheVariables": {
+                "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
+                "CMAKE_C_COMPILER": "/usr/bin/clang",
+                "CMAKE_CXX_COMPILER": "/usr/bin/clang++",
+                "CLI_NULLTUN": {
+                    "value": "ON",
+                    "type": "BOOL"
+                }
+            }
+        },
+        {
             "name": "base-mingw",
             "hidden": true,
             "generator": "Unix Makefiles",
@@ -285,6 +299,20 @@
                 "debug",
                 "tunbuilder"
             ]
+        },
+        {
+            "name": "mac-debug",
+            "inherits": [
+                "base-mac",
+                "debug"
+            ]
+        },
+        {
+            "name": "mac-release",
+            "inherits": [
+                "base-mac",
+                "release"
+            ]
         }
     ],
     "buildPresets": [
@@ -357,6 +385,16 @@
             "name": "linux-x64-debug-tunbuilder",
             "configurePreset": "linux-x64-debug-tunbuilder",
             "configuration": "Debug"
+        },
+        {
+            "name": "mac-debug",
+            "configurePreset": "mac-debug",
+            "configuration": "Debug"
+        },
+        {
+            "name": "mac-release",
+            "configurePreset": "mac-release",
+            "configuration": "Release"
         }
     ],
     "testPresets": [

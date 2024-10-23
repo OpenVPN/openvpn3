@@ -49,28 +49,11 @@ class MacGatewayInfo
         char m_space[512];
     };
 
-#define OPENVPN_ROUNDUP(a) \
-    ((a) > 0 ? (1 + (((a)-1) | (sizeof(std::uint32_t) - 1))) : sizeof(std::uint32_t))
-
-#define OPENVPN_NEXTADDR(w, u)          \
-    if (rtm_addrs & (w))                \
-    {                                   \
-        l = OPENVPN_ROUNDUP(u.sin_len); \
-        std::memmove(cp, &(u), l);      \
-        cp += l;                        \
+    constexpr std::uint32_t openvpn_roundup(std::uint32_t a)
+    {
+        constexpr std::uint32_t size = sizeof(std::uint32_t);
+        return a > 0 ? (1 + ((a - 1) | (size - 1))) : size;
     }
-
-
-#define OPENVPN_NEXTADDR6(w, u)          \
-    if (rtm_addrs & (w))                 \
-    {                                    \
-        l = OPENVPN_ROUNDUP(u.sin6_len); \
-        std::memmove(cp, &(u), l);       \
-        cp += l;                         \
-    }
-
-#define OPENVPN_ADVANCE(x, n) \
-    (x += OPENVPN_ROUNDUP((n)->sa_len))
 
   public:
     OPENVPN_EXCEPTION(route_gateway_error);
@@ -85,81 +68,70 @@ class MacGatewayInfo
 
     MacGatewayInfo(IP::Addr dest)
     {
-        struct rtmsg m_rtmsg;
-        ScopedFD sockfd;
-        int seq, l, pid, rtm_addrs;
-        sockaddr_in so_dst{}, so_mask{};
-        sockaddr_in6 so_dst6{};
-        char *cp = m_rtmsg.m_space;
-        struct sockaddr *gate = nullptr, *ifp = nullptr, *sa;
-        struct rt_msghdr *rtm_aux;
-
         /* setup data to send to routing socket */
-        pid = ::getpid();
-        seq = 0;
-        rtm_addrs = RTA_DST | RTA_NETMASK | RTA_IFP;
+        int seq = 0;
 
-        std::memset(&m_rtmsg, 0, sizeof(m_rtmsg));
-        std::memset(&m_rtmsg.m_rtm, 0, sizeof(struct rt_msghdr));
+        struct rtmsg m_rtmsg
+        {
+        };
 
         m_rtmsg.m_rtm.rtm_type = RTM_GET;
-        m_rtmsg.m_rtm.rtm_flags = RTF_UP | RTF_GATEWAY;
+        m_rtmsg.m_rtm.rtm_flags = RTF_UP;
         m_rtmsg.m_rtm.rtm_version = RTM_VERSION;
         m_rtmsg.m_rtm.rtm_seq = ++seq;
-        m_rtmsg.m_rtm.rtm_addrs = rtm_addrs;
+        m_rtmsg.m_rtm.rtm_addrs = RTA_DST | RTA_GATEWAY | RTA_IFP;
+        m_rtmsg.m_rtm.rtm_msglen = sizeof(struct rt_msghdr);
 
-        const bool ipv6 = dest.is_ipv6();
-
-        if (!ipv6)
+        if (!dest.is_ipv6())
         {
-            so_dst = dest.to_ipv4().to_sockaddr();
-            // 32 netmask to lookup the route to the destination
-            so_mask.sin_family = AF_INET;
-            so_mask.sin_addr.s_addr = 0xffffffff;
-            so_mask.sin_len = sizeof(struct sockaddr_in);
+            auto dst4 = reinterpret_cast<sockaddr_in *>(&m_rtmsg.m_space);
+            *dst4 = dest.to_ipv4().to_sockaddr();
 
-            OPENVPN_NEXTADDR(RTA_DST, so_dst);
-            OPENVPN_NEXTADDR(RTA_NETMASK, so_mask);
+            m_rtmsg.m_rtm.rtm_msglen += openvpn_roundup(sizeof(struct sockaddr_in));
         }
         else
         {
-            so_dst6 = dest.to_ipv6().to_sockaddr();
-            OPENVPN_NEXTADDR6(RTA_DST, so_dst6);
+            auto dst6 = reinterpret_cast<sockaddr_in6 *>(&m_rtmsg.m_space);
+            *dst6 = dest.to_ipv6().to_sockaddr();
+
+            m_rtmsg.m_rtm.rtm_msglen += openvpn_roundup(sizeof(struct sockaddr_in6));
         }
 
-        m_rtmsg.m_rtm.rtm_msglen = l = cp - (char *)&m_rtmsg;
-
         /* transact with routing socket */
+        ScopedFD sockfd;
         sockfd.reset(socket(PF_ROUTE, SOCK_RAW, 0));
         if (!sockfd.defined())
             throw route_gateway_error("GDG: socket #1 failed");
 
-        auto ret = ::write(sockfd(), (char *)&m_rtmsg, l);
+        auto ret = ::write(sockfd(), &m_rtmsg, m_rtmsg.m_rtm.rtm_msglen);
         if (ret < 0)
             throw route_gateway_error("GDG: problem writing to routing socket: " + std::to_string(ret)
                                       + " errno: " + std::to_string(errno) + " msg: " + ::strerror(errno));
 
+        int l = 0;
+        int pid = ::getpid();
         do
         {
-            l = ::read(sockfd(), (char *)&m_rtmsg, sizeof(m_rtmsg));
+            l = ::read(sockfd(), &m_rtmsg, sizeof(m_rtmsg));
         } while (l > 0 && (m_rtmsg.m_rtm.rtm_seq != seq || m_rtmsg.m_rtm.rtm_pid != pid));
         sockfd.close();
 
         /* extract return data from routing socket */
-        rtm_aux = &m_rtmsg.m_rtm;
-        cp = ((char *)(rtm_aux + 1));
+        struct sockaddr *gate = nullptr, *ifp = nullptr, *sa;
+        struct rt_msghdr *rtm_aux = &m_rtmsg.m_rtm;
+        auto cp = reinterpret_cast<char *>(rtm_aux + 1);
         if (rtm_aux->rtm_addrs)
         {
             for (unsigned int i = 1; i; i <<= 1u)
             {
                 if (i & rtm_aux->rtm_addrs)
                 {
-                    sa = (struct sockaddr *)cp;
+                    sa = reinterpret_cast<struct sockaddr *>(cp);
                     if (i == RTA_GATEWAY)
                         gate = sa;
                     else if (i == RTA_IFP)
                         ifp = sa;
-                    OPENVPN_ADVANCE(cp, sa);
+                    cp += openvpn_roundup(sa->sa_len);
                 }
             }
         }
@@ -177,7 +149,7 @@ class MacGatewayInfo
             if (ifp)
             {
                 /* get interface name */
-                const struct sockaddr_dl *adl = (struct sockaddr_dl *)ifp;
+                const auto adl = reinterpret_cast<struct sockaddr_dl *>(ifp);
                 const size_t len = adl->sdl_nlen;
                 if (len && len < sizeof(iface_))
                 {
@@ -235,7 +207,7 @@ class MacGatewayInfo
                     && ifa->ifa_addr->sa_family == AF_LINK
                     && !strncmp(ifa->ifa_name, iface_, IFNAMSIZ))
                 {
-                    const struct sockaddr_dl *sockaddr_dl = reinterpret_cast<struct sockaddr_dl *>(ifa->ifa_addr);
+                    const auto sockaddr_dl = reinterpret_cast<struct sockaddr_dl *>(ifa->ifa_addr);
 
                     hwaddr_.reset(reinterpret_cast<unsigned char *>(LLADDR(sockaddr_dl)));
                     flags_ |= HWADDR_DEFINED;
@@ -243,10 +215,6 @@ class MacGatewayInfo
             }
         }
     }
-#undef OPENVPN_ROUNDUP
-#undef OPENVPN_NEXTADDR
-#undef OPENVPN_NEXTADDR6
-#undef OPENVPN_ADVANCE
 
     std::string info() const
     {

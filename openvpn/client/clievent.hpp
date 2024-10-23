@@ -89,6 +89,7 @@ enum Type
     COMPRESS_ERROR,
     NTLM_MISSING_CRYPTO,
     SESSION_EXPIRED,
+    NEED_CREDS,
 
     N_TYPES
 };
@@ -158,7 +159,8 @@ inline const char *event_name(const Type type)
         "RELAY_ERROR",
         "COMPRESS_ERROR",
         "NTLM_MISSING_CRYPTO",
-        "SESSION_EXPIRED"};
+        "SESSION_EXPIRED",
+        "NEED_CREDS"};
 
     static_assert(N_TYPES == array_size(names), "event names array inconsistency");
     if (type < N_TYPES)
@@ -481,6 +483,14 @@ struct Connected : public Base
             << " gw=[" << vpn_gw4 << '/' << vpn_gw6 << ']'
             << " mtu=" << vpn_mtu;
         return out.str();
+    }
+};
+
+struct NeedCreds : public Base
+{
+    NeedCreds()
+        : Base(NEED_CREDS)
+    {
     }
 };
 
