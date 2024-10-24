@@ -438,14 +438,14 @@ class TunBuilderCapture : public TunBuilderBase, public RC<thread_unsafe_refcoun
 #endif
     };
 
-    virtual bool tun_builder_set_remote_address(const std::string &address, bool ipv6) override
+    bool tun_builder_set_remote_address(const std::string &address, bool ipv6) override
     {
         remote_address.address = address;
         remote_address.ipv6 = ipv6;
         return true;
     }
 
-    virtual bool tun_builder_add_address(const std::string &address, int prefix_length, const std::string &gateway, bool ipv6, bool net30) override
+    bool tun_builder_add_address(const std::string &address, int prefix_length, const std::string &gateway, bool ipv6, bool net30) override
     {
         RouteAddress r;
         r.address = address;
@@ -461,7 +461,7 @@ class TunBuilderCapture : public TunBuilderBase, public RC<thread_unsafe_refcoun
         return true;
     }
 
-    virtual bool tun_builder_reroute_gw(bool ipv4, bool ipv6, unsigned int flags) override
+    bool tun_builder_reroute_gw(bool ipv4, bool ipv6, unsigned int flags) override
     {
         reroute_gw.ipv4 = ipv4;
         reroute_gw.ipv6 = ipv6;
@@ -469,13 +469,13 @@ class TunBuilderCapture : public TunBuilderBase, public RC<thread_unsafe_refcoun
         return true;
     }
 
-    virtual bool tun_builder_set_route_metric_default(int metric) override
+    bool tun_builder_set_route_metric_default(int metric) override
     {
         route_metric_default = metric;
         return true;
     }
 
-    virtual bool tun_builder_add_route(const std::string &address, int prefix_length, int metric, bool ipv6) override
+    bool tun_builder_add_route(const std::string &address, int prefix_length, int metric, bool ipv6) override
     {
         Route r;
         r.address = address;
@@ -486,7 +486,7 @@ class TunBuilderCapture : public TunBuilderBase, public RC<thread_unsafe_refcoun
         return true;
     }
 
-    virtual bool tun_builder_exclude_route(const std::string &address, int prefix_length, int metric, bool ipv6) override
+    bool tun_builder_exclude_route(const std::string &address, int prefix_length, int metric, bool ipv6) override
     {
         Route r;
         r.address = address;
@@ -505,7 +505,7 @@ class TunBuilderCapture : public TunBuilderBase, public RC<thread_unsafe_refcoun
      * @param dns       The --dns options to be set
      * @return true     unconditionally
      */
-    virtual bool tun_builder_add_dns_options(const DnsOptions &dns) override
+    bool tun_builder_add_dns_options(const DnsOptions &dns) override
     {
         reset_dns_servers();
         reset_search_domains();
@@ -514,7 +514,7 @@ class TunBuilderCapture : public TunBuilderBase, public RC<thread_unsafe_refcoun
         return true;
     }
 
-    virtual bool tun_builder_add_dns_server(const std::string &address, bool ipv6) override
+    bool tun_builder_add_dns_server(const std::string &address, bool ipv6) override
     {
         DNSServer dns;
         dns.address = address;
@@ -523,7 +523,7 @@ class TunBuilderCapture : public TunBuilderBase, public RC<thread_unsafe_refcoun
         return true;
     }
 
-    virtual bool tun_builder_add_search_domain(const std::string &domain) override
+    bool tun_builder_add_search_domain(const std::string &domain) override
     {
         SearchDomain dom;
         dom.domain = domain;
@@ -531,31 +531,31 @@ class TunBuilderCapture : public TunBuilderBase, public RC<thread_unsafe_refcoun
         return true;
     }
 
-    virtual bool tun_builder_set_adapter_domain_suffix(const std::string &name) override
+    bool tun_builder_set_adapter_domain_suffix(const std::string &name) override
     {
         adapter_domain_suffix = name;
         return true;
     }
 
-    virtual bool tun_builder_set_layer(int layer) override
+    bool tun_builder_set_layer(int layer) override
     {
         this->layer = Layer::from_value(layer);
         return true;
     }
 
-    virtual bool tun_builder_set_mtu(int mtu) override
+    bool tun_builder_set_mtu(int mtu) override
     {
         this->mtu = mtu;
         return true;
     }
 
-    virtual bool tun_builder_set_session_name(const std::string &name) override
+    bool tun_builder_set_session_name(const std::string &name) override
     {
         session_name = name;
         return true;
     }
 
-    virtual bool tun_builder_add_proxy_bypass(const std::string &bypass_host) override
+    bool tun_builder_add_proxy_bypass(const std::string &bypass_host) override
     {
         ProxyBypass b;
         b.bypass_host = bypass_host;
@@ -563,27 +563,27 @@ class TunBuilderCapture : public TunBuilderBase, public RC<thread_unsafe_refcoun
         return true;
     }
 
-    virtual bool tun_builder_set_proxy_auto_config_url(const std::string &url) override
+    bool tun_builder_set_proxy_auto_config_url(const std::string &url) override
     {
         proxy_auto_config_url.url = url;
         return true;
     }
 
-    virtual bool tun_builder_set_proxy_http(const std::string &host, int port) override
+    bool tun_builder_set_proxy_http(const std::string &host, int port) override
     {
         http_proxy.host = host;
         http_proxy.port = port;
         return true;
     }
 
-    virtual bool tun_builder_set_proxy_https(const std::string &host, int port) override
+    bool tun_builder_set_proxy_https(const std::string &host, int port) override
     {
         https_proxy.host = host;
         https_proxy.port = port;
         return true;
     }
 
-    virtual bool tun_builder_add_wins_server(const std::string &address) override
+    bool tun_builder_add_wins_server(const std::string &address) override
     {
         WINSServer wins;
         wins.address = address;
@@ -591,7 +591,7 @@ class TunBuilderCapture : public TunBuilderBase, public RC<thread_unsafe_refcoun
         return true;
     }
 
-    virtual bool tun_builder_set_allow_family(int af, bool value) override
+    bool tun_builder_set_allow_family(int af, bool value) override
     {
         if (af == AF_INET)
             block_ipv4 = !value;
