@@ -108,14 +108,9 @@ class CryptoDCSettingsData
         digest_ = digest;
     }
 
-    void set_aead_tag_end(bool at_the_end)
+    void set_use_epoch_keys(bool use_epoch)
     {
-        aead_tag_at_the_end = at_the_end;
-    }
-
-    void set_64_bit_packet_id(bool use_64bit_packet_id)
-    {
-        pktcounter_64bit = use_64bit_packet_id;
+        use_epoch_keys = use_epoch;
     }
 
     CryptoAlgs::Type cipher() const
@@ -135,14 +130,9 @@ class CryptoDCSettingsData
         return (CryptoAlgs::use_cipher_digest(cipher_) ? digest_ : CryptoAlgs::NONE);
     }
 
-    bool use64bitPktCounter() const
+    bool useEpochKeys() const
     {
-        return pktcounter_64bit;
-    }
-
-    bool aeadTagAtTheEnd() const
-    {
-        return aead_tag_at_the_end;
+        return use_epoch_keys;
     }
 
     void set_key_derivation(CryptoAlgs::KeyDerivation method)
@@ -160,8 +150,7 @@ class CryptoDCSettingsData
     CryptoAlgs::Type cipher_ = CryptoAlgs::NONE;
     CryptoAlgs::Type digest_ = CryptoAlgs::NONE;
     CryptoAlgs::KeyDerivation key_derivation_ = CryptoAlgs::KeyDerivation::OPENVPN_PRF;
-    bool pktcounter_64bit = false;
-    bool aead_tag_at_the_end = false;
+    bool use_epoch_keys = false;
 };
 
 // Factory for CryptoDCInstance objects
@@ -229,20 +218,11 @@ class CryptoDCSettings : public CryptoDCSettingsData
         }
     }
 
-    void set_aead_tag_end(bool at_the_end)
+    void set_use_epoch_keys(bool at_the_end)
     {
-        if (at_the_end != aeadTagAtTheEnd())
+        if (at_the_end != useEpochKeys())
         {
-            CryptoDCSettingsData::set_aead_tag_end(at_the_end);
-            dirty = true;
-        }
-    }
-
-    void set_64_bit_packet_id(bool use_64bit_packet_id)
-    {
-        if (use_64bit_packet_id != use64bitPktCounter())
-        {
-            CryptoDCSettingsData::set_64_bit_packet_id(use_64bit_packet_id);
+            CryptoDCSettingsData::set_use_epoch_keys(at_the_end);
             dirty = true;
         }
     }

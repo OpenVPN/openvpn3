@@ -840,13 +840,9 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
                             // Overrides "key-derivation" method set above
                             dc.set_key_derivation(CryptoAlgs::KeyDerivation::TLS_EKM);
                         }
-                        else if (flag == "aead-tag-end")
+                        else if (flag == "aead-epoch")
                         {
-                            dc.set_aead_tag_end(true);
-                        }
-                        else if (flag == "pkt-id-64-bit")
-                        {
-                            dc.set_64_bit_packet_id(true);
+                            dc.set_use_epoch_keys(true);
                         }
                         else
                         {
@@ -922,11 +918,8 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
 
             os << ", peer-id " << remote_peer_id;
 
-            if (dc.aeadTagAtTheEnd())
-                os << ", aead-tag-end";
-
-            if (dc.use64bitPktCounter())
-                os << ", pkt-id-64-bit";
+            if (dc.useEpochKeys())
+                os << ", aead-epoch";
 
             os << std::endl;
         }
