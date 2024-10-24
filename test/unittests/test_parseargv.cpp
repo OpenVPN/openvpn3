@@ -234,3 +234,17 @@ TEST(argv, parsetest1)
     options_csv_test("V4,dev-type tun,link-mtu 1558,tun-mtu 1500,proto UDPv4,comp-lzo,keydir 1,cipher AES-256-CBC,auth SHA1,keysize 256,tls-auth,key-method 2,tls-client",
                      "");
 }
+
+TEST(argv, QuotesTest)
+{
+    auto str = "\"abc,def\",\'abc,def\',\"abc',def\",\'abc\"def\',\'abc\"";
+    std::vector<std::string> list = Split::by_char<std::vector<std::string>, StandardLex, Split::NullLimit>(str, ',');
+    std::stringstream s;
+    std::copy(list.begin(), list.end(), std::ostream_iterator<std::string>(s, "\n"));
+    ASSERT_EQ("\"abc,def\"\n"
+              "\'abc,def'\n"
+              "\"abc',def\"\n"
+              "\'abc\"def\'\n"
+              "\'abc\"\n",
+              s.str());
+}

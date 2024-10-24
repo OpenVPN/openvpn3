@@ -38,8 +38,59 @@ struct SpaceMatch
     }
 };
 
+/**
+ * @brief Helper class to handle quote processing
+ *
+ * This class provides functionality to handle single and double quotes within a text.
+ * It allows treating single quotes as regular characters when inside double quotes,
+ * and vice versa.
+ */
+class LexQuoteMixin
+{
+  public:
+    /**
+     * @brief Check if currently inside a quote
+     * @return true if inside single or double quote, false otherwise
+     */
+    bool in_quote() const
+    {
+        return in_squote | in_dquote;
+    }
+
+  protected:
+    /**
+     * @brief Handle a character as a potential quote
+     *
+     * Toggles quote state if `c` is a single or double quote,
+     * considering the current context.
+     *
+     * @param c Character to process
+     * @return true if `c` is treated as a quote, false otherwise
+     */
+    bool handle_quote(char c)
+    {
+        if ((c == '\"') && (!in_squote))
+        {
+            in_dquote = !in_dquote;
+            return true;
+        }
+
+        if ((c == '\'') && (!in_dquote))
+        {
+            in_squote = !in_squote;
+            return true;
+        }
+
+        return false;
+    }
+
+  private:
+    bool in_squote = false; /**< State for single quotes */
+    bool in_dquote = false; /**< State for double quotes */
+};
+
 // A basic lexical analyzer that understands quoting
-class StandardLex
+class StandardLex : public LexQuoteMixin
 {
   public:
     void put(char c)
@@ -56,9 +107,8 @@ class StandardLex
             backslash_ = true;
             ch = -1;
         }
-        else if (c == '\"')
+        else if (handle_quote(c))
         {
-            in_quote_ = !in_quote_;
             ch = -1;
         }
         else
@@ -77,18 +127,12 @@ class StandardLex
     {
         ch = -1;
     }
-
-    bool in_quote() const
-    {
-        return in_quote_;
-    }
     bool in_backslash() const
     {
         return in_backslash_;
     }
 
   private:
-    bool in_quote_ = false;
     bool backslash_ = false;
     bool in_backslash_ = false;
     int ch = -1;

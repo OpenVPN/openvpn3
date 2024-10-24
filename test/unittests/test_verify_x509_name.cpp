@@ -84,6 +84,14 @@ TEST(VerifyX509Name, config_correct_name)
     VerifyX509Name ok_name(parse_testcfg(config));
 }
 
+TEST(VerifyX509Name, config_squote)
+{
+    // ensure that single quote is not treated as name part
+    std::string config = "verify-x509-name 'server.example.org'";
+    VerifyX509Name verify(parse_testcfg(config));
+    ASSERT_TRUE(verify.verify("server.example.org"));
+}
+
 TEST(VerifyX509Name, config_correct_name_prefix)
 {
     // Correct - type: name-prefix
