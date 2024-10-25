@@ -209,7 +209,7 @@ class SessionStats : public RC<thread_safe_refcount>
         dco_.reset(source);
     }
 
-    void dco_update()
+    bool dco_update()
     {
         if (dco_)
         {
@@ -228,7 +228,11 @@ class SessionStats : public RC<thread_safe_refcount>
             stats_[PACKETS_OUT] += data.transport_pkts_out;
             stats_[TUN_PACKETS_IN] += data.tun_pkts_in;
             stats_[TUN_PACKETS_OUT] += data.tun_pkts_out;
+
+            return true;
         }
+
+        return false;
     }
 
     /**
