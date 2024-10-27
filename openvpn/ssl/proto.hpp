@@ -3567,6 +3567,11 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
             return proto_field_ & iv_proto_flag::IV_PROTO_AUTH_PENDING_KW;
         }
 
+        bool client_supports_push_update() const
+        {
+            return proto_field_ & iv_proto_flag::IV_PROTO_PUSH_UPDATE;
+        }
+
       private:
         unsigned int proto_field_;
     };
