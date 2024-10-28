@@ -179,6 +179,8 @@ class TunBuilderCapture : public TunBuilderBase, public RC<thread_unsafe_refcoun
 #endif
 
       protected:
+        static constexpr int net30_prefix_length = 30;
+
         void validate_(const std::string &title, const bool require_canonical) const
         {
             const IP::Addr::Version ver = ipv6 ? IP::Addr::V6 : IP::Addr::V4;
@@ -187,7 +189,7 @@ class TunBuilderCapture : public TunBuilderBase, public RC<thread_unsafe_refcoun
                 OPENVPN_THROW_EXCEPTION(title << " : not a canonical route: " << route);
             if (!gateway.empty())
                 IP::Addr(gateway, title + ".gateway", ver);
-            if (net30 && route.prefix_len != 30)
+            if (net30 && route.prefix_len != net30_prefix_length)
                 OPENVPN_THROW_EXCEPTION(title << " : not a net30 route: " << route);
         }
     };
@@ -806,6 +808,8 @@ class TunBuilderCapture : public TunBuilderBase, public RC<thread_unsafe_refcoun
 
     std::vector<WINSServer> wins_servers; // Windows WINS servers
 
+    static constexpr int mtu_ipv4_maximum = 65'535;
+
   private:
     template <typename LIST>
     static void render_list(std::ostream &os, const std::string &title, const LIST &list)
@@ -849,7 +853,7 @@ class TunBuilderCapture : public TunBuilderBase, public RC<thread_unsafe_refcoun
 
     void validate_mtu(const std::string &title) const
     {
-        if (mtu < 0 || mtu > 65536)
+        if (mtu < 0 || mtu > mtu_ipv4_maximum)
             OPENVPN_THROW_EXCEPTION(title << ".mtu : MTU out of range: " << mtu);
     }
 
