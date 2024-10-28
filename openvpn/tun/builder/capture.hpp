@@ -591,12 +591,12 @@ class TunBuilderCapture : public TunBuilderBase, public RC<thread_unsafe_refcoun
         return true;
     }
 
-    bool tun_builder_set_allow_family(int af, bool value) override
+    bool tun_builder_set_allow_family(int af, bool allow) override
     {
         if (af == AF_INET)
-            block_ipv4 = !value;
+            block_ipv4 = !allow;
         else if (af == AF_INET6)
-            block_ipv6 = !value;
+            block_ipv6 = !allow;
         return true;
     }
 
