@@ -678,18 +678,18 @@ class TunBuilderCapture : public TunBuilderBase, public RC<thread_unsafe_refcoun
     std::string to_string() const
     {
         std::ostringstream os;
-        os << "Session Name: " << session_name << std::endl;
-        os << "Layer: " << layer.str() << std::endl;
+        os << "Session Name: " << session_name << '\n';
+        os << "Layer: " << layer.str() << '\n';
         if (mtu)
-            os << "MTU: " << mtu << std::endl;
-        os << "Remote Address: " << remote_address.to_string() << std::endl;
+            os << "MTU: " << mtu << '\n';
+        os << "Remote Address: " << remote_address.to_string() << '\n';
         render_list(os, "Tunnel Addresses", tunnel_addresses);
-        os << "Reroute Gateway: " << reroute_gw.to_string() << std::endl;
-        os << "Block IPv4: " << (block_ipv4 ? "yes" : "no") << std::endl;
-        os << "Block IPv6: " << (block_ipv6 ? "yes" : "no") << std::endl;
-        os << "Block local DNS: " << (block_outside_dns ? "yes" : "no") << std::endl;
+        os << "Reroute Gateway: " << reroute_gw.to_string() << '\n';
+        os << "Block IPv4: " << (block_ipv4 ? "yes" : "no") << '\n';
+        os << "Block IPv6: " << (block_ipv6 ? "yes" : "no") << '\n';
+        os << "Block local DNS: " << (block_outside_dns ? "yes" : "no") << '\n';
         if (route_metric_default >= 0)
-            os << "Route Metric Default: " << route_metric_default << std::endl;
+            os << "Route Metric Default: " << route_metric_default << '\n';
         render_list(os, "Add Routes", add_routes);
         render_list(os, "Exclude Routes", exclude_routes);
         if (!dns_servers.empty())
@@ -697,19 +697,19 @@ class TunBuilderCapture : public TunBuilderBase, public RC<thread_unsafe_refcoun
         if (!search_domains.empty())
             render_list(os, "Search Domains", search_domains);
         if (!adapter_domain_suffix.empty())
-            os << "Adapter Domain Suffix: " << adapter_domain_suffix << std::endl;
+            os << "Adapter Domain Suffix: " << adapter_domain_suffix << '\n';
         if (!dns_options.servers.empty())
         {
-            os << dns_options.to_string() << std::endl;
+            os << dns_options.to_string() << '\n';
         }
         if (!proxy_bypass.empty())
             render_list(os, "Proxy Bypass", proxy_bypass);
         if (proxy_auto_config_url.defined())
-            os << "Proxy Auto Config URL: " << proxy_auto_config_url.to_string() << std::endl;
+            os << "Proxy Auto Config URL: " << proxy_auto_config_url.to_string() << '\n';
         if (http_proxy.defined())
-            os << "HTTP Proxy: " << http_proxy.to_string() << std::endl;
+            os << "HTTP Proxy: " << http_proxy.to_string() << '\n';
         if (https_proxy.defined())
-            os << "HTTPS Proxy: " << https_proxy.to_string() << std::endl;
+            os << "HTTPS Proxy: " << https_proxy.to_string() << '\n';
         if (!wins_servers.empty())
             render_list(os, "WINS Servers", wins_servers);
         return os.str();
@@ -814,9 +814,11 @@ class TunBuilderCapture : public TunBuilderBase, public RC<thread_unsafe_refcoun
     template <typename LIST>
     static void render_list(std::ostream &os, const std::string &title, const LIST &list)
     {
-        os << title << ':' << std::endl;
+        os << title << ':' << '\n';
         for (auto &e : list)
-            os << "  " << e.to_string() << std::endl;
+        {
+            os << "  " << e.to_string() << '\n';
+        }
     }
 
     template <typename LIST>
