@@ -632,16 +632,14 @@ class TunBuilderCapture : public TunBuilderBase, public RC<thread_unsafe_refcoun
     {
         if (tunnel_address_index_ipv4 >= 0)
             return &tunnel_addresses[tunnel_address_index_ipv4];
-        else
-            return nullptr;
+        return nullptr;
     }
 
     const RouteAddress *vpn_ipv6() const
     {
         if (tunnel_address_index_ipv6 >= 0)
             return &tunnel_addresses[tunnel_address_index_ipv6];
-        else
-            return nullptr;
+        return nullptr;
     }
 
     const RouteAddress *vpn_ip(const IP::Addr::Version v) const
