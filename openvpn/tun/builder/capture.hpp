@@ -41,7 +41,7 @@ namespace openvpn {
 class TunBuilderCapture : public TunBuilderBase, public RC<thread_unsafe_refcount>
 {
   public:
-    typedef RCPtr<TunBuilderCapture> Ptr;
+    using Ptr = RCPtr<TunBuilderCapture>;
 
     // builder data classes
 
