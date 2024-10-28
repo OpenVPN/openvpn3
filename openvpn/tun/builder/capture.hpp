@@ -110,7 +110,7 @@ class TunBuilderCapture : public TunBuilderBase, public RC<thread_unsafe_refcoun
             Json::Value root(Json::objectValue);
             root["ipv4"] = Json::Value(ipv4);
             root["ipv6"] = Json::Value(ipv6);
-            root["flags"] = Json::Value((Json::UInt)flags);
+            root["flags"] = Json::Value(flags);
             return root;
         }
 
