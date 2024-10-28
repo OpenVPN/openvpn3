@@ -103,10 +103,6 @@ class TunBuilderCapture : public TunBuilderBase, public RC<thread_unsafe_refcoun
             return os.str();
         }
 
-        void validate(const std::string &title) const
-        {
-            // nothing to validate
-        }
 
 #ifdef HAVE_JSON
         Json::Value to_json() const
@@ -664,7 +660,6 @@ class TunBuilderCapture : public TunBuilderBase, public RC<thread_unsafe_refcoun
         remote_address.validate("remote_address");
         validate_list(tunnel_addresses, "tunnel_addresses");
         validate_tunnel_address_indices("root");
-        reroute_gw.validate("reroute_gw");
         validate_list(add_routes, "add_routes");
         validate_list(exclude_routes, "exclude_routes");
         validate_list(dns_servers, "dns_servers");
