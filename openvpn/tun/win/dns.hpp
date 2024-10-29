@@ -55,6 +55,8 @@
 
 #include <array>
 
+#include <winternl.h>
+
 #include <openvpn/common/wstring.hpp>
 #include <openvpn/common/action.hpp>
 #include <openvpn/win/reg.hpp>
@@ -508,8 +510,15 @@ class Dns
          */
         void execute(std::ostream &log) override
         {
+            const char *gpol_status = "";
+            Reg::Key gpol_nrpt_key(Reg::gpol_nrpt_subkey);
+            if (gpol_nrpt_key.defined())
+            {
+                gpol_status = apply_gpol_nrtp_rules() ? " [gpol successful]" : " [gpol failed]";
+            }
+
             const char *status = apply_dns_settings() ? "successful" : "failed";
-            log << to_string() << ": " << status << std::endl;
+            log << to_string() << ": " << status << gpol_status << std::endl;
         }
 
         /**
@@ -563,6 +572,47 @@ class Dns
             {
                 ::CloseServiceHandle(scm);
             }
+            return res;
+        }
+
+        /**
+         * @brief Signal the DNS resolver (and others potentially) to reload the NRTP rules group policy settings
+         *
+         * @return bool to indicate if the reload was initiated
+         */
+        bool apply_gpol_nrtp_rules()
+        {
+            bool res = false;
+
+            using publish_fn_t = NTSTATUS (*)(
+                __int64 StateName,
+                __int64 TypeId,
+                __int64 Buffer,
+                unsigned int Length,
+                __int64 ExplicitScope);
+            publish_fn_t RtlPublishWnfStateData;
+            constexpr INT64 WNF_GPOL_SYSTEM_CHANGES = 0x0D891E2AA3BC0875;
+
+            HMODULE ntdll = ::LoadLibraryA("ntdll.dll");
+            if (ntdll == NULL)
+            {
+                goto out;
+            }
+
+            RtlPublishWnfStateData = reinterpret_cast<publish_fn_t>(::GetProcAddress(ntdll, "RtlPublishWnfStateData"));
+            if (RtlPublishWnfStateData == NULL)
+            {
+                goto out;
+            }
+
+            if (RtlPublishWnfStateData(WNF_GPOL_SYSTEM_CHANGES, 0, 0, 0, 0) != ERROR_SUCCESS)
+            {
+                goto out;
+            }
+
+            res = true;
+
+        out:
             return res;
         }
     };

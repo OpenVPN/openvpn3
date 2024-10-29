@@ -226,6 +226,12 @@ struct Reg
     };
 
     /**
+     * Registry subkeys where NRPT rules can be found
+     */
+    static constexpr PCWSTR gpol_nrpt_subkey = LR"(SOFTWARE\Policies\Microsoft\Windows NT\DNSClient\DnsPolicyConfig)";
+    static constexpr PCWSTR local_nrpt_subkey = LR"(SYSTEM\CurrentControlSet\Services\Dnscache\Parameters\DnsPolicyConfig)";
+
+    /**
      * Registry subkeys where IP configuration for interfaces can be found
      */
     static constexpr WCHAR subkey_ipv4_itfs[] = LR"(SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces)";
