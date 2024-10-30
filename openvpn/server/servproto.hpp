@@ -334,6 +334,7 @@ class ServerProto
                 AuthCreds::Ptr auth_creds(new AuthCreds(Unicode::utf8_printable(username, MAX_USERNAME_SIZE | Unicode::UTF8_FILTER),
                                                         Unicode::utf8_printable(password, MAX_PASSWORD_SIZE | Unicode::UTF8_FILTER | Unicode::UTF8_PASS_FMT),
                                                         Unicode::utf8_printable(peer_info, Unicode::UTF8_FILTER | Unicode::UTF8_PASS_FMT)));
+                proto_request_push = ProtoContext::IvProtoHelper(auth_creds->peer_info).client_supports_request_push();
                 ManLink::send->auth_request(auth_creds, auth_cert, peer_addr);
             }
         }
@@ -370,10 +371,8 @@ class ServerProto
 
         void active(bool primary) override
         {
-            /* Currently the server does not do anything special when the connection
-             * is ready (control channel fully established). We probably should trigger
-             * sending a PUSH_REPLY here, when the client requested it via
-             * IV_PROTO_REQUEST_PUSH instead waiting for an explicit PUSH_REQUEST */
+            if (proto_request_push && get_management())
+                ManLink::send->push_request(proto_context.conf_ptr());
         }
 
         void auth_failed(const std::string &reason,
@@ -768,6 +767,8 @@ class ServerProto
 
         ManClientInstance::Factory::Ptr man_factory;
         TunClientInstance::Factory::Ptr tun_factory;
+
+        bool proto_request_push = false;
     };
 };
 
