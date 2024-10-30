@@ -23,7 +23,6 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/crypto/static_key.hpp>
 #include <openvpn/crypto/cryptoalgs.hpp>
-#include <openvpn/ssl/sslapi.hpp>
 
 namespace openvpn::MbedTLSCrypto {
 class CipherContextCommon
