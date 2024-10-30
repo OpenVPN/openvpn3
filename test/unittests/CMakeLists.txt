@@ -40,6 +40,7 @@ add_executable(coreUnitTests
         test_ssl.cpp
         test_sslctx.cpp
         test_continuation.cpp
+        test_pushlex.cpp
         test_crypto.cpp
         test_optfilt.cpp
         test_clamp_typerange.cpp
