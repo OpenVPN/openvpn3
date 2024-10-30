@@ -43,6 +43,28 @@ endfunction()
 
 
 function(add_core_dependencies target)
+    # It would be nice if we could just do organise the files that make up the OpenVPN3 core library in
+    # a static library called openvpn3 or similar and be able to do
+    #      target_link_libraries(${target} openvpn3)
+    # here.
+    #
+    # Unfortunately, too much currently depends on per-target compile flags and defines like #define OPENVPN_LOG
+    # that require compilation of all core files as part of the target that uses the core library.
+    #
+    # If even with this approach of adding some extra files to the sources of a target, we need to careful that
+    # we are depending on definitions that are can be defined differently in another compilation unit.
+    #
+    # Until we refactor these problematic defines to be in a common header (like config.h in autoconf land)
+    # or in set then for the whole target in the cmake files (instead of using #define xy in the top of a cpp file)
+    # we have to live with this restriction.
+    #
+    # The unit test work around this problem by always including test_common.h as very first include in every
+    # file that double as a config.h equivalent.
+    add_corelibrary_dependencies(${target})
+    target_sources(${target} PRIVATE ${CORE_DIR}/openvpn/crypto/data_epoch.cpp)
+endfunction()
+
+function(add_corelibrary_dependencies target)
     set(PLAT ${OPENVPN_PLAT})
 
     target_include_directories(${target} PRIVATE ${CORE_DIR})
@@ -140,7 +162,6 @@ function(add_core_dependencies target)
             target_compile_options(${target} PRIVATE -ferror-limit=0 -Wno-enum-enum-conversion)
         endif()
     endif()
-
 endfunction()
 
 function (add_json_library target)
