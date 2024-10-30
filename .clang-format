@@ -4,7 +4,6 @@ SortIncludes: Never
 BreakBeforeBinaryOperators: All
 BinPackArguments: False
 BinPackParameters: False
-LambdaBodyIndentation: OuterScope
 IndentCaseBlocks: true
 MaxEmptyLinesToKeep: 3
 BraceWrapping:
