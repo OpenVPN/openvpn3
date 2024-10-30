@@ -586,8 +586,8 @@ class GeNL : public RC<thread_unsafe_refcount>
         stream->async_wait(openvpn_io::posix::stream_descriptor::wait_read,
                            [self = Ptr(this)](const openvpn_io::error_code &error)
                            {
-            self->handle_read(error);
-        });
+                               self->handle_read(error);
+                           });
     }
 
     NlMsgPtr create_msg(enum ovpn_nl_commands cmd)

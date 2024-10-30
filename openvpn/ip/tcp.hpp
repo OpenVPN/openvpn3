@@ -23,7 +23,7 @@ struct TCPHeader
 {
     static unsigned int length(const std::uint8_t doff_res)
     {
-        return ((doff_res)&0xF0) >> 2;
+        return ((doff_res) & 0xF0) >> 2;
     }
 
     std::uint16_t source;

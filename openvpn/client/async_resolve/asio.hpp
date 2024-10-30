@@ -107,8 +107,7 @@ class AsyncResolvable
     }
 
     virtual void resolve_callback(const openvpn_io::error_code &error,
-                                  results_type results)
-        = 0;
+                                  results_type results) = 0;
 
     // mimic the asynchronous DNS resolution by performing a
     // synchronous one in a detached thread.

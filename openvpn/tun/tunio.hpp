@@ -209,9 +209,9 @@ class TunIO : public RC<thread_unsafe_refcount>
         stream->async_read_some(frame_context.mutable_buffer(tunfrom->buf),
                                 [self = Ptr(this), tunfrom = typename PacketFrom::SPtr(tunfrom)](const openvpn_io::error_code &error, const size_t bytes_recvd) mutable
                                 {
-            OPENVPN_ASYNC_HANDLER;
-            self->handle_read(std::move(tunfrom), error, bytes_recvd);
-        });
+                                    OPENVPN_ASYNC_HANDLER;
+                                    self->handle_read(std::move(tunfrom), error, bytes_recvd);
+                                });
     }
 
     void handle_read(typename PacketFrom::SPtr pfp, const openvpn_io::error_code &error, const size_t bytes_recvd)

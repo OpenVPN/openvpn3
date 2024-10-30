@@ -81,9 +81,8 @@ class XKeyExternalPKIImpl : public std::enable_shared_from_this<XKeyExternalPKII
             OSSL_PROVIDER_add_builtin(tls_libctx.get(), "ovpn.xkey", xkey_provider_init);
             if (!OSSL_PROVIDER_load(tls_libctx.get(), "ovpn.xkey"))
             {
-                OPENVPN_THROW(OpenSSLException, "OpenSSLContext::ExternalPKIImpl: "
-                                                    << "failed loading external key provider: "
-                                                       "Signing with external keys will not work.");
+                OPENVPN_THROW(OpenSSLException, "OpenSSLContext::ExternalPKIImpl: " << "failed loading external key provider: "
+                                                                                       "Signing with external keys will not work.");
             }
         }
 
@@ -152,8 +151,7 @@ class XKeyExternalPKIImpl : public std::enable_shared_from_this<XKeyExternalPKII
 
         if (!privkey)
         {
-            OPENVPN_THROW(OpenSSLException, "OpenSSLContext::ExternalPKIImpl: "
-                                                << "SSL_CTX_use_PrivateKey");
+            OPENVPN_THROW(OpenSSLException, "OpenSSLContext::ExternalPKIImpl: " << "SSL_CTX_use_PrivateKey");
         }
 
         EVP_PKEY_free(privkey);

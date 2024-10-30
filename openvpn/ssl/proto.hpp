@@ -1131,10 +1131,10 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
             CryptoAlgs::for_each(
                 [&out](CryptoAlgs::Type type, const CryptoAlgs::Alg &alg) -> bool
                 {
-                if (!alg.dc_cipher())
-                    return false;
-                out << alg.name() << ':';
-                return true;
+                    if (!alg.dc_cipher())
+                        return false;
+                    out << alg.name() << ':';
+                    return true;
                 });
             out.seekp(-1, std::ios_base::cur);
             out << "\n";

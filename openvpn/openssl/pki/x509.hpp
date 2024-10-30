@@ -51,8 +51,7 @@ class X509
     {
     }
 
-    X509(X509 &&other)
-    noexcept
+    X509(X509 &&other) noexcept
         : x509_(std::move(other.x509_))
     {
     }

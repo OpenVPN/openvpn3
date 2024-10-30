@@ -709,8 +709,8 @@ class HTTPCore : public Base, public TransportClientParent
                 s->socket.async_connect(ep,
                                         [self = Ptr(this)](const openvpn_io::error_code &error)
                                         {
-                    self->handle_unix_connect(error);
-                });
+                                            self->handle_unix_connect(error);
+                                        });
                 set_connect_timeout(config->connect_timeout);
                 return;
             }

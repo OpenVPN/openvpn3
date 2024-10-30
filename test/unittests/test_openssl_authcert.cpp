@@ -272,65 +272,25 @@ TEST(authcert_openssl, serial_parse)
 
     // failure cases
 
-    JY_EXPECT_THROW({
-        const AuthCert::Serial ser("");
-    },
-                    AuthCert::Serial::serial_number_error,
-                    "expected leading serial number hex digit");
+    JY_EXPECT_THROW({ const AuthCert::Serial ser(""); }, AuthCert::Serial::serial_number_error, "expected leading serial number hex digit");
 
-    JY_EXPECT_THROW({
-        const AuthCert::Serial ser(" ");
-    },
-                    AuthCert::Serial::serial_number_error,
-                    "' ' is not a hex char");
+    JY_EXPECT_THROW({ const AuthCert::Serial ser(" "); }, AuthCert::Serial::serial_number_error, "' ' is not a hex char");
 
-    JY_EXPECT_THROW({
-        const AuthCert::Serial ser(":");
-    },
-                    AuthCert::Serial::serial_number_error,
-                    "spurious colon");
+    JY_EXPECT_THROW({ const AuthCert::Serial ser(":"); }, AuthCert::Serial::serial_number_error, "spurious colon");
 
-    JY_EXPECT_THROW({
-        const AuthCert::Serial ser(":aa");
-    },
-                    AuthCert::Serial::serial_number_error,
-                    "expected leading serial number hex digit");
+    JY_EXPECT_THROW({ const AuthCert::Serial ser(":aa"); }, AuthCert::Serial::serial_number_error, "expected leading serial number hex digit");
 
-    JY_EXPECT_THROW({
-        const AuthCert::Serial ser("aa:");
-    },
-                    AuthCert::Serial::serial_number_error,
-                    "spurious colon");
+    JY_EXPECT_THROW({ const AuthCert::Serial ser("aa:"); }, AuthCert::Serial::serial_number_error, "spurious colon");
 
-    JY_EXPECT_THROW({
-        const AuthCert::Serial ser("x");
-    },
-                    AuthCert::Serial::serial_number_error,
-                    "'x' is not a hex char");
+    JY_EXPECT_THROW({ const AuthCert::Serial ser("x"); }, AuthCert::Serial::serial_number_error, "'x' is not a hex char");
 
-    JY_EXPECT_THROW({
-        const AuthCert::Serial ser("1:2:3x:4");
-    },
-                    AuthCert::Serial::serial_number_error,
-                    "'x' is not a hex char");
+    JY_EXPECT_THROW({ const AuthCert::Serial ser("1:2:3x:4"); }, AuthCert::Serial::serial_number_error, "'x' is not a hex char");
 
-    JY_EXPECT_THROW({
-        const AuthCert::Serial ser("aa::bb");
-    },
-                    AuthCert::Serial::serial_number_error,
-                    "spurious colon");
+    JY_EXPECT_THROW({ const AuthCert::Serial ser("aa::bb"); }, AuthCert::Serial::serial_number_error, "spurious colon");
 
-    JY_EXPECT_THROW({
-        const AuthCert::Serial ser("11:22:33:44:55:66:77:88:99:aa:BB:cc:dd:ee:ff:00:0f:1f:2f:3f:4f");
-    },
-                    AuthCert::Serial::serial_number_error,
-                    "serial number too large (C2)");
+    JY_EXPECT_THROW({ const AuthCert::Serial ser("11:22:33:44:55:66:77:88:99:aa:BB:cc:dd:ee:ff:00:0f:1f:2f:3f:4f"); }, AuthCert::Serial::serial_number_error, "serial number too large (C2)");
 
-    JY_EXPECT_THROW({
-        const AuthCert::Serial ser("112233445566778899aaBBccddeeff000f1f2f3ff");
-    },
-                    AuthCert::Serial::serial_number_error,
-                    "serial number too large (C2)");
+    JY_EXPECT_THROW({ const AuthCert::Serial ser("112233445566778899aaBBccddeeff000f1f2f3ff"); }, AuthCert::Serial::serial_number_error, "serial number too large (C2)");
 }
 
 #ifdef OPENVPN_JSON_INTERNAL
@@ -353,10 +313,7 @@ TEST(authcert_openssl, sn_json_type_err)
 {
     JY_EXPECT_THROW({
         const Json::Value jv;
-        const AuthCert::Serial ser(jv);
-    },
-                    AuthCert::Serial::serial_number_error,
-                    "JSON serial is missing");
+        const AuthCert::Serial ser(jv); }, AuthCert::Serial::serial_number_error, "JSON serial is missing");
 }
 
 #endif

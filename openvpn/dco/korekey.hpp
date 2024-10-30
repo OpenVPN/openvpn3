@@ -24,8 +24,7 @@ class Receiver : public virtual RC<thread_unsafe_refcount>
     typedef RCPtr<Receiver> Ptr;
 
     virtual void rekey(const CryptoDCInstance::RekeyType type,
-                       const Info &info)
-        = 0;
+                       const Info &info) = 0;
 
     virtual void explicit_exit_notify()
     {

@@ -309,21 +309,21 @@ class OvpnDcoWinClient : public Client,
             [self = Ptr(this)](const openvpn_io::error_code &error,
                                const size_t bytes_recvd)
             {
-            if (self->halt)
-                return;
-            if (!error)
-            {
-                self->buf_.set_size(bytes_recvd);
-                self->transport_parent->transport_recv(self->buf_);
-                if (!self->halt)
-                    self->queue_read_();
-            }
-            else if (!self->halt)
-            {
-                self->stop_();
-                self->transport_parent->transport_error(Error::TRANSPORT_ERROR,
-                                                        error.message());
-            }
+                if (self->halt)
+                    return;
+                if (!error)
+                {
+                    self->buf_.set_size(bytes_recvd);
+                    self->transport_parent->transport_recv(self->buf_);
+                    if (!self->halt)
+                        self->queue_read_();
+                }
+                else if (!self->halt)
+                {
+                    self->stop_();
+                    self->transport_parent->transport_error(Error::TRANSPORT_ERROR,
+                                                            error.message());
+                }
             });
     }
 
@@ -400,18 +400,18 @@ class OvpnDcoWinClient : public Client,
                                                [self = Ptr(this), complete](const openvpn_io::error_code &ec,
                                                                             std::size_t len)
                                                {
-            if (self->halt)
-                return;
-            if (!ec)
-                complete();
-            else
-            {
-                std::ostringstream errmsg;
-                errmsg << "TCP connection error: " << ec.message();
-                self->config->transport.stats->error(Error::TCP_CONNECT_ERROR);
-                self->transport_parent->transport_error(Error::UNDEF, errmsg.str());
-                self->stop_();
-            }
+                                                   if (self->halt)
+                                                       return;
+                                                   if (!ec)
+                                                       complete();
+                                                   else
+                                                   {
+                                                       std::ostringstream errmsg;
+                                                       errmsg << "TCP connection error: " << ec.message();
+                                                       self->config->transport.stats->error(Error::TCP_CONNECT_ERROR);
+                                                       self->transport_parent->transport_error(Error::UNDEF, errmsg.str());
+                                                       self->stop_();
+                                                   }
                                                }};
 
         const DWORD ec = dco_ioctl_(OVPN_IOCTL_NEW_PEER, &peer, sizeof(peer), NULL, 0, &ov);

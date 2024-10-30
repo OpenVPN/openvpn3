@@ -50,12 +50,10 @@ class Base : public RC<thread_unsafe_refcount>
     typedef RCPtr<Base> Ptr;
 
     virtual void async_send(const openvpn_io::const_buffer &buf,
-                            Function<void(const openvpn_io::error_code &, const size_t)> &&callback)
-        = 0;
+                            Function<void(const openvpn_io::error_code &, const size_t)> &&callback) = 0;
 
     virtual void async_receive(const openvpn_io::mutable_buffer &buf,
-                               Function<void(const openvpn_io::error_code &, const size_t)> &&callback)
-        = 0;
+                               Function<void(const openvpn_io::error_code &, const size_t)> &&callback) = 0;
 
     virtual std::string remote_endpoint_str() const = 0;
     virtual bool remote_ip_port(IP::Addr &addr, unsigned int &port) const = 0;

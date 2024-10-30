@@ -62,11 +62,11 @@ class NamedPipe : public Base
                  listener = ListenerBase::Ptr(listener),
                  acceptor_index](const openvpn_io::error_code &ec, size_t bytes_transferred)
                 {
-                // accept client connection
-                listener->handle_accept(new AsioPolySock::NamedPipe(std::move(self->handle), acceptor_index),
-                                        ec.value() == ERROR_PIPE_CONNECTED // not an error
-                                            ? openvpn_io::error_code()
-                                            : ec);
+                    // accept client connection
+                    listener->handle_accept(new AsioPolySock::NamedPipe(std::move(self->handle), acceptor_index),
+                                            ec.value() == ERROR_PIPE_CONNECTED // not an error
+                                                ? openvpn_io::error_code()
+                                                : ec);
                 });
 
             const BOOL ok = ::ConnectNamedPipe(handle.native_handle(), over.get());

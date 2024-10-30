@@ -62,16 +62,16 @@ class SD_OUT : public SD
         sd->async_write_some(buf.const_buffer_limit(2048),
                              [this](const openvpn_io::error_code &ec, const size_t bytes_sent)
                              {
-            if (!ec && bytes_sent < buf.size())
-            {
-                buf.advance(bytes_sent);
-                queue_write();
-            }
-            else
-            {
-                sd->close();
-            }
-        });
+                                 if (!ec && bytes_sent < buf.size())
+                                 {
+                                     buf.advance(bytes_sent);
+                                     queue_write();
+                                 }
+                                 else
+                                 {
+                                     sd->close();
+                                 }
+                             });
     }
 
     BufferAllocated buf;
@@ -99,17 +99,17 @@ class SD_IN : public SD
         sd->async_read_some(buf.mutable_buffer_clamp(),
                             [this](const openvpn_io::error_code &ec, const size_t bytes_recvd)
                             {
-            if (!ec)
-            {
-                buf.set_size(bytes_recvd);
-                data.put_consume(buf);
-                queue_read();
-            }
-            else
-            {
-                sd->close();
-            }
-        });
+                                if (!ec)
+                                {
+                                    buf.set_size(bytes_recvd);
+                                    data.put_consume(buf);
+                                    queue_read();
+                                }
+                                else
+                                {
+                                    sd->close();
+                                }
+                            });
     }
 
     BufferAllocated buf;

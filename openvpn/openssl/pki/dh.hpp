@@ -49,8 +49,7 @@ class DH
         dup(other.dh_);
     }
 
-    DH(DH &&other)
-    noexcept
+    DH(DH &&other) noexcept
         : dh_(other.dh_)
     {
         other.dh_ = nullptr;

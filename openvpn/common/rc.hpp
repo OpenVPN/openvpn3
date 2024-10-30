@@ -913,8 +913,7 @@ class RC
   public:
     typedef RCPtr<RC> Ptr;
 
-    RC()
-    noexcept = default;
+    RC() noexcept = default;
     virtual ~RC() = default;
     RC(const RC &) = delete;
     RC &operator=(const RC &) = delete;

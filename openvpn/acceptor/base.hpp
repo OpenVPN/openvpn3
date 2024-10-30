@@ -44,8 +44,7 @@ struct Base : public RC<thread_unsafe_refcount>
 
     virtual void async_accept(ListenerBase *listener,
                               const size_t acceptor_index,
-                              openvpn_io::io_context &io_context)
-        = 0;
+                              openvpn_io::io_context &io_context) = 0;
     virtual void close() = 0;
 };
 

@@ -641,22 +641,22 @@ class OvpnDcoClient : public Client,
              pkt = PacketFrom::SPtr(pkt)](const openvpn_io::error_code &error,
                                           const size_t bytes_recvd) mutable
             {
-            if (!error)
-            {
-                pkt->buf.set_size(bytes_recvd);
-                if (self->tun_read_handler(pkt->buf))
-                    self->queue_read_pipe(pkt.release());
-            }
-            else
-            {
-                if (!self->halt)
+                if (!error)
                 {
-                    OPENVPN_LOG("ovpn-dco pipe read error: " << error.message());
-                    self->stop_();
-                    self->transport_parent->transport_error(Error::TUN_HALT,
-                                                            error.message());
+                    pkt->buf.set_size(bytes_recvd);
+                    if (self->tun_read_handler(pkt->buf))
+                        self->queue_read_pipe(pkt.release());
                 }
-            }
+                else
+                {
+                    if (!self->halt)
+                    {
+                        OPENVPN_LOG("ovpn-dco pipe read error: " << error.message());
+                        self->stop_();
+                        self->transport_parent->transport_error(Error::TUN_HALT,
+                                                                error.message());
+                    }
+                }
             });
     }
 

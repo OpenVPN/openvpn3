@@ -136,9 +136,9 @@ class UDPLink : public RC<thread_unsafe_refcount>
                                   udpfrom->sender_endpoint,
                                   [self = Ptr(this), udpfrom = PacketFrom::SPtr(udpfrom)](const openvpn_io::error_code &error, const size_t bytes_recvd) mutable
                                   {
-            OPENVPN_ASYNC_HANDLER;
-            self->handle_read(std::move(udpfrom), error, bytes_recvd);
-        });
+                                      OPENVPN_ASYNC_HANDLER;
+                                      self->handle_read(std::move(udpfrom), error, bytes_recvd);
+                                  });
     }
 
     void handle_read(PacketFrom::SPtr pfp, const openvpn_io::error_code &error, const size_t bytes_recvd)

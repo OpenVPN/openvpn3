@@ -56,17 +56,14 @@ class CryptoDCInstance : public RC<thread_unsafe_refcount>
     virtual unsigned int defined() const = 0;
 
     virtual void init_cipher(StaticKey &&encrypt_key,
-                             StaticKey &&decrypt_key)
-        = 0;
+                             StaticKey &&decrypt_key) = 0;
 
     virtual void init_hmac(StaticKey &&encrypt_key,
-                           StaticKey &&decrypt_key)
-        = 0;
+                           StaticKey &&decrypt_key) = 0;
 
     virtual void init_pid(const char *recv_name,
                           const int recv_unit,
-                          const SessionStats::Ptr &recv_stats_arg)
-        = 0;
+                          const SessionStats::Ptr &recv_stats_arg) = 0;
 
     virtual void init_remote_peer_id(const int remote_peer_id)
     {

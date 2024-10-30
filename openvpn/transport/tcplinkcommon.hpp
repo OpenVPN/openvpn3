@@ -189,32 +189,32 @@ class LinkCommon : public LinkBase
         socket.async_receive(frame_context.mutable_buffer_clamp(tcpfrom->buf),
                              [self = Ptr(this), tcpfrom = PacketFrom::SPtr(tcpfrom)](const openvpn_io::error_code &error, const size_t bytes_recvd) mutable
                              {
-            OPENVPN_ASYNC_HANDLER;
-            try
-            {
-                self->handle_recv(std::move(tcpfrom), error, bytes_recvd);
-            }
-            catch (const std::exception &e)
-            {
-                Error::Type err = Error::TCP_SIZE_ERROR;
-                const char *msg = "TCP_SIZE_ERROR";
-                // if exception is an ExceptionCode, translate the code
-                // to return status string
-                {
-                    const ExceptionCode *ec = dynamic_cast<const ExceptionCode *>(&e);
-                    if (ec && ec->code_defined())
-                    {
-                        err = ec->code();
-                        msg = ec->what();
-                    }
-                }
+                                 OPENVPN_ASYNC_HANDLER;
+                                 try
+                                 {
+                                     self->handle_recv(std::move(tcpfrom), error, bytes_recvd);
+                                 }
+                                 catch (const std::exception &e)
+                                 {
+                                     Error::Type err = Error::TCP_SIZE_ERROR;
+                                     const char *msg = "TCP_SIZE_ERROR";
+                                     // if exception is an ExceptionCode, translate the code
+                                     // to return status string
+                                     {
+                                         const ExceptionCode *ec = dynamic_cast<const ExceptionCode *>(&e);
+                                         if (ec && ec->code_defined())
+                                         {
+                                             err = ec->code();
+                                             msg = ec->what();
+                                         }
+                                     }
 
-                OPENVPN_LOG_TCPLINK_ERROR("TCP packet extract exception: " << e.what());
-                self->stats->error(err);
-                self->read_handler->tcp_error_handler(msg);
-                self->stop();
-            }
-        });
+                                     OPENVPN_LOG_TCPLINK_ERROR("TCP packet extract exception: " << e.what());
+                                     self->stats->error(err);
+                                     self->read_handler->tcp_error_handler(msg);
+                                     self->stop();
+                                 }
+                             });
     }
 
   protected:
@@ -281,9 +281,9 @@ class LinkCommon : public LinkBase
         socket.async_send(buf.const_buffer_clamp(),
                           [self = Ptr(this)](const openvpn_io::error_code &error, const size_t bytes_sent)
                           {
-            OPENVPN_ASYNC_HANDLER;
-            self->handle_send(error, bytes_sent);
-        });
+                              OPENVPN_ASYNC_HANDLER;
+                              self->handle_send(error, bytes_sent);
+                          });
     }
 
     void handle_send(const openvpn_io::error_code &error, const size_t bytes_sent)

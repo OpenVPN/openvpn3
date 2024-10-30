@@ -155,12 +155,12 @@ struct SignalBlockerDefault : public SignalBlocker
 {
     SignalBlockerDefault()
         : SignalBlocker( // these signals should be handled by parent thread
-            Signal::F_SIGINT
-            | Signal::F_SIGTERM
-            | Signal::F_SIGHUP
-            | Signal::F_SIGUSR1
-            | Signal::F_SIGUSR2
-            | Signal::F_SIGPIPE)
+              Signal::F_SIGINT
+              | Signal::F_SIGTERM
+              | Signal::F_SIGHUP
+              | Signal::F_SIGUSR1
+              | Signal::F_SIGUSR2
+              | Signal::F_SIGPIPE)
     {
     }
 };

@@ -52,7 +52,7 @@ struct TunClient : public virtual RC<thread_unsafe_refcount>
 
     virtual int vpn_mtu() const = 0;
 
-    virtual void adjust_mss(int mss){};
+    virtual void adjust_mss(int mss) {};
 
     /**
      * @brief Notifies tun client about received PUSH_UPDATE control channel message.
@@ -65,7 +65,7 @@ struct TunClient : public virtual RC<thread_unsafe_refcount>
      * @param opt merged options, to be applied by implementation
      * @param cli transport client, passed to tun_start() call
      */
-    virtual void apply_push_update(const OptionList &opt, TransportClient &cli){};
+    virtual void apply_push_update(const OptionList &opt, TransportClient &cli) {};
 };
 
 // Base class for parent of tun interface object, used to

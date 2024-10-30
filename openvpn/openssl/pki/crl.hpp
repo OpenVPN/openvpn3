@@ -44,8 +44,7 @@ class CRL
     {
     }
 
-    CRL(CRL &&other)
-    noexcept
+    CRL(CRL &&other) noexcept
         : crl_(other.crl_)
     {
         other.crl_ = nullptr;

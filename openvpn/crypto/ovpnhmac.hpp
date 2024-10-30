@@ -149,15 +149,13 @@ class OvpnHMACInstance : public RC<thread_unsafe_refcount>
                                const size_t data_size,
                                const size_t l1,
                                const size_t l2,
-                               const size_t l3)
-        = 0;
+                               const size_t l3) = 0;
 
     virtual bool ovpn_hmac_cmp(const unsigned char *data,
                                const size_t data_size,
                                const size_t l1,
                                const size_t l2,
-                               const size_t l3)
-        = 0;
+                               const size_t l3) = 0;
 };
 
 class OvpnHMACContext : public RC<thread_unsafe_refcount>

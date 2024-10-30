@@ -38,8 +38,7 @@ class AsyncResolvable : public virtual RC<thread_unsafe_refcount>
     }
 
     virtual void resolve_callback(const openvpn_io::error_code &error,
-                                  results_type results)
-        = 0;
+                                  results_type results) = 0;
 
     // This implementation assumes that the i/o reactor provides an asynchronous
     // DNS resolution routine using its own primitives and that doesn't require

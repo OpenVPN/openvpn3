@@ -215,9 +215,9 @@ class RunContext : public RunContextBase
         exit_sock->async_read_some(openvpn_io::null_buffers(),
                                    [self = Ptr(this)](const openvpn_io::error_code &error, const size_t bytes_recvd)
                                    {
-            if (!error)
-                self->cancel();
-        });
+                                       if (!error)
+                                           self->cancel();
+                                   });
     }
 #endif
 

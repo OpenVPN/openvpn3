@@ -20,8 +20,7 @@ class LinkBase : public RC<thread_unsafe_refcount>
 {
   protected:
     virtual void recv_buffer(PacketFrom::SPtr &pfp,
-                             const size_t bytes_recvd)
-        = 0;
+                             const size_t bytes_recvd) = 0;
     virtual void from_app_send_buffer(BufferPtr &buf) = 0;
 
   public:
