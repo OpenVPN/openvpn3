@@ -50,12 +50,12 @@ enum PCMode
     PC_2,
 };
 
-static std::string get_csv(Buffer buf, const PCMode pc_mode)
+static std::string get_csv(Buffer buf, const PCMode pc_mode, const std::string &prefix)
 {
     // verify PUSH_REPLY then remove it
-    if (!string::starts_with(buf, "PUSH_REPLY,"))
-        throw Exception("expected that buffer would begin with PUSH_REPLY");
-    buf.advance(11);
+    if (!string::starts_with(buf, prefix + ','))
+        throw Exception("expected that buffer would begin with " + prefix);
+    buf.advance(prefix.length() + 1);
 
     // possibly remove push-continuation options from tail of buffer
     if (pc_mode == PC_1)
@@ -74,14 +74,14 @@ static std::string get_csv(Buffer buf, const PCMode pc_mode)
     return buf_to_string(buf);
 }
 
-static std::string get_csv_from_frag(Buffer buf, const size_t index, const size_t size)
+static std::string get_csv_from_frag(Buffer buf, const size_t index, const size_t size, const std::string &prefix)
 {
     if (size < 2)
-        return get_csv(buf, NO_PC);
+        return get_csv(std::move(buf), NO_PC, prefix);
     else if (index == size - 1)
-        return get_csv(buf, PC_1);
+        return get_csv(std::move(buf), PC_1, prefix);
     else
-        return get_csv(buf, PC_2);
+        return get_csv(std::move(buf), PC_2, prefix);
 }
 
 static std::string random_term(RandomAPI &prng)
@@ -118,31 +118,31 @@ static OptionList random_optionlist(RandomAPI &prng)
     return ret;
 }
 
-static void test_roundtrip(const OptionList &opt_orig)
+static void test_roundtrip(const OptionList &opt_orig, const std::string &prefix)
 {
     // first render to CSV
     BufferAllocated buf(opt_orig.size() * 128, BufAllocFlags::GROW);
-    buf_append_string(buf, "PUSH_REPLY,");
+    buf_append_string(buf, prefix + ',');
     buf_append_string(buf, opt_orig.render_csv());
 
     // parse back to OptionList and verify round trip
-    const OptionList opt = OptionList::parse_from_csv_static_nomap(get_csv(buf, NO_PC), nullptr);
+    const OptionList opt = OptionList::parse_from_csv_static_nomap(get_csv(buf, NO_PC, prefix), nullptr);
     require_equal(opt_orig, opt, "TEST_ROUNDTRIP #1");
 
     // fragment into multiple buffers using push-continuation
-    const PushContinuationFragment frag(buf);
+    const PushContinuationFragment frag(buf, prefix);
 
     // parse fragments separately and verify with original
     OptionList new_opt;
     for (size_t i = 0; i < frag.size(); ++i)
-        new_opt.parse_from_csv(get_csv_from_frag(*frag[i], i, frag.size()), nullptr);
+        new_opt.parse_from_csv(get_csv_from_frag(*frag[i], i, frag.size(), prefix), nullptr);
     require_equal(opt_orig, new_opt, "TEST_ROUNDTRIP #2");
 
     // test client-side continuation parser
     OptionListContinuation cc;
     for (size_t i = 0; i < frag.size(); ++i)
     {
-        const OptionList cli_opt = OptionList::parse_from_csv_static(get_csv(*frag[i], NO_PC), nullptr);
+        const OptionList cli_opt = OptionList::parse_from_csv_static(get_csv(*frag[i], NO_PC, prefix), nullptr);
         cc.add(cli_opt, nullptr);
         ASSERT_TRUE(cc.partial());
         ASSERT_EQ(cc.complete(), i == frag.size() - 1);
@@ -155,31 +155,16 @@ static void test_roundtrip(const OptionList &opt_orig)
     require_equal(opt_orig, cc, "TEST_ROUNDTRIP #3");
 
     // defragment back to original form
-    BufferPtr defrag = PushContinuationFragment::defragment(frag);
+    BufferPtr defrag = PushContinuationFragment::defragment(frag, prefix);
     require_equal(buf, *defrag, "TEST_ROUNDTRIP #4");
-}
-
-// test roundtrip for random configurations
-TEST(continuation, test1)
-{
-    RandomAPI::Ptr prng(new MTRand);
-
-    // Note: this code runs ~100x slower with valgrind
-    const int n = 100;
-
-    for (int i = 0; i < n; ++i)
-    {
-        const OptionList opt = random_optionlist(*prng);
-        test_roundtrip(opt);
-    }
 }
 
 // test maximum fragment sizes and optionally generate
 // push-list for further testing
-TEST(continuation, test2)
+static void test_prefix_fragment(const std::string &prefix)
 {
     BufferAllocated buf(65536, BufAllocFlags::GROW);
-    buf_append_string(buf, "PUSH_REPLY,route-gateway 10.213.0.1,ifconfig 10.213.0.48 255.255.0.0,ifconfig-ipv6 fdab::48/64 fdab::1,client-ip 192.168.4.1,ping 1,ping-restart 8,reneg-sec 60,cipher AES-128-GCM,compress stub-v2,peer-id 4,topology subnet,explicit-exit-notify");
+    buf_append_string(buf, prefix + ",route-gateway 10.213.0.1,ifconfig 10.213.0.48 255.255.0.0,ifconfig-ipv6 fdab::48/64 fdab::1,client-ip 192.168.4.1,ping 1,ping-restart 8,reneg-sec 60,cipher AES-128-GCM,compress stub-v2,peer-id 4,topology subnet,explicit-exit-notify");
 
     // pack the buffers, so several reach the maximum
     // fragment size of PushContinuationFragment::FRAGMENT_SIZE
@@ -191,21 +176,21 @@ TEST(continuation, test2)
     }
 
     // fragment into multiple buffers using push-continuation
-    const PushContinuationFragment frag(buf);
-    int count = 0;
+    const PushContinuationFragment frag(buf, prefix);
+
+    // verify that no buffer exceeds PushContinuationFragment::FRAGMENT_SIZE
     for (auto &e : frag)
     {
         // OPENVPN_LOG(e->size());
-        if (e->size() == PushContinuationFragment::FRAGMENT_SIZE)
-            ++count;
+        ASSERT_LE(e->size(), PushContinuationFragment::FRAGMENT_SIZE);
     }
 
-    // 8 buffers should have reached maximum size
-    ASSERT_EQ(count, 8);
+    // we should have fragmented into 15 buffers
+    ASSERT_EQ(frag.size(), 15);
 
     // defragment the buffer
-    BufferPtr defrag = PushContinuationFragment::defragment(frag);
-    const OptionList opt = OptionList::parse_from_csv_static_nomap(get_csv(*defrag, NO_PC), nullptr);
+    BufferPtr defrag = PushContinuationFragment::defragment(frag, prefix);
+    const OptionList opt = OptionList::parse_from_csv_static_nomap(get_csv(*defrag, NO_PC, prefix), nullptr);
 
 #if 0
   // dump for inclusion in JSON push list
@@ -214,6 +199,41 @@ TEST(continuation, test2)
       OPENVPN_LOG("    \"" << e.render(0) << "\",");
     }
 #endif
+}
+
+// test roundtrip for random configurations
+static void test_prefix_random(const std::string &prefix)
+{
+    RandomAPI::Ptr prng(new MTRand);
+
+    // Note: this code runs ~100x slower with valgrind
+    const int n = 100;
+
+    for (int i = 0; i < n; ++i)
+    {
+        const OptionList opt = random_optionlist(*prng);
+        test_roundtrip(opt, prefix);
+    }
+}
+
+TEST(continuation, test_random_push_reply)
+{
+    test_prefix_random("PUSH_REPLY");
+}
+
+TEST(continuation, test_random_push_update)
+{
+    test_prefix_random("PUSH_UPDATE");
+}
+
+TEST(continuation, test_fragment_push_reply)
+{
+    test_prefix_fragment("PUSH_REPLY");
+}
+
+TEST(continuation, test_fragment_push_update)
+{
+    test_prefix_fragment("PUSH_UPDATE");
 }
 
 TEST(continuation, push_update_add)
