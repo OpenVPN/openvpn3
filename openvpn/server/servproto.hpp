@@ -358,6 +358,12 @@ class ServerProto
                 else
                     auth_failed("no management provider", "");
             }
+            else if (msg == "EXIT")
+            {
+                OPENVPN_LOG("Client disconnecting from server, EXIT received");
+                disconnect_type = DT_HALT_RESTART;
+                disconnect_in(Time::Duration::seconds(1));
+            }
             else if (string::starts_with(msg, "ACC,"))
             {
                 if (get_management())
