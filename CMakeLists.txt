@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.13...3.28)
+cmake_minimum_required(VERSION 3.16...3.30)
 
 project(OpenVPN3-core VERSION 3)
 
