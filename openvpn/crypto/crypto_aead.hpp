@@ -229,7 +229,7 @@ class Crypto : public CryptoDCInstance
             // prepend additional data
             nonce.prepend_ad(buf, e.pid_send);
         }
-        return e.pid_send.wrap_warning();
+        return e.pid_send.wrap_warning() || e.impl.get_usage_limit().usage_limit_warn();
     }
 
     Error::Type decrypt(BufferAllocated &buf, const std::time_t now, const unsigned char *op32) override
