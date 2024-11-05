@@ -190,6 +190,35 @@ void test_datachannel_crypto(bool use_epoch)
 }
 
 
+TEST(crypto, epoch_derive_data_keys)
+{
+    uint8_t epoch_key[32] = {19, 12};
+    openvpn::StaticKey e1{epoch_key, 32};
+
+    auto cipher = openvpn::CryptoAlgs::AES_192_GCM;
+
+    openvpn::EpochKey epoch{std::move(e1)};
+
+    auto [key, iv] = epoch.data_key(cipher);
+
+    ASSERT_EQ(key.size(), 24);
+    ASSERT_EQ(iv.size(), 12);
+
+    std::array<uint8_t, 24> exp_key{0xed, 0x85, 0x33, 0xdb, 0x1c, 0x28, 0xac, 0xe4, 0x18, 0xe9, 0x00, 0x6a, 0xb2, 0x9c, 0x17, 0x41, 0x7d, 0x60, 0xeb, 0xe6, 0xcd, 0x90, 0xbf, 0x0a};
+
+    std::array<uint8_t, 12> exp_impl_iv{0x86, 0x89, 0x0a, 0xab, 0xf0, 0x32, 0xcb, 0x59, 0xf4, 0xcf, 0xa3, 0x4e};
+
+
+    std::array<uint8_t, 24> key_array;
+    std::array<uint8_t, 12> iv_array;
+
+    std::memcpy(key_array.data(), key.data(), key.size());
+    std::memcpy(iv_array.data(), iv.data(), iv.size());
+
+    EXPECT_EQ(exp_key, key_array);
+    EXPECT_EQ(exp_impl_iv, iv_array);
+}
+
 TEST(crypto, aead_cipher_movable)
 {
     openvpn::CryptoAlgs::allow_default_dc_algs<openvpn::SSLLib::CryptoAPI>(nullptr, true, false);
@@ -367,4 +396,209 @@ TEST(crypto, hkdf_expand_testa3)
     openvpn::ovpn_hkdf_expand(prk, info, 0, out.data(), L);
 
     ASSERT_EQ(out, okm);
+}
+
+
+/** class for unit test that exposes some of the internals for easier testing if internal are correct*/
+class DataChannelEpochTest : public openvpn::DataChannelEpoch
+{
+public:
+    DataChannelEpochTest(decltype(cipher) cipher, openvpn::StaticKey e1send, openvpn::StaticKey e1recv, uint16_t future_key_count = 16)
+        : openvpn::DataChannelEpoch(cipher, std::move(e1send), std::move(e1recv), nullptr, future_key_count)
+    {
+
+    }
+    DataChannelEpochTest() = default;
+
+    openvpn::EpochDataChannelCryptoContext & get_future_key(decltype(future_keys)::size_type i)
+    {
+        return future_keys.at(i);
+    }
+
+    void iterate_send_key()
+    {
+        openvpn::DataChannelEpoch::iterate_send_key();
+    }
+
+
+    openvpn::EpochKey &recv_() { return receive; }
+    openvpn::EpochKey &send_() { return send; }
+
+    openvpn::EpochDataChannelCryptoContext &recv_ctx_() { return decrypt_ctx; }
+    openvpn::EpochDataChannelCryptoContext &send_ctx_() { return encrypt_ctx; }
+
+
+    openvpn::EpochDataChannelCryptoContext &retire_() { return retiring_decrypt_ctx; }
+
+};
+
+class EpochTest :  public testing::Test
+{
+protected:
+
+    void SetUp() override
+    {
+        // use 13 as default
+        initDCE(13);
+    }
+
+    void initDCE(uint16_t numfuture)
+    {
+        uint8_t e1send_data[32] = { 0x23 };
+        uint8_t e1recv_data[32] = { 0x27 };
+        openvpn::StaticKey e1send{e1send_data, sizeof (e1send_data)};
+        openvpn::StaticKey e1recv{e1send_data, sizeof (e1recv_data)};
+
+        dce_ = DataChannelEpochTest{openvpn::CryptoAlgs::AES_256_GCM, std::move(e1send), std::move(e1recv), numfuture};
+    }
+
+    DataChannelEpochTest dce_;
+};
+
+
+TEST_F(EpochTest, key_generation)
+{
+    /* check the keys look like we expect */
+    EXPECT_EQ(dce_.get_future_key(0).epoch, 2);
+    EXPECT_EQ(dce_.get_future_key(12).epoch, 14);
+    EXPECT_EQ(dce_.recv_().epoch, 14);
+    EXPECT_EQ(dce_.send_().epoch, 1);
+}
+
+
+TEST_F(EpochTest, key_rotation)
+{
+openvpn::SessionStats::Ptr stats{new openvpn::SessionStats{}};
+    /* should replace send + key recv */
+    dce_.replace_update_recv_key(9, stats);
+
+    EXPECT_EQ(dce_.recv_ctx_().epoch, 9);
+    EXPECT_EQ(dce_.send_ctx_().epoch, 9);
+    EXPECT_EQ(dce_.retire_().epoch, 1);
+
+
+    /* Iterate the data send key four times to get it to 13 */
+    for (int i = 0; i < 4; i++)
+    {
+        dce_.iterate_send_key();
+    }
+
+    EXPECT_EQ(dce_.send_ctx_().epoch, 13);
+EXPECT_EQ(dce_.send_().epoch, 13);
+
+    /* recv context should still be 9 */
+EXPECT_EQ(dce_.recv_ctx_().epoch, 9);
+
+    dce_.replace_update_recv_key(10, stats);
+
+EXPECT_EQ(dce_.recv_ctx_().epoch, 10);
+EXPECT_EQ(dce_.send_ctx_().epoch, 13);
+    EXPECT_EQ(dce_.send_().epoch, 13);
+
+EXPECT_EQ(dce_.retire_().epoch, 9);
+
+dce_.replace_update_recv_key(12, stats);
+EXPECT_EQ(dce_.recv_ctx_().epoch, 12);
+EXPECT_EQ(dce_.send_ctx_().epoch, 13);
+EXPECT_EQ(dce_.send_().epoch, 13);
+
+EXPECT_EQ(dce_.retire_().epoch, 10);
+
+dce_.iterate_send_key();
+EXPECT_EQ(dce_.send_ctx_().epoch, 14);
+}
+
+TEST_F(EpochTest, key_receive_lookup)
+{
+openvpn::SessionStats::Ptr stats{new openvpn::SessionStats{}};
+
+    /* lookup some wacky things that should fail */
+    EXPECT_EQ(dce_.lookup_decrypt_key(2000), nullptr);
+    EXPECT_EQ(dce_.lookup_decrypt_key(-1), nullptr);
+    EXPECT_EQ(dce_.lookup_decrypt_key(0xefff), nullptr);
+
+    /* Lookup the edges of the current window */
+    EXPECT_EQ(dce_.lookup_decrypt_key(0), nullptr);
+    EXPECT_EQ(dce_.lookup_decrypt_key(1)->epoch, 1);
+    EXPECT_EQ(dce_.lookup_decrypt_key(2)->epoch, 2);
+    EXPECT_EQ(dce_.lookup_decrypt_key(13)->epoch, 13);
+    EXPECT_EQ(dce_.lookup_decrypt_key(14)->epoch, 14);
+     EXPECT_EQ(dce_.lookup_decrypt_key(15), nullptr);
+
+    /* Should move 1 to retiring key but leave 1-5 undefined, 7 as
+     * active and 8-20 as future keys*/
+    dce_.replace_update_recv_key(7, stats);
+
+    EXPECT_EQ(dce_.lookup_decrypt_key(0), nullptr);
+    EXPECT_EQ(dce_.lookup_decrypt_key(1)->epoch, 1);
+    EXPECT_EQ(dce_.lookup_decrypt_key(2), nullptr);
+    EXPECT_EQ(dce_.lookup_decrypt_key(3), nullptr);
+    EXPECT_EQ(dce_.lookup_decrypt_key(4), nullptr);
+    EXPECT_EQ(dce_.lookup_decrypt_key(5), nullptr);
+    EXPECT_EQ(dce_.lookup_decrypt_key(6), nullptr);
+    EXPECT_EQ(dce_.lookup_decrypt_key( 7)->epoch, 7);
+    EXPECT_EQ(dce_.lookup_decrypt_key( 8)->epoch, 8);
+    EXPECT_EQ(dce_.lookup_decrypt_key( 20)->epoch, 20);
+    EXPECT_EQ(dce_.lookup_decrypt_key(21), nullptr);
+    EXPECT_EQ(dce_.lookup_decrypt_key(22), nullptr);
+
+
+    /* Should move 7 to retiring key and have 8 as active key and
+     * 9-21 as future keys */
+dce_.replace_update_recv_key(8, stats);
+    EXPECT_EQ(dce_.lookup_decrypt_key(0), nullptr);
+    EXPECT_EQ(dce_.lookup_decrypt_key(1), nullptr);
+    EXPECT_EQ(dce_.lookup_decrypt_key(2), nullptr);
+    EXPECT_EQ(dce_.lookup_decrypt_key(3), nullptr);
+    EXPECT_EQ(dce_.lookup_decrypt_key(4), nullptr);
+    EXPECT_EQ(dce_.lookup_decrypt_key(5), nullptr);
+    EXPECT_EQ(dce_.lookup_decrypt_key(6), nullptr);
+    EXPECT_EQ(dce_.lookup_decrypt_key( 7)->epoch, 7);
+    EXPECT_EQ(dce_.lookup_decrypt_key( 8)->epoch, 8);
+    EXPECT_EQ(dce_.lookup_decrypt_key( 20)->epoch, 20);
+    EXPECT_EQ(dce_.lookup_decrypt_key( 21)->epoch, 21);
+    EXPECT_EQ(dce_.lookup_decrypt_key(22), nullptr);
+    EXPECT_EQ(dce_.lookup_decrypt_key(23), nullptr);
+}
+
+TEST_F(EpochTest, key_overflow)
+{
+    openvpn::SessionStats::Ptr stats{new openvpn::SessionStats{}};
+    initDCE(32);
+
+    /* Modify the receive epoch and keys to have a very high epoch to test
+     * the end of array. Iterating through all 16k keys takes a 2-3s, so we
+     * avoid this for the unit test */
+    dce_.recv_ctx_().epoch = 16000;
+    dce_.send_ctx_().epoch = 16000;
+
+    dce_.send_().epoch = 16000;
+    dce_.recv_().epoch = 16000 + dce_.get_future_keys_count();
+
+    for (uint16_t i = 0; i < dce_.get_future_keys_count(); i++)
+    {
+        dce_.get_future_key(i).epoch = 16001 + i;
+    }
+
+    /* Move the last few keys until we are close to the limit */
+    while (dce_.recv_ctx_().epoch < (UINT16_MAX - 40))
+    {
+        dce_.replace_update_recv_key(dce_.recv_ctx_().epoch + 10, stats);
+    }
+
+    /* Looking up this key should still work as it will not break the limit
+     * when generating keys */
+    EXPECT_EQ(dce_.lookup_decrypt_key( UINT16_MAX - 34)->epoch, UINT16_MAX - 34);
+    EXPECT_EQ(dce_.lookup_decrypt_key( UINT16_MAX - 33)->epoch, UINT16_MAX - 33);
+
+    /* This key is no longer eligible for decrypting as the 13 future keys
+     * would be larger than uint16_t maximum */
+    EXPECT_EQ(dce_.lookup_decrypt_key(UINT16_MAX - 32), nullptr);
+    EXPECT_EQ(dce_.lookup_decrypt_key(UINT16_MAX), nullptr);
+
+    /* Check that moving to the last possible epoch works */
+    dce_.replace_update_recv_key(UINT16_MAX - 33, stats);
+    EXPECT_EQ(dce_.lookup_decrypt_key( UINT16_MAX - 33)->epoch, UINT16_MAX - 33);
+    EXPECT_EQ(dce_.lookup_decrypt_key(UINT16_MAX - 32), nullptr);
+    EXPECT_EQ(dce_.lookup_decrypt_key(UINT16_MAX), nullptr);
 }
