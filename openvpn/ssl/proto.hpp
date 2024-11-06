@@ -3577,6 +3577,12 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
             return proto_field_ & iv_proto_flag::IV_PROTO_REQUEST_PUSH;
         }
 
+        //! Checks if the client is able to send an explicit EXIT message before exiting.
+        bool client_supports_exit_notify() const
+        {
+            return proto_field_ & iv_proto_flag::IV_PROTO_CC_EXIT_NOTIFY;
+        }
+
       private:
         unsigned int proto_field_;
     };
