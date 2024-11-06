@@ -56,5 +56,5 @@ if (ENABLE_DOXYGEN)
         )
     set(DOXYGEN_USE_MDFILE_AS_MAINPAGE "${PROJECT_SOURCE_DIR}/README.md")
 
-    configure_doxygen("OpenVPN 3 Core Library" "doxygen/core")
+    configure_doxygen("OpenVPN 3 Core Library" "core" "doxygen/core")
 endif ()

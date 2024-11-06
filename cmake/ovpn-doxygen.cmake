@@ -1,7 +1,7 @@
 option(ENABLE_DOXYGEN "Build code documentation with Doxygen")
 
 
-function(configure_doxygen projname outputdir)
+function(configure_doxygen projname tgtname outputdir)
     find_package(Doxygen
                  REQUIRED dot)
 
@@ -27,8 +27,8 @@ function(configure_doxygen projname outputdir)
     set(DOXYGEN_DOT_GRAPH_MAX_NODES 500)
     set(DOXYGEN_WARN_AS_ERROR YES)
 
-    doxygen_add_docs(doxygen ALL
-        "${CMAKE_CURRENT_SOURCE_DIR}"
+    doxygen_add_docs("doxygen-${tgtname}" ALL
+        "${CMAKE_CURRENT_SOURCE_DIR}" ${OVPN_DOXYGEN_SOURCES}
         WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-        COMMENT "Generate Doxygen documentation")
+        COMMENT "Generate Doxygen documentation (${projname})")
 endfunction ()
