@@ -190,6 +190,49 @@ void test_datachannel_crypto(bool use_epoch)
 }
 
 
+TEST(crypto, aead_cipher_movable)
+{
+    openvpn::CryptoAlgs::allow_default_dc_algs<openvpn::SSLLib::CryptoAPI>(nullptr, true, false);
+
+    const uint8_t key[32] = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', '0', '1', '2', '3', '4', '5', '6', '7', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'j', 'k', 'u', 'c', 'h', 'e', 'n', 'l'};
+
+    openvpn::SSLLib::CryptoAPI::CipherContextAEAD cipher;
+    cipher.init(nullptr, openvpn::CryptoAlgs::AES_256_GCM, key, 32, openvpn::SSLLib::CryptoAPI::CipherContextAEAD::ENCRYPT);
+    ASSERT_TRUE(cipher.is_initialized());
+    const uint8_t input[5] = {'h', 'e', 'l', 'l', 'o'};
+    uint8_t encrypted[64] = {0};
+    const uint8_t iv[12] = {0x77};
+    uint8_t *tag = encrypted + sizeof(input);
+
+    cipher.encrypt(input, encrypted, 5, iv, tag, nullptr, 0);
+
+    /* Move constructor */
+    openvpn::SSLLib::CryptoAPI::CipherContextAEAD cipher2(std::move(cipher));
+    ASSERT_TRUE(cipher2.is_initialized());
+    ASSERT_FALSE(cipher.is_initialized());
+
+    uint8_t output2[32] = {0};
+
+    auto ret = cipher2.decrypt(encrypted, output2, 5 + openvpn::SSLLib::CryptoAPI::CipherContextAEAD::AUTH_TAG_LEN, iv, nullptr, nullptr, 0);
+    EXPECT_TRUE(ret);
+
+    ASSERT_EQ(std::memcmp(input, output2, 5), 0);
+
+    /* Move operator=  */
+    uint8_t output3[32] = {0};
+
+    openvpn::SSLLib::CryptoAPI::CipherContextAEAD cipher3;
+    cipher3 = std::move(cipher2);
+    ASSERT_TRUE(cipher3.is_initialized());
+    ASSERT_FALSE(cipher2.is_initialized());
+    ASSERT_FALSE(cipher.is_initialized());
+
+    ret = cipher3.decrypt(encrypted, output3, 5 + openvpn::SSLLib::CryptoAPI::CipherContextAEAD::AUTH_TAG_LEN, iv, nullptr, nullptr, 0);
+    EXPECT_TRUE(ret);
+
+    ASSERT_EQ(std::memcmp(input, output3, 5), 0);
+}
+
 TEST(crypto, dcaead_data_v2)
 {
     test_datachannel_crypto(false);

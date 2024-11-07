@@ -42,7 +42,20 @@ class CipherContextAEAD
   public:
     CipherContextAEAD(const CipherContextAEAD &) = delete;
     CipherContextAEAD &operator=(const CipherContextAEAD &) = delete;
-    
+
+    CipherContextAEAD(CipherContextAEAD &&other) noexcept
+        : ctx(std::exchange(other.ctx, nullptr)), aead_usage_limit_(other.aead_usage_limit_)
+    {
+    }
+
+    CipherContextAEAD &operator=(CipherContextAEAD &&other)
+    {
+        CipherContextAEAD temp(std::move(other));
+        std::swap(ctx, temp.ctx);
+        std::swap(aead_usage_limit_, other.aead_usage_limit_);
+        return *this;
+    }
+
     OPENVPN_EXCEPTION(openssl_gcm_error);
 
     // mode parameter for constructor
