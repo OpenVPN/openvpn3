@@ -47,14 +47,18 @@ class CryptoDCInstance : public RC<thread_unsafe_refcount>
     // return value of defined()
     enum
     {
-        CIPHER_DEFINED = (1 << 0),               // may call init_cipher method
-        HMAC_DEFINED = (1 << 1),                 // may call init_hmac method
-        CRYPTO_DEFINED = (1 << 2),               // may call encrypt or decrypt methods
-        EXPLICIT_EXIT_NOTIFY_DEFINED = (1 << 3), // may call explicit_exit_notify method
-        LONG_IV_DEFINED = (1 << 4)
+        CIPHER_DEFINED = (1 << 0),              // may call init_cipher method
+        HMAC_DEFINED = (1 << 1),                // may call init_hmac method
+        CRYPTO_DEFINED = (1 << 2),              // may call encrypt or decrypt methods
+        EXPLICIT_EXIT_NOTIFY_DEFINED = (1 << 3) // may call explicit_exit_notify method
     };
     virtual unsigned int defined() const = 0;
 
+
+    /**
+     * Initialised the encryption/decryption cipher of the classs. Note that this is
+     * and init_hmac need to typically called before encrypt/decrypt can be called.
+     */
     virtual void init_cipher(StaticKey &&encrypt_key,
                              StaticKey &&decrypt_key) = 0;
 

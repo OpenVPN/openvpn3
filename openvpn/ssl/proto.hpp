@@ -282,7 +282,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
         IV_PROTO_CC_EXIT_NOTIFY = (1 << 7),
         IV_PROTO_AUTH_FAIL_TEMP = (1 << 8),
         IV_PROTO_DYN_TLS_CRYPT = (1 << 9),
-        IV_PROTO_DATA_V3 = (1 << 10),
+        IV_PROTO_DATA_EPOCH = (1 << 10),
         IV_PROTO_DNS_OPTION_V2 = (1 << 11),
         IV_PROTO_PUSH_UPDATE = (1 << 12)
     };
@@ -1102,12 +1102,8 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
                                     | IV_PROTO_DNS_OPTION_V2
                                     | IV_PROTO_CC_EXIT_NOTIFY
                                     | IV_PROTO_AUTH_FAIL_TEMP
+                                    | IV_PROTO_DATA_EPOCH
                                     | IV_PROTO_PUSH_UPDATE;
-
-            /* Note, this is disabled until OpenVPN3 implements data v3 support
-             * with epoch key rotation */
-            /* if (proto_v3_support)
-                iv_proto |= IV_PROTO_DATA_V3; */
 
             if (CryptoAlgs::lookup("SHA256") != CryptoAlgs::NONE && CryptoAlgs::lookup("AES-256-CTR") != CryptoAlgs::NONE)
                 iv_proto |= IV_PROTO_DYN_TLS_CRYPT;

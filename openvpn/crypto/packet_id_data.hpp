@@ -35,7 +35,7 @@ namespace openvpn {
 /**
  * Communicate packet-id over the wire for data channel packets
  * A short packet-id is just a 32 bit sequence number. A long packet-id is a
- * 64 bit sequence number. This sequence number is reused for AEAD IV when
+ * 16 bit epoch + 48 bit sequence number. This sequence number is reused for AEAD IV when
  * AEAD is used as a cipher. CBC transmits an additional IV.
  *
  * This data structure is always sent over the net in network byte order,
@@ -50,6 +50,11 @@ namespace openvpn {
 struct PacketIDData
 {
     typedef std::uint64_t data_id_t;
+
+    /* the part of the packet id that represents the PID, the first 16 bits
+     * are used by the Epoch*/
+    static constexpr inline data_id_t epoch_packet_id_mask = 0x0000ffffffffffffull;
+
 
     data_id_t id = 0; // legal values are 1 through 2^64-1
     bool wide = false;
@@ -93,6 +98,11 @@ struct PacketIDData
     void reset()
     {
         id = data_id_t(0);
+    }
+
+    uint16_t get_epoch()
+    {
+        return static_cast<uint16_t>((id & ~epoch_packet_id_mask) >> 48ull);
     }
 
     /**
@@ -159,12 +169,19 @@ class PacketIDDataSend
   public:
     OPENVPN_SIMPLE_EXCEPTION(packet_id_wrap);
 
-    explicit PacketIDDataSend(bool wide_arg)
-        : pid_(wide_arg)
+    /** the maximum allowed value for a epoch packet counter (48 bit) */
+    static constexpr inline PacketIDData::data_id_t epoch_packet_id_max = 0x0000ffffffffffffull;
+
+
+    explicit PacketIDDataSend(bool wide_arg, uint16_t epoch)
+        : pid_(wide_arg, static_cast<PacketIDData::data_id_t>(epoch) << 48ull)
     {
     }
 
-
+    explicit PacketIDDataSend()
+        : pid_(false)
+    {
+    }
     /**
      * Increment the packet ID and return the next packet id to use.
      * @throws  packet_id_wrap if the packet id space is exhausted
@@ -174,11 +191,7 @@ class PacketIDDataSend
     {
         ++pid_.id;
         PacketIDData ret{pid_.wide, pid_.id};
-        if (!pid_.wide && unlikely(pid_.id == std::numeric_limits<std::uint32_t>::max())) // wraparound
-        {
-            throw packet_id_wrap();
-        }
-        else if (unlikely(pid_.id == std::numeric_limits<decltype(pid_.id)>::max()))
+        if (at_limit())
         {
             throw packet_id_wrap();
         }
@@ -242,6 +255,20 @@ class PacketIDDataSend
         const PacketIDData::data_id_t wrap_at = 0xFF000000;
         return pid_.id >= wrap_at;
     }
+
+    bool at_limit()
+    {
+        if (!pid_.wide && unlikely(pid_.id == std::numeric_limits<std::uint32_t>::max())) // wraparound
+        {
+            return true;
+        }
+        else if (unlikely((pid_.id & PacketIDData::epoch_packet_id_mask) == epoch_packet_id_max))
+        {
+            return true;
+        }
+        return false;
+    }
+
 
   protected:
     PacketIDData pid_;

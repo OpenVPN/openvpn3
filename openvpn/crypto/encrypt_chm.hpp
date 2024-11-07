@@ -100,7 +100,7 @@ class EncryptCHM
     Frame::Ptr frame;
     CipherContext<CRYPTO_API> cipher;
     OvpnHMAC<CRYPTO_API> hmac;
-    PacketIDDataSend pid_send{false};
+    PacketIDDataSend pid_send{};
 
   private:
     // compute HMAC signature of data buffer,

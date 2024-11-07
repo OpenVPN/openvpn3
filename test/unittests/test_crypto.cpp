@@ -16,7 +16,10 @@
 #include <openvpn/ssl/sslchoose.hpp>
 #include <openvpn/crypto/cryptoalgs.hpp>
 #include <openvpn/crypto/crypto_aead.hpp>
+#include <openvpn/crypto/crypto_aead_epoch.hpp>
 #include <openvpn/crypto/data_epoch.hpp>
+#include <openvpn/crypto/cryptodcsel.hpp>
+#include <cstring>
 
 
 static uint8_t testkey[20] = {0x0b, 0x00};
@@ -87,19 +90,26 @@ static openvpn::Frame::Context frame_ctx()
 }
 
 
-void test_datachannel_crypto(bool use_epoch)
+openvpn::CryptoDCInstance::Ptr create_dctest_instance(bool use_epoch)
 {
-
+    openvpn::CryptoDCInstance::Ptr cryptodc;
     auto frameptr = openvpn::Frame::Ptr{new openvpn::Frame{frame_ctx()}};
     auto statsptr = openvpn::SessionStats::Ptr{new openvpn::SessionStats{}};
+
 
     openvpn::CryptoDCSettingsData dc;
     dc.set_cipher(openvpn::CryptoAlgs::AES_256_GCM);
     dc.set_use_epoch_keys(use_epoch);
 
-    openvpn::AEAD::Crypto<openvpn::SSLLib::CryptoAPI> cryptodc{nullptr, dc, frameptr, statsptr};
+    openvpn::SSLLib::Ctx libctx = nullptr;
+    openvpn::CryptoDCFactory::Ptr dc_factory_sel{new openvpn::CryptoDCSelect<openvpn::SSLLib::CryptoAPI>(libctx, frameptr, statsptr, nullptr)};
 
-    const char *plaintext = "The quick little fox jumps over the bureaucratic hurdles";
+    auto dc_factory = dc_factory_sel->new_obj(dc);
+
+    cryptodc = dc_factory->new_obj(0);
+
+    uint8_t bigkey[openvpn::OpenVPNStaticKey::KEY_SIZE] = {0};
+
 
     const uint8_t key[] = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', '0', '1', '2', '3', '4', '5', '6', '7', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'j', 'k', 'u', 'c', 'h', 'e', 'n', 'l'};
 
@@ -107,12 +117,14 @@ void test_datachannel_crypto(bool use_epoch)
 
     /* copy the key a few times to ensure to have the size we need for
      * Statickey but XOR it to not repeat it */
-    uint8_t bigkey[openvpn::OpenVPNStaticKey::KEY_SIZE]{};
 
     for (int i = 0; i < openvpn::OpenVPNStaticKey::KEY_SIZE; i++)
     {
         bigkey[i] = static_cast<uint8_t>(key[i % sizeof(key)] ^ i);
     }
+
+    // Epoch known vector test uses the same key for both e1 send and receive, overwrite s2c cipher key with c2s cipher key
+    std::memcpy(bigkey + 128, bigkey, 64);
 
     openvpn::OpenVPNStaticKey static_key;
     std::memcpy(static_key.raw_alloc(), bigkey, sizeof(bigkey));
@@ -120,15 +132,25 @@ void test_datachannel_crypto(bool use_epoch)
     auto key_dir = openvpn::OpenVPNStaticKey::NORMAL;
 
     /* We here make encrypt and decrypt keys the same by design to have the loopback decryption capability */
-    cryptodc.init_hmac(static_key.slice(openvpn::OpenVPNStaticKey::HMAC | openvpn::OpenVPNStaticKey::ENCRYPT | key_dir),
-                       static_key.slice(openvpn::OpenVPNStaticKey::HMAC | openvpn::OpenVPNStaticKey::ENCRYPT | key_dir));
+    cryptodc->init_hmac(static_key.slice(openvpn::OpenVPNStaticKey::HMAC | openvpn::OpenVPNStaticKey::ENCRYPT | key_dir),
+                        static_key.slice(openvpn::OpenVPNStaticKey::HMAC | openvpn::OpenVPNStaticKey::ENCRYPT | key_dir));
 
-    cryptodc.init_cipher(static_key.slice(openvpn::OpenVPNStaticKey::CIPHER | openvpn::OpenVPNStaticKey::ENCRYPT | key_dir),
-                         static_key.slice(openvpn::OpenVPNStaticKey::CIPHER | openvpn::OpenVPNStaticKey::ENCRYPT | key_dir));
+    cryptodc->init_cipher(static_key.slice(openvpn::OpenVPNStaticKey::CIPHER | openvpn::OpenVPNStaticKey::ENCRYPT | key_dir),
+                          static_key.slice(openvpn::OpenVPNStaticKey::CIPHER | openvpn::OpenVPNStaticKey::ENCRYPT | key_dir));
 
-    cryptodc.init_pid("DATA",
-                      0,
-                      statsptr);
+    cryptodc->init_pid("DATA", 0, statsptr);
+
+    return cryptodc;
+}
+
+void test_datachannel_crypto(bool use_epoch)
+{
+    openvpn::CryptoAlgs::allow_default_dc_algs<openvpn::SSLLib::CryptoAPI>(nullptr, true, false);
+
+    openvpn::CryptoDCInstance::Ptr cryptodc = create_dctest_instance(use_epoch);
+
+
+    const char *plaintext = "The quick little fox jumps over the bureaucratic hurdles";
 
     openvpn::BufferAllocated work{2048, 0};
 
@@ -143,7 +165,7 @@ void test_datachannel_crypto(bool use_epoch)
 
     const unsigned char op32[]{7, 0, 0, 23};
 
-    bool const wrapwarn = cryptodc.encrypt(work, op32);
+    bool const wrapwarn = cryptodc->encrypt(work, op32);
     ASSERT_FALSE(wrapwarn);
 
     size_t pkt_counter_len = use_epoch ? 8 : 4;
@@ -153,18 +175,22 @@ void test_datachannel_crypto(bool use_epoch)
     EXPECT_EQ(work.size(), std::strlen(plaintext) + pkt_counter_len + tag_len);
 
     const uint8_t exp_tag_short[16]{0x1f, 0xdd, 0x90, 0x8f, 0x0e, 0x9d, 0xc2, 0x5e, 0x79, 0xd8, 0x32, 0x02, 0x0d, 0x58, 0xe7, 0x3f};
-    const uint8_t exp_tag_long[16]{0x52, 0xee, 0xef, 0xdb, 0x34, 0xb7, 0xbd, 0x79, 0xfe, 0xbf, 0x69, 0xd0, 0x4e, 0x92, 0xfe, 0x4b};
-
+    std::array<uint8_t, 16> exp_tag_epoch = {0Xa0, 0xb5, 0x4c, 0xdd, 0x93, 0xff, 0x0b, 0x01, 0xa3, 0x26, 0x5e, 0xcf, 0x19, 0xd5, 0x6a, 0x06};
 
     if (use_epoch)
     {
         ptrdiff_t tag_offset = 56;
-        uint8_t packetid1[]{0, 0, 0, 0, 0, 0, 0, 1};
+        uint8_t packetid1[8] = {0, 0x1, 0, 0, 0, 0, 0, 1};
         EXPECT_EQ(std::memcmp(work.data(), packetid1, 8), 0);
-        EXPECT_EQ(std::memcmp(work.data() + tag_offset + pkt_counter_len, exp_tag_long, 16), 0);
+
+        // Use std::aray for comparison since that gives better gtest output
+
+        std::array<uint8_t, 16> tag{};
+        std::memcpy(tag.data(), work.data() + tag_offset + pkt_counter_len, 16);
+        EXPECT_EQ(tag, exp_tag_epoch);
 
         // Check a few random bytes of the encrypted output. Different IVs lead to different output here.
-        const uint8_t bytesat14[6]{0xc7, 0x40, 0x47, 0x81, 0xac, 0x8c};
+        const uint8_t bytesat14[6]{0x8e, 0x45, 0x5a, 0xdd, 0xd9, 0x0e};
         EXPECT_EQ(std::memcmp(work.data() + 14, bytesat14, 6), 0);
     }
     else
@@ -179,9 +205,8 @@ void test_datachannel_crypto(bool use_epoch)
         EXPECT_EQ(std::memcmp(work.data() + tag_offset + 14, bytesat14, 6), 0);
     }
 
-
     /* Check now if decrypting also works */
-    auto ret = cryptodc.decrypt(work, now, op32);
+    auto ret = cryptodc->decrypt(work, now, op32);
 
     EXPECT_EQ(ret, openvpn::Error::SUCCESS);
     EXPECT_EQ(work.size(), std::strlen(plaintext));
@@ -189,6 +214,66 @@ void test_datachannel_crypto(bool use_epoch)
     EXPECT_EQ(std::memcmp(work.data(), plaintext, std::strlen(plaintext)), 0);
 }
 
+TEST(crypto, testEpochIterateKey)
+{
+    openvpn::CryptoAlgs::allow_default_dc_algs<openvpn::SSLLib::CryptoAPI>(nullptr, true, false);
+
+    openvpn::CryptoDCInstance::Ptr cryptodcsend = create_dctest_instance(true);
+    openvpn::CryptoDCInstance::Ptr cryptodcrecv = create_dctest_instance(true);
+
+    auto *epochdcsend = dynamic_cast<openvpn::AEADEpoch::Crypto<openvpn::SSLLib::CryptoAPI> *>(cryptodcsend.get());
+
+    ASSERT_NE(epochdcsend, nullptr);
+
+    /* Increase the epoch to 4 on the sending you */
+    epochdcsend->increase_send_epoch();
+    epochdcsend->increase_send_epoch();
+    epochdcsend->increase_send_epoch();
+
+    const char *plaintext = "The quick little fox jumps over the bureaucratic hurdles";
+
+    const std::time_t now = 42;
+
+    const unsigned char op32[]{7, 0, 0, 23};
+
+    openvpn::BufferAllocated work{2048, 0};
+
+    /* reserve some headroom */
+    work.realign(128);
+
+    std::memcpy(work.write_alloc(std::strlen(plaintext)), plaintext, std::strlen(plaintext));
+
+    bool const wrapwarn = cryptodcsend->encrypt(work, op32);
+    ASSERT_FALSE(wrapwarn);
+
+    std::size_t pkt_counter_len = 8;
+    std::size_t tag_len = 16;
+
+    /* 16 for tag, 4 or 8 for packet counter */
+    EXPECT_EQ(work.size(), std::strlen(plaintext) + pkt_counter_len + tag_len);
+
+    std::array<uint8_t, 16> exp_tag_epoch = {0x0f, 0xff, 0xf5, 0x91, 0x3d, 0x39, 0xd7, 0x5b, 0x18, 0x57, 0x3b, 0x57, 0x48, 0x58, 0x9a, 0x7d};
+    ptrdiff_t tag_offset = 56;
+    uint8_t packetid1[8] = {0, 0x4, 0, 0, 0, 0, 0, 1};
+    EXPECT_EQ(std::memcmp(work.data(), packetid1, 8), 0);
+
+    // Use std::aray for comparison since that gives better gtest output
+    std::array<uint8_t, 16> tag{};
+    std::memcpy(tag.data(), work.data() + tag_offset + pkt_counter_len, 16);
+    EXPECT_EQ(tag, exp_tag_epoch);
+
+    // Check a few random bytes of the encrypted output. Different IVs lead to different output here.
+    const uint8_t bytesat14[6]{0x36, 0xaa, 0xb4, 0xd4, 0x9c, 0xe6};
+    EXPECT_EQ(std::memcmp(work.data() + 14, bytesat14, 6), 0);
+
+    /* Check now if decrypting also works */
+    auto ret = cryptodcrecv->decrypt(work, now, op32);
+
+    EXPECT_EQ(ret, openvpn::Error::SUCCESS);
+    EXPECT_EQ(work.size(), std::strlen(plaintext));
+
+    EXPECT_EQ(std::memcmp(work.data(), plaintext, std::strlen(plaintext)), 0);
+}
 
 TEST(crypto, epoch_derive_data_keys)
 {
@@ -270,7 +355,6 @@ TEST(crypto, dcaead_data_v2)
 TEST(crypto, dcaead_epoch_data)
 {
     /* Epoch data needs more refactoring before adjusting the unit test */
-    GTEST_SKIP();
     test_datachannel_crypto(true);
 }
 
@@ -406,7 +490,6 @@ public:
     DataChannelEpochTest(decltype(cipher) cipher, openvpn::StaticKey e1send, openvpn::StaticKey e1recv, uint16_t future_key_count = 16)
         : openvpn::DataChannelEpoch(cipher, std::move(e1send), std::move(e1recv), nullptr, future_key_count)
     {
-
     }
     DataChannelEpochTest() = default;
 

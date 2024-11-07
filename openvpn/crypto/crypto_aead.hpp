@@ -158,7 +158,7 @@ class Crypto : public CryptoDCInstance
     {
         typename CRYPTO_API::CipherContextAEAD impl;
         Nonce nonce;
-        PacketIDDataSend pid_send{false};
+        PacketIDDataSend pid_send{};
         BufferAllocated work;
     };
 
@@ -315,7 +315,7 @@ class Crypto : public CryptoDCInstance
                   const int recv_unit,
                   const SessionStats::Ptr &recv_stats_arg) override
     {
-        e.pid_send = PacketIDDataSend{false};
+        e.pid_send = PacketIDDataSend{};
         d.pid_recv.init(recv_name, recv_unit, false);
         stats = recv_stats_arg;
     }

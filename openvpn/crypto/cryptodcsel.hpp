@@ -18,6 +18,7 @@
 #include <openvpn/crypto/cryptodc.hpp>
 #include <openvpn/crypto/crypto_chm.hpp>
 #include <openvpn/crypto/crypto_aead.hpp>
+#include <openvpn/crypto/crypto_aead_epoch.hpp>
 #include <openvpn/random/randapi.hpp>
 
 namespace openvpn {
@@ -49,6 +50,8 @@ class CryptoDCSelect : public CryptoDCFactory
         const CryptoAlgs::Alg &alg = CryptoAlgs::get(dc_settings.cipher());
         if (alg.flags() & CryptoAlgs::CBC_HMAC)
             return new CryptoContextCHM<CRYPTO_API>(libctx, std::move(dc_settings), frame, stats, rng);
+        else if (alg.flags() & CryptoAlgs::AEAD && dc_settings.useEpochKeys())
+            return new AEADEpoch::CryptoContext<CRYPTO_API>(libctx, std::move(dc_settings), frame, stats);
         else if (alg.flags() & CryptoAlgs::AEAD)
             return new AEAD::CryptoContext<CRYPTO_API>(libctx, std::move(dc_settings), frame, stats);
         else

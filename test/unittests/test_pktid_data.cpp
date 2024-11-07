@@ -163,7 +163,7 @@ class PacketIDDataSendTest : public openvpn::PacketIDDataSend
 {
   public:
     PacketIDDataSendTest(bool wide, std::uint64_t start)
-        : openvpn::PacketIDDataSend(wide)
+        : openvpn::PacketIDDataSend(wide, 0)
     {
         pid_ = PacketIDDataConstruct{start, wide};
     }
