@@ -76,7 +76,7 @@ class MacGatewayInfo
         IFACE_DEFINED = (1 << 3),   /* set if iface is defined */
     };
 
-    MacGatewayInfo(IP::Addr dest)
+    MacGatewayInfo(IP::Addr dest, std::ostream *os = nullptr)
     {
         /* setup data to send to routing socket */
         int seq = 0;
@@ -115,8 +115,15 @@ class MacGatewayInfo
 
         auto ret = ::write(sockfd(), &m_rtmsg, m_rtmsg.m_rtm.rtm_msglen);
         if (ret < 0)
-            throw route_gateway_error("GDG: problem writing to routing socket: " + std::to_string(ret)
-                                      + " errno: " + std::to_string(errno) + " msg: " + ::strerror(errno));
+        {
+            // likely no default gw or IPv6 connectivity
+            if (os)
+            {
+                *os << "GDG: problem writing to routing socket: " << std::to_string(ret) << " errno: " << std::to_string(errno) << " msg: " << ::strerror(errno) << std::endl;
+            }
+
+            return;
+        }
 
         int l = 0;
         int pid = ::getpid();

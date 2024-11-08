@@ -378,8 +378,8 @@ class Setup : public TunBuilderSetup::Base
         if (!pull.exclude_routes.empty())
         {
             // get default gateways
-            MacGatewayInfo gw4{IP::Addr::from_ipv4(IPv4::Addr::from_zero())};
-            MacGatewayInfo gw6{IP::Addr::from_ipv6(IPv6::Addr::from_zero())};
+            MacGatewayInfo gw4{IP::Addr::from_ipv4(IPv4::Addr::from_zero()), &os};
+            MacGatewayInfo gw6{IP::Addr::from_ipv6(IPv6::Addr::from_zero()), &os};
 
             for (std::vector<TunBuilderCapture::Route>::const_iterator i = pull.exclude_routes.begin(); i != pull.exclude_routes.end(); ++i)
             {
@@ -410,7 +410,7 @@ class Setup : public TunBuilderSetup::Base
             // add server bypass route if remote is also IPv4
             if (!pull.remote_address.ipv6)
             {
-                MacGatewayInfo gw4{IP::Addr::from_ipv4(IPv4::Addr::from_string(pull.remote_address.address))};
+                MacGatewayInfo gw4{IP::Addr::from_ipv4(IPv4::Addr::from_string(pull.remote_address.address)), &os};
                 if (gw4.flags() & MacGatewayInfo::ADDR_DEFINED)
                 {
                     if (!pull.remote_address.ipv6 && !(pull.reroute_gw.flags & RedirectGatewayFlags::RG_LOCAL))
@@ -444,7 +444,7 @@ class Setup : public TunBuilderSetup::Base
             // add server bypass route if remote is also ipv6
             if (pull.remote_address.ipv6)
             {
-                MacGatewayInfo gw6{IP::Addr::from_ipv6(IPv6::Addr::from_string(pull.remote_address.address))};
+                MacGatewayInfo gw6{IP::Addr::from_ipv6(IPv6::Addr::from_string(pull.remote_address.address)), &os};
                 if (gw6.flags() & MacGatewayInfo::ADDR_DEFINED)
                 {
                     if (pull.remote_address.ipv6 && !(pull.reroute_gw.flags & RedirectGatewayFlags::RG_LOCAL))
