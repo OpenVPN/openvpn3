@@ -25,6 +25,9 @@ function(configure_doxygen projname tgtname outputdir)
     set(DOXYGEN_FILE_PATTERNS *.c *.h *.cc *.hh *.cpp *.hpp *.java *.i *.md *.txt)
     set(DOXYGEN_EXTENSION_MAPPING txt=md)
     set(DOXYGEN_DOT_GRAPH_MAX_NODES 500)
+    set(DOXYGEN_DOT_MULTI_TARGETS YES)
+    set(DOXYGEN_DOT_IMAGE_FORMAT svg)
+    set(DOXYGEN_INTERACTIVE_SVG YES)
     set(DOXYGEN_WARN_AS_ERROR YES)
 
     doxygen_add_docs("doxygen-${tgtname}" ALL
