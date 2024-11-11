@@ -32,7 +32,7 @@ void do_packet_id_recv_test_short_ids(bool usewide)
     typedef PacketIDDataReceiveType<3, 5> PIDRecv;
     SessionStats::Ptr stats(new SessionStats());
     PIDRecv pr;
-    pr.init("test", 0, usewide, stats);
+    pr.init("test", 0, usewide);
 
     testcase(pr, 0, 0, Error::PKTID_INVALID);
     testcase(pr, 1, 1, Error::SUCCESS);
@@ -65,7 +65,7 @@ TEST(misc, do_packet_id_recv_test_long_ids)
     typedef PacketIDDataReceiveType<3, 5> PIDRecv;
     PIDRecv pr;
     SessionStats::Ptr stats{new SessionStats()};
-    pr.init("test", 0, true, stats);
+    pr.init("test", 0, true);
 
     testcase(pr, 40, 0xfffffffe, Error::SUCCESS);
     testcase(pr, 41, 0xffffffff, Error::SUCCESS);
@@ -111,7 +111,7 @@ void perfiter(const long n,
     long high = 0;
     SessionStats::Ptr stats(new SessionStats());
     PIDRecv pr;
-    pr.init("test", 0, false, stats);
+    pr.init("test", 0, false);
 
     for (long i = 1; i < n; i += step)
     {

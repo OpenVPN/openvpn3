@@ -109,12 +109,13 @@ class DecryptCHM
     CipherContext<CRYPTO_API> cipher;
     OvpnHMAC<CRYPTO_API> hmac;
     PacketIDDataReceive pid_recv;
+    SessionStats::Ptr stats;
 
   private:
     bool verify_packet_id(BufferAllocated &buf, const std::time_t now)
     {
         const PacketIDData pid = pid_recv.read_next(buf);
-        return pid_recv.test_add(pid, now);
+        return pid_recv.test_add(pid, now, stats);
     }
 
     BufferAllocated work;

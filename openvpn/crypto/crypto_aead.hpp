@@ -115,11 +115,11 @@ class Crypto : public CryptoDCInstance
         }
 
         // for decrypt
-        bool verify_packet_id(PacketIDDataReceive &pid_recv, const PacketIDControl::time_t now)
+        bool verify_packet_id(PacketIDDataReceive &pid_recv, const PacketIDControl::time_t now, const SessionStats::Ptr &stats_arg)
         {
             Buffer buf(data + data_offset_pkt_id, PacketIDData::long_id_size, true);
             const PacketIDData pid = pid_recv.read_next(buf);
-            return pid_recv.test_add(pid, now); // verify packet ID
+            return pid_recv.test_add(pid, now, stats_arg); // verify packet ID
         }
 
         const unsigned char *iv() const
@@ -275,7 +275,7 @@ class Crypto : public CryptoDCInstance
             }
 
             // verify packet ID
-            if (!nonce.verify_packet_id(d.pid_recv, now))
+            if (!nonce.verify_packet_id(d.pid_recv, now, stats))
             {
                 buf.reset_size();
                 return Error::REPLAY_ERROR;
@@ -316,7 +316,8 @@ class Crypto : public CryptoDCInstance
                   const SessionStats::Ptr &recv_stats_arg) override
     {
         e.pid_send = PacketIDDataSend{false};
-        d.pid_recv.init(recv_name, recv_unit, false, recv_stats_arg);
+        d.pid_recv.init(recv_name, recv_unit, false);
+        stats = recv_stats_arg;
     }
 
     // Indicate whether or not cipher/digest is defined

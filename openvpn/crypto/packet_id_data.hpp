@@ -264,8 +264,7 @@ class PacketIDDataReceiveType
 
     void init(const char *name_arg,
               const int unit_arg,
-              bool wide_arg,
-              const SessionStats::Ptr &stats_arg)
+              bool wide_arg)
     {
         wide = wide_arg;
         base = 0;
@@ -275,7 +274,6 @@ class PacketIDDataReceiveType
         id_floor = 0;
         unit = unit_arg;
         name = name_arg;
-        stats = stats_arg;
         std::memset(history, 0, sizeof(history));
     }
 
@@ -288,10 +286,12 @@ class PacketIDDataReceiveType
      *
      * @param pin       packet ID to check
      * @param now       Current time to check that reordered packets are in the allowed time
+     * @param stats     Stats to update when an error occurs
      * @return          true if the packet id is okay and has been accepted
      */
     [[nodiscard]] bool test_add(const PacketIDData &pin,
-                                const Time::base_type now)
+                                const Time::base_type now,
+                                const SessionStats::Ptr &stats)
     {
         const Error::Type err = do_test_add(pin, now);
         if (unlikely(err != Error::SUCCESS))
@@ -421,8 +421,6 @@ class PacketIDDataReceiveType
     bool wide;
     int unit;         // unit number of this object (for debugging)
     std::string name; // name of this object (for debugging)
-
-    SessionStats::Ptr stats;
 
     //! "sliding window" bitmask of recent packet IDs received */
     std::uint8_t history[REPLAY_WINDOW_BYTES];
