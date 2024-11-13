@@ -645,6 +645,10 @@ class Setup : public SetupBase
                 create.add(new DNS::ActionCreate(tap.name, search_domains));
                 destroy.add(new DNS::ActionDelete(tap.name, search_domains));
 
+                // Apply changes to DNS settings
+                create.add(new DNS::ActionApply());
+                destroy.add(new DNS::ActionApply());
+
                 // Use WFP for DNS leak protection unless local traffic is blocked already.
                 // Block DNS on all interfaces except the TAP adapter.
                 if (use_wfp && pull.block_outside_dns && !block_local_traffic
@@ -752,6 +756,10 @@ class Setup : public SetupBase
                     {
                         create.add(new NRPT::ActionCreate(pid, split_domains, dserv, false));
                         destroy.add(new NRPT::ActionDelete(pid));
+
+                        // Apply changes to DNS settings
+                        create.add(new DNS::ActionApply());
+                        destroy.add(new DNS::ActionApply());
                     }
                 }
 

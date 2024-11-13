@@ -154,6 +154,8 @@ class Nrpt
     static void delete_rules(DWORD process_id)
     {
         std::vector<std::wstring> del_subkeys;
+        static constexpr std::array<PCWSTR, 2> nrpt_subkeys{
+            REG::gpol_nrpt_subkey, REG::local_nrpt_subkey};
         // Only find rules to delete, so that the iterator stays valid
         for (const auto &nrpt_subkey : nrpt_subkeys)
         {
@@ -308,13 +310,6 @@ class Nrpt
     }
 
     /**
-     * Registry subkeys where NRPT rules can be found
-     */
-    static constexpr std::array<PCWSTR, 2> nrpt_subkeys{
-        LR"(SOFTWARE\Policies\Microsoft\Windows NT\DNSClient\DnsPolicyConfig)",
-        LR"(SYSTEM\CurrentControlSet\Services\Dnscache\Parameters\DnsPolicyConfig)"};
-
-    /**
      * @brief Open the NRPT key to store our rules at
      *
      * There are two places in the registry where NRPT rules can be found, depending
@@ -326,12 +321,12 @@ class Nrpt
      */
     static typename REG::Key open_nrpt_base_key()
     {
-        typename REG::Key key(nrpt_subkeys[0]);
+        typename REG::Key key(REG::gpol_nrpt_subkey);
         if (key.defined())
         {
             return key;
         }
-        return typename REG::Key(nrpt_subkeys[1]);
+        return typename REG::Key(REG::local_nrpt_subkey);
     }
 
     /**

@@ -1493,6 +1493,24 @@ class Session : ProtoContextCallbackInterface,
         {
             if (!e && !halt)
             {
+                // In non-DCO case, inactivity timeout is reset on data channel activity,
+                // so this function is only called on timeout.
+                //
+                // With DCO, OpenVPN doesn't see data channel packets, so we have to
+                // change the logic and check kernel counters here, either stopping or
+                // rearming the timer if there is sufficient traffic.
+                if (cli_stats->dco_update())
+                {
+                    auto sample = cli_stats->get_stat(SessionStats::TUN_BYTES_IN) + cli_stats->get_stat(SessionStats::TUN_BYTES_OUT);
+                    auto delta = sample - inactive_last_sample;
+                    if (delta >= inactivity_minimum_bytes)
+                    {
+                        inactive_last_sample = sample;
+                        schedule_inactive_timer();
+                        return;
+                    }
+                }
+
                 fatal_ = Error::INACTIVE_TIMEOUT;
                 send_explicit_exit_notify();
                 if (notify_callback)
@@ -1649,6 +1667,7 @@ class Session : ProtoContextCallbackInterface,
     AsioTimer inactive_timer;
     Time::Duration inactive_duration;
 
+    count_t inactive_last_sample = 0;
     unsigned int inactivity_minimum_bytes = 0;
     std::uint64_t inactivity_bytes = 0;
     std::shared_ptr<SessionStats::inc_callback_t> out_tun_callback_;

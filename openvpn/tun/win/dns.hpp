@@ -46,6 +46,8 @@
 
 #include <array>
 
+#include <winternl.h>
+
 #include <openvpn/common/wstring.hpp>
 #include <openvpn/common/action.hpp>
 #include <openvpn/win/reg.hpp>
@@ -412,49 +414,6 @@ class Dns
     }
 
 
-    /**
-     * @brief Signal the DNS resolver to reload its settings
-     *
-     * @return bool to indicate if the reload was initiated
-     */
-    static bool apply_dns_settings()
-    {
-        bool res = false;
-        SC_HANDLE scm = static_cast<SC_HANDLE>(INVALID_HANDLE_VALUE);
-        SC_HANDLE dnssvc = static_cast<SC_HANDLE>(INVALID_HANDLE_VALUE);
-
-        scm = ::OpenSCManager(NULL, NULL, SC_MANAGER_ALL_ACCESS);
-        if (scm == NULL)
-        {
-            goto out;
-        }
-
-        dnssvc = ::OpenServiceA(scm, "Dnscache", SERVICE_PAUSE_CONTINUE);
-        if (dnssvc == NULL)
-        {
-            goto out;
-        }
-
-        SERVICE_STATUS status;
-        if (::ControlService(dnssvc, SERVICE_CONTROL_PARAMCHANGE, &status) == 0)
-        {
-            goto out;
-        }
-
-        res = true;
-
-    out:
-        if (dnssvc != INVALID_HANDLE_VALUE)
-        {
-            ::CloseServiceHandle(dnssvc);
-        }
-        if (scm != INVALID_HANDLE_VALUE)
-        {
-            ::CloseServiceHandle(scm);
-        }
-        return res;
-    }
-
     class ActionCreate : public Action
     {
       public:
@@ -472,7 +431,6 @@ class Dns
         {
             log << to_string() << std::endl;
             set_search_domains(itf_name_, search_domains_);
-            apply_dns_settings();
         }
 
         /**
@@ -511,7 +469,6 @@ class Dns
         {
             log << to_string() << std::endl;
             remove_search_domains(itf_name_, search_domains_);
-            apply_dns_settings();
         }
 
         /**
@@ -531,6 +488,123 @@ class Dns
       private:
         const std::string itf_name_;
         const std::string search_domains_;
+    };
+
+    class ActionApply : public Action
+    {
+      public:
+        /**
+         * @brief Apply any modification to the DNS settings by signaling the resolver.
+         *
+         * @param log   where the log message goes
+         */
+        void execute(std::ostream &log) override
+        {
+            const char *gpol_status = "";
+            Reg::Key gpol_nrpt_key(Reg::gpol_nrpt_subkey);
+            if (gpol_nrpt_key.defined())
+            {
+                gpol_status = apply_gpol_nrtp_rules() ? " [gpol successful]" : " [gpol failed]";
+            }
+
+            const char *status = apply_dns_settings() ? "successful" : "failed";
+            log << to_string() << ": " << status << gpol_status << std::endl;
+        }
+
+        /**
+         * @brief Return the log message
+         *
+         * @return std::string
+         */
+        std::string to_string() const override
+        {
+            return "DNS::ActionApply";
+        }
+
+      private:
+        /**
+         * @brief Signal the DNS resolver to reload its settings
+         *
+         * @return bool to indicate if the reload was initiated
+         */
+        bool apply_dns_settings()
+        {
+            bool res = false;
+            SC_HANDLE scm = static_cast<SC_HANDLE>(INVALID_HANDLE_VALUE);
+            SC_HANDLE dnssvc = static_cast<SC_HANDLE>(INVALID_HANDLE_VALUE);
+
+            scm = ::OpenSCManager(NULL, NULL, SC_MANAGER_ALL_ACCESS);
+            if (scm == NULL)
+            {
+                goto out;
+            }
+
+            dnssvc = ::OpenServiceA(scm, "Dnscache", SERVICE_PAUSE_CONTINUE);
+            if (dnssvc == NULL)
+            {
+                goto out;
+            }
+
+            SERVICE_STATUS status;
+            if (::ControlService(dnssvc, SERVICE_CONTROL_PARAMCHANGE, &status) == 0)
+            {
+                goto out;
+            }
+
+            res = true;
+
+        out:
+            if (dnssvc != INVALID_HANDLE_VALUE)
+            {
+                ::CloseServiceHandle(dnssvc);
+            }
+            if (scm != INVALID_HANDLE_VALUE)
+            {
+                ::CloseServiceHandle(scm);
+            }
+            return res;
+        }
+
+        /**
+         * @brief Signal the DNS resolver (and others potentially) to reload the NRTP rules group policy settings
+         *
+         * @return bool to indicate if the reload was initiated
+         */
+        bool apply_gpol_nrtp_rules()
+        {
+            bool res = false;
+
+            using publish_fn_t = NTSTATUS (*)(
+                __int64 StateName,
+                __int64 TypeId,
+                __int64 Buffer,
+                unsigned int Length,
+                __int64 ExplicitScope);
+            publish_fn_t RtlPublishWnfStateData;
+            constexpr INT64 WNF_GPOL_SYSTEM_CHANGES = 0x0D891E2AA3BC0875;
+
+            HMODULE ntdll = ::LoadLibraryA("ntdll.dll");
+            if (ntdll == NULL)
+            {
+                goto out;
+            }
+
+            RtlPublishWnfStateData = reinterpret_cast<publish_fn_t>(::GetProcAddress(ntdll, "RtlPublishWnfStateData"));
+            if (RtlPublishWnfStateData == NULL)
+            {
+                goto out;
+            }
+
+            if (RtlPublishWnfStateData(WNF_GPOL_SYSTEM_CHANGES, 0, 0, 0, 0) != ERROR_SUCCESS)
+            {
+                goto out;
+            }
+
+            res = true;
+
+        out:
+            return res;
+        }
     };
 };
 

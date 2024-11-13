@@ -144,6 +144,37 @@ TEST(PushedOptionsFilter, PullFilterMalformedLong)
     ASSERT_THROW(PushedOptionsFilter x(cfg), option_error);
 }
 
+TEST(PushedOptionsFilter, PullFilterSingleQuote)
+{
+    OptionList cfg;
+    cfg.parse_from_config("pull-filter ignore 'route 1.2.3.4'", nullptr);
+    cfg.update_map();
+    PushedOptionsFilter filter(cfg);
+
+    OptionList src;
+    OptionList dst;
+
+    dst.extend(src, &filter);
+
+    testLog->startCollecting();
+    src.parse_from_config("route 1.1.1.1\nroute 2.2.2.2\nroute 1.2.3.4", nullptr);
+    dst.extend(src, &filter);
+    std::string filter_output(testLog->stopCollecting());
+
+    ASSERT_EQ(2u, dst.size())
+        << "Too many options have been accepted by --pull-filter" << std::endl
+        << filter_output;
+}
+
+TEST(PushedOptionsFilter, PullFilterMisplacedQuote)
+{
+    OptionList cfg;
+    cfg.parse_from_config("pull-filter ignore 'a b' c", nullptr);
+    cfg.update_map();
+
+    ASSERT_THROW(PushedOptionsFilter x(cfg), option_error);
+}
+
 TEST(PushedOptionsFilter, PullFilterIgnoreAll)
 {
     OptionList cfg;

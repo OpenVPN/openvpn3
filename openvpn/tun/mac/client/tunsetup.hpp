@@ -396,21 +396,29 @@ class Setup : public TunBuilderSetup::Base
         // Process IPv4 redirect-gateway
         if (pull.reroute_gw.ipv4)
         {
-            MacGatewayInfo gw4{IP::Addr::from_ipv4(IPv4::Addr::from_string(pull.remote_address.address))};
-            // add server bypass route
-            if (gw4.flags() & MacGatewayInfo::ADDR_DEFINED)
+            // add server bypass route if remote is also IPv4
+            if (!pull.remote_address.ipv6)
             {
-                if (!pull.remote_address.ipv6 && !(pull.reroute_gw.flags & RedirectGatewayFlags::RG_LOCAL))
+                MacGatewayInfo gw4{IP::Addr::from_ipv4(IPv4::Addr::from_string(pull.remote_address.address))};
+                if (gw4.flags() & MacGatewayInfo::ADDR_DEFINED)
                 {
-                    Action::Ptr c, d;
-                    add_del_route(pull.remote_address.address, 32, gw4.gateway_addr_str(), gw4.iface(), 0, c, d);
-                    create.add(c);
-                    destroy.add(d);
-                    // add_del_route(gw.v4.router.to_string(), 32, "", gw.v4.iface, R_ONLINK, create, destroy); // fixme -- needed for block-local
+                    if (!pull.remote_address.ipv6 && !(pull.reroute_gw.flags & RedirectGatewayFlags::RG_LOCAL))
+                    {
+                        Action::Ptr c, d;
+                        add_del_route(pull.remote_address.address, 32, gw4.gateway_addr_str(), gw4.iface(), 0, c, d);
+                        create.add(c);
+                        destroy.add(d);
+                    }
+                }
+                else
+                {
+                    os << "ERROR: cannot detect IPv4 default gateway" << std::endl;
                 }
             }
             else
-                os << "ERROR: cannot detect IPv4 default gateway" << std::endl;
+            {
+                os << "remote is IPv6, skip bypass route for reroute-ipv4" << std::endl;
+            }
 
             if (!(pull.reroute_gw.flags & RGWFlags::EmulateExcludeRoutes))
             {
@@ -422,21 +430,29 @@ class Setup : public TunBuilderSetup::Base
         // Process IPv6 redirect-gateway
         if (pull.reroute_gw.ipv6 && !pull.block_ipv6)
         {
-            MacGatewayInfo gw6{IP::Addr::from_ipv6(IPv6::Addr::from_string(pull.remote_address.address))};
-            // add server bypass route
-            if (gw6.flags() & MacGatewayInfo::ADDR_DEFINED)
+            // add server bypass route if remote is also ipv6
+            if (pull.remote_address.ipv6)
             {
-                if (pull.remote_address.ipv6 && !(pull.reroute_gw.flags & RedirectGatewayFlags::RG_LOCAL))
+                MacGatewayInfo gw6{IP::Addr::from_ipv6(IPv6::Addr::from_string(pull.remote_address.address))};
+                if (gw6.flags() & MacGatewayInfo::ADDR_DEFINED)
                 {
-                    Action::Ptr c, d;
-                    add_del_route(pull.remote_address.address, 128, gw6.gateway_addr_str(), gw6.iface(), R_IPv6 | R_IFACE_HINT, c, d);
-                    create.add(c);
-                    destroy.add(d);
-                    // add_del_route(gw.v6.router.to_string(), 128, "", gw.v6.iface, R_IPv6|R_ONLINK, create, destroy); // fixme -- needed for block-local
+                    if (pull.remote_address.ipv6 && !(pull.reroute_gw.flags & RedirectGatewayFlags::RG_LOCAL))
+                    {
+                        Action::Ptr c, d;
+                        add_del_route(pull.remote_address.address, 128, gw6.gateway_addr_str(), gw6.iface(), R_IPv6 | R_IFACE_HINT, c, d);
+                        create.add(c);
+                        destroy.add(d);
+                    }
+                }
+                else
+                {
+                    os << "ERROR: cannot detect IPv6 default gateway" << std::endl;
                 }
             }
             else
-                os << "ERROR: cannot detect IPv6 default gateway" << std::endl;
+            {
+                os << "remote is IPv4, skip bypass route for reroute-ipv6" << std::endl;
+            }
 
             if (!(pull.reroute_gw.flags & RGWFlags::EmulateExcludeRoutes))
             {

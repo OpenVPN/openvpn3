@@ -530,13 +530,10 @@ class OptionList : public std::vector<Option>, public RCCopyable<thread_unsafe_r
     typedef StandardLex Lex;
 
     // special lex filter that recognizes end-of-line comments
-    class LexComment
+    class LexComment : public LexQuoteMixin
     {
       public:
-        LexComment()
-            : in_quote_(false), in_comment(false), backslash(false), ch(-1)
-        {
-        }
+        LexComment() = default;
 
         void put(char c)
         {
@@ -554,12 +551,11 @@ class OptionList : public std::vector<Option>, public RCCopyable<thread_unsafe_r
                 backslash = true;
                 ch = -1;
             }
-            else if (c == '\"')
+            else if (handle_quote(c))
             {
-                in_quote_ = !in_quote_;
                 ch = -1;
             }
-            else if (is_comment(c) && !in_quote_)
+            else if (is_comment(c) && !in_quote())
             {
                 in_comment = true;
                 ch = -1;
@@ -583,16 +579,10 @@ class OptionList : public std::vector<Option>, public RCCopyable<thread_unsafe_r
             ch = -1;
         }
 
-        bool in_quote() const
-        {
-            return in_quote_;
-        }
-
       private:
-        bool in_quote_;
-        bool in_comment;
-        bool backslash;
-        int ch;
+        bool in_comment = false;
+        bool backslash = false;
+        int ch = -1;
     };
 
     class Limits
