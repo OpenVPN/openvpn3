@@ -168,7 +168,7 @@ else ()
     message("lzo not found, skipping lzo compression tests")
 endif ()
 
-target_link_libraries(coreUnitTests ${GTEST_LIB} GTest::gmock ${EXTRA_LIBS})
+target_link_libraries(coreUnitTests ${GTEST_LIB} GTest::gmock rapidcheck rapidcheck_gtest ${EXTRA_LIBS})
 
 target_compile_definitions(coreUnitTests PRIVATE ${CORE_TEST_DEFINES})
 target_include_directories(coreUnitTests PRIVATE ${EXTRA_INCLUDES})
