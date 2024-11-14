@@ -206,7 +206,11 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
                                                   logging::LOG_LEVEL_VERB,
                                                   ProtoContext>
 {
+#ifdef UNIT_TEST
+  public:
+#else
   protected:
+#endif
     static constexpr size_t APP_MSG_MAX = 65536;
 
     enum
