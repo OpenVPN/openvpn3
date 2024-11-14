@@ -572,6 +572,65 @@ class Dns
          */
         bool apply_gpol_nrtp_rules()
         {
+            SYSTEM_INFO si;
+            ::GetSystemInfo(&si);
+            const bool win_32bit = si.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_INTEL;
+
+            return win_32bit ? apply_gpol_nrtp_rules_32() : apply_gpol_nrtp_rules_64();
+        }
+
+        /**
+         * @brief Signal the DNS resolver (and others potentially) to reload the
+         *        NRTP rules group policy settings on 32 bit Windows systems
+         *
+         * @return bool to indicate if the reload was initiated
+         */
+        bool apply_gpol_nrtp_rules_32()
+        {
+            bool res = false;
+
+            using publish_fn_t = NTSTATUS(__stdcall *)(
+                DWORD StateNameLo,
+                DWORD StateNameHi,
+                DWORD TypeId,
+                DWORD Buffer,
+                DWORD Length,
+                DWORD ExplicitScope);
+            publish_fn_t RtlPublishWnfStateData;
+            constexpr DWORD WNF_GPOL_SYSTEM_CHANGES_HI = 0x0D891E2A;
+            constexpr DWORD WNF_GPOL_SYSTEM_CHANGES_LO = 0xA3BC0875;
+
+            HMODULE ntdll = ::LoadLibraryA("ntdll.dll");
+            if (ntdll == NULL)
+            {
+                goto out;
+            }
+
+            RtlPublishWnfStateData = reinterpret_cast<publish_fn_t>(::GetProcAddress(ntdll, "RtlPublishWnfStateData"));
+            if (RtlPublishWnfStateData == NULL)
+            {
+                goto out;
+            }
+
+            if (RtlPublishWnfStateData(WNF_GPOL_SYSTEM_CHANGES_LO, WNF_GPOL_SYSTEM_CHANGES_HI, 0, 0, 0, 0) != ERROR_SUCCESS)
+            {
+                goto out;
+            }
+
+            res = true;
+
+        out:
+            return res;
+        }
+
+        /**
+         * @brief Signal the DNS resolver (and others potentially) to reload the
+         *        NRTP rules group policy settings on 64 bit Windows systems
+         *
+         * @return bool to indicate if the reload was initiated
+         */
+        bool apply_gpol_nrtp_rules_64()
+        {
             bool res = false;
 
             using publish_fn_t = NTSTATUS (*)(
