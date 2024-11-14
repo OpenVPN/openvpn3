@@ -40,6 +40,7 @@
 #include <sstream>
 #include <cstdint> // for std::uint32_t
 #include <memory>
+#include <new>
 
 #include <tap-windows.h>
 
@@ -680,7 +681,7 @@ struct InterfaceInfoList
         DWORD size = 0;
         if (::GetInterfaceInfo(nullptr, &size) != ERROR_INSUFFICIENT_BUFFER)
             OPENVPN_THROW(tun_win_util, "InterfaceInfoList: GetInterfaceInfo #1");
-        list.reset((IP_INTERFACE_INFO *)new unsigned char[size]);
+        list.reset((IP_INTERFACE_INFO *)::operator new(size));
         if (::GetInterfaceInfo(list.get(), &size) != NO_ERROR)
             OPENVPN_THROW(tun_win_util, "InterfaceInfoList: GetInterfaceInfo #2");
     }
@@ -699,7 +700,7 @@ struct InterfaceInfoList
         return nullptr;
     }
 
-    std::unique_ptr<IP_INTERFACE_INFO> list;
+    unique_ptr_slab<IP_INTERFACE_INFO> list;
 };
 
 inline void dhcp_release(const InterfaceInfoList &ii,
@@ -800,7 +801,7 @@ struct IPAdaptersInfo
         ULONG size = 0;
         if (::GetAdaptersInfo(nullptr, &size) != ERROR_BUFFER_OVERFLOW)
             OPENVPN_THROW(tun_win_util, "IPAdaptersInfo: GetAdaptersInfo #1");
-        list.reset((IP_ADAPTER_INFO *)new unsigned char[size]);
+        list.reset((IP_ADAPTER_INFO *)::operator new(size));
         if (::GetAdaptersInfo(list.get(), &size) != NO_ERROR)
             OPENVPN_THROW(tun_win_util, "IPAdaptersInfo: GetAdaptersInfo #2");
     }
@@ -838,7 +839,7 @@ struct IPAdaptersInfo
         return ai && ai->DhcpEnabled;
     }
 
-    std::unique_ptr<IP_ADAPTER_INFO> list;
+    unique_ptr_slab<IP_ADAPTER_INFO> list;
 };
 
 struct IPPerAdapterInfo
@@ -848,12 +849,12 @@ struct IPPerAdapterInfo
         ULONG size = 0;
         if (::GetPerAdapterInfo(index, nullptr, &size) != ERROR_BUFFER_OVERFLOW)
             return;
-        adapt.reset((IP_PER_ADAPTER_INFO *)new unsigned char[size]);
+        adapt.reset((IP_PER_ADAPTER_INFO *)::operator new(size));
         if (::GetPerAdapterInfo(index, adapt.get(), &size) != ERROR_SUCCESS)
             adapt.reset();
     }
 
-    std::unique_ptr<IP_PER_ADAPTER_INFO> adapt;
+    unique_ptr_slab<IP_PER_ADAPTER_INFO> adapt;
 };
 
 class TAPDriverVersion
@@ -952,12 +953,12 @@ inline const MIB_IPFORWARDTABLE *windows_routing_table()
 {
     ULONG size = 0;
     DWORD status;
-    std::unique_ptr<MIB_IPFORWARDTABLE> rt;
+    unique_ptr_slab<MIB_IPFORWARDTABLE> rt;
 
     status = ::GetIpForwardTable(nullptr, &size, TRUE);
     if (status == ERROR_INSUFFICIENT_BUFFER)
     {
-        rt.reset((MIB_IPFORWARDTABLE *)new unsigned char[size]);
+        rt.reset((MIB_IPFORWARDTABLE *)::operator new(size));
         status = ::GetIpForwardTable(rt.get(), &size, TRUE);
         if (status != NO_ERROR)
         {
