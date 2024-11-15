@@ -1115,8 +1115,8 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
             out << "IV_PLAT=" << platform_name() << '\n';
             out << "IV_NCP=2\n";   // negotiable crypto parameters V2
             out << "IV_TCPNL=1\n"; // supports TCP non-linear packet ID
-            out << "IV_PROTO=" << std::to_string(iv_proto) << '\n';
-            out << "IV_MTU=" << std::to_string(tun_mtu_max) << "\n";
+            out << "IV_PROTO=" << iv_proto << '\n';
+            out << "IV_MTU=" << tun_mtu_max << "\n";
             /*
              * OpenVPN3 allows to be pushed any cipher that it supports as it
              * only implements secure ones and BF-CBC for backwards
