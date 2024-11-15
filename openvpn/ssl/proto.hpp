@@ -3587,6 +3587,12 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
             return proto_field_ & iv_proto_flag::IV_PROTO_CC_EXIT_NOTIFY;
         }
 
+        //! Checks if the client can handle dynamic TLS-crypt.
+        bool client_supports_dynamic_tls_crypt() const
+        {
+            return proto_field_ & iv_proto_flag::IV_PROTO_DYN_TLS_CRYPT;
+        }
+
       private:
         unsigned int proto_field_;
     };
