@@ -533,14 +533,14 @@ class Dns
             SC_HANDLE scm = static_cast<SC_HANDLE>(INVALID_HANDLE_VALUE);
             SC_HANDLE dnssvc = static_cast<SC_HANDLE>(INVALID_HANDLE_VALUE);
 
-            scm = ::OpenSCManager(NULL, NULL, SC_MANAGER_ALL_ACCESS);
-            if (scm == NULL)
+            scm = ::OpenSCManager(nullptr, nullptr, SC_MANAGER_ALL_ACCESS);
+            if (scm == nullptr)
             {
                 goto out;
             }
 
             dnssvc = ::OpenServiceA(scm, "Dnscache", SERVICE_PAUSE_CONTINUE);
-            if (dnssvc == NULL)
+            if (dnssvc == nullptr)
             {
                 goto out;
             }
@@ -599,11 +599,11 @@ class Dns
             constexpr DWORD WNF_GPOL_SYSTEM_CHANGES_LO = 0xA3BC0875;
 
             HMODULE ntdll = ::LoadLibraryA("ntdll.dll");
-            if (ntdll == NULL)
+            if (ntdll == nullptr)
                 return false;
 
             RtlPublishWnfStateData = reinterpret_cast<publish_fn_t>(::GetProcAddress(ntdll, "RtlPublishWnfStateData"));
-            if (RtlPublishWnfStateData == NULL)
+            if (RtlPublishWnfStateData == nullptr)
                 return false;
 
             if (RtlPublishWnfStateData(WNF_GPOL_SYSTEM_CHANGES_LO, WNF_GPOL_SYSTEM_CHANGES_HI, 0, 0, 0, 0) != ERROR_SUCCESS)
@@ -630,11 +630,11 @@ class Dns
             constexpr INT64 WNF_GPOL_SYSTEM_CHANGES = 0x0D891E2AA3BC0875;
 
             HMODULE ntdll = ::LoadLibraryA("ntdll.dll");
-            if (ntdll == NULL)
+            if (ntdll == nullptr)
                 return false;
 
             RtlPublishWnfStateData = reinterpret_cast<publish_fn_t>(::GetProcAddress(ntdll, "RtlPublishWnfStateData"));
-            if (RtlPublishWnfStateData == NULL)
+            if (RtlPublishWnfStateData == nullptr)
                 return false;
 
             if (RtlPublishWnfStateData(WNF_GPOL_SYSTEM_CHANGES, 0, 0, 0, 0) != ERROR_SUCCESS)

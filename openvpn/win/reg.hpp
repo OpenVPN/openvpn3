@@ -64,12 +64,12 @@ struct Reg
                 error = ::RegCreateKeyExW(key,
                                           subkey.c_str(),
                                           0,
-                                          NULL,
+                                          nullptr,
                                           0,
                                           KEY_ALL_ACCESS,
-                                          NULL,
+                                          nullptr,
                                           &key_,
-                                          NULL);
+                                          nullptr);
             }
             else
             {
@@ -186,7 +186,7 @@ struct Reg
             status = ::RegQueryInfoKeyA(key(),
                                         nullptr,
                                         nullptr,
-                                        NULL,
+                                        nullptr,
                                         &subkeys_num,
                                         nullptr,
                                         nullptr,
@@ -247,7 +247,7 @@ struct Reg
         PBYTE data = reinterpret_cast<PBYTE>(&value);
         LSTATUS err;
 
-        err = ::RegGetValueW(key(), NULL, name, RRF_RT_REG_DWORD, &type, data, &size);
+        err = ::RegGetValueW(key(), nullptr, name, RRF_RT_REG_DWORD, &type, data, &size);
         if (err)
         {
             return {0, err};
@@ -274,7 +274,7 @@ struct Reg
         LSTATUS err;
         DWORD size = 0;
         DWORD type;
-        err = ::RegGetValueW(key(), NULL, name, RRF_RT_REG_SZ, &type, NULL, &size);
+        err = ::RegGetValueW(key(), nullptr, name, RRF_RT_REG_SZ, &type, nullptr, &size);
         if (err)
         {
             return {{}, err};
@@ -286,7 +286,7 @@ struct Reg
 
         std::wstring str(size / sizeof(std::wstring::value_type) + 1, '\0');
         PBYTE data = reinterpret_cast<PBYTE>(str.data());
-        err = ::RegGetValueW(key(), NULL, name, RRF_RT_REG_SZ, NULL, data, &size);
+        err = ::RegGetValueW(key(), nullptr, name, RRF_RT_REG_SZ, nullptr, data, &size);
         if (err)
         {
             return {{}, err};
@@ -311,7 +311,7 @@ struct Reg
         LSTATUS err;
         DWORD size = 0;
         DWORD type;
-        err = ::RegGetValueW(key(), NULL, name, RRF_RT_REG_BINARY, &type, NULL, &size);
+        err = ::RegGetValueW(key(), nullptr, name, RRF_RT_REG_BINARY, &type, nullptr, &size);
         if (err)
         {
             return {{}, err};
@@ -323,7 +323,7 @@ struct Reg
 
         std::string str(size, '\0');
         PBYTE data = reinterpret_cast<PBYTE>(str.data());
-        err = ::RegGetValueW(key(), NULL, name, RRF_RT_REG_BINARY, NULL, data, &size);
+        err = ::RegGetValueW(key(), nullptr, name, RRF_RT_REG_BINARY, nullptr, data, &size);
         if (err)
         {
             return {{}, err};
