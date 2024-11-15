@@ -31,30 +31,21 @@ struct NetApi
     {
         DWORD err;
         NET_LUID luid;
-        std::wstring iid;
         err = ::ConvertInterfaceAliasToLuid(wstring::from_utf8(itf_name).c_str(), &luid);
         if (err)
-        {
-            goto out;
-        }
+            return {};
 
         IID guid;
         err = ::ConvertInterfaceLuidToGuid(&luid, &guid);
         if (err)
-        {
-            goto out;
-        }
+            return {};
 
         PWSTR iid_str;
         if (::StringFromIID(guid, &iid_str) != S_OK)
-        {
-            goto out;
-        }
+            return {};
 
-        iid = iid_str;
+        std::wstring iid = iid_str;
         ::CoTaskMemFree(iid_str);
-
-    out:
         return iid;
     }
 
