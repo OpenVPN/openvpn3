@@ -227,9 +227,9 @@ essentially defined inside of **namespace openvpn::ClientAPI** with headers and
 implementation in [client](client) and header-only library files under
 [openvpn](openvpn).
 
-The consise definition of the client API is essentially
+The concise definition of the client API is essentially
 **class openvpn::ClientAPI::OpenVPNClient** in [client/ovpncli.hpp](client/ovpncli.hpp) with
-several imporant extensions to the API found in:
+several important extensions to the API found in:
 
 -   **class openvpn::TunBuilderBase** in
     [openvpn/tun/builder/base.hpp](openvpn/tun/builder/base.hpp) ---
@@ -390,7 +390,7 @@ The OpenVPN 3 client API, as defined by
 languages.
 
 For example, OpenVPN Connect for Android creates a Java binding of the
-API using [javacli/ovpncli.i](javacli/ovpncli.i).
+API using [client/ovpncli.i](client/ovpncli.i).
 
 Security
 --------
