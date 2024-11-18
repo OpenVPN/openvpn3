@@ -4,9 +4,11 @@ OpenVPN protocol unit tests
 The `protoUnitTest` utility can be tweaked with build time options
 changing the behaviour. These are set via CMake variables.
 
--   `TEST_PROTO_NTHREADS` - Running test threads (default `1`)
+-   `TEST_PROTO_NTHREADS` - Running test threads (default `-1`)
 
     The number of test client/server pairs running in parallel.
+    By default will use `std::thread::hardware_concurrency()` unless
+    set to a positive integer.
 
         $ cd $O3/core/build && cmake -DTEST_PROTO_NTHREADS=4 ..
         $ cmake --build . -- test/unittests/coreUnitTests
