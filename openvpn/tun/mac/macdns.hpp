@@ -67,7 +67,7 @@ class MacDNS : public RC<thread_unsafe_refcount>
             if (have_dns_options)
             {
                 // With --dns options we redirect when there are no split domains
-                redirect_dns = CF::array_len(resolve_domains);
+                redirect_dns = !CF::array_len(resolve_domains);
             }
             else
             {
