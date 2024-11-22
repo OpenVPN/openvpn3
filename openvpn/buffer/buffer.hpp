@@ -823,7 +823,7 @@ class BufferType : public ConstBufferType<T>
     /**
      * @brief Default constructor for BufferType.
      */
-    BufferType(){};
+    BufferType() = default;
 
     /**
      * @brief Constructor for BufferType that takes a void pointer, size, and a flag indicating if the buffer is filled.
@@ -954,6 +954,15 @@ class BufferAllocatedType : public BufferType<T>
     void realloc(const size_t newcap);
 
     /**
+        @brief Realign the buffer with the specified headroom.
+        @param headroom The amount of headroom to reserve in the buffer.
+        @return BufferAllocatedType& A reference to the realigned buffer.
+        @note May reallocate or throw an exception if the reallocation fails.
+        @throws if the buffer is full and the reallocation fails.
+    */
+    BufferAllocatedType &realign(const size_t headroom);
+
+    /**
      * @brief Resets the buffer with the specified minimum capacity and flags.
      * @param min_capacity The minimum capacity for the buffer.
      * @param flags The flags to set for the buffer.
@@ -1052,8 +1061,9 @@ class BufferAllocatedType : public BufferType<T>
     /**
      * @brief Reallocates the buffer to the specified new capacity.
      * @param newcap The new capacity for the buffer.
+     * @param new_offset The new offset for the buffer.
      */
-    void realloc_(const size_t newcap);
+    void realloc_(const size_t newcap, size_t new_offset);
 
     /**
      * @brief Frees the data associated with the buffer.
@@ -1709,7 +1719,20 @@ template <typename T>
 void BufferAllocatedType<T>::realloc(const size_t newcap)
 {
     if (newcap > capacity())
-        realloc_(newcap);
+        realloc_(newcap, offset());
+}
+
+template <typename T>
+BufferAllocatedType<T> &BufferAllocatedType<T>::realign(const size_t headroom)
+{
+    if (headroom != offset())
+    {
+        if (headroom + size() > capacity())
+            realloc_(headroom + size(), headroom);
+        else
+            BufferType<T>::realign(headroom);
+    }
+    return *this;
 }
 
 template <typename T>
@@ -1800,16 +1823,16 @@ void BufferAllocatedType<T>::resize(const size_t new_capacity)
     if (newcap > capacity())
     {
         if (flags_ & BufAllocFlags::GROW)
-            realloc_(newcap);
+            realloc_(newcap, offset());
         else
             buffer_full_error(newcap, true);
     }
 }
 
 template <typename T>
-void BufferAllocatedType<T>::realloc_(const size_t newcap)
+void BufferAllocatedType<T>::realloc_(const size_t newcap, size_t new_offset)
 {
-    auto tempBuffer = BufferAllocatedType(offset(), size(), newcap, flags_);
+    auto tempBuffer = BufferAllocatedType(new_offset, size(), newcap, flags_);
     if (size())
         std::memcpy(tempBuffer.data(), c_data(), size() * sizeof(T));
     swap(tempBuffer);

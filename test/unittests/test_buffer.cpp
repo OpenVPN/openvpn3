@@ -343,3 +343,62 @@ TEST(buffer, alloc_buffer_read1)
 
     EXPECT_EQ(memcmp(raw, data, sizeof(raw)), 0);
 }
+
+TEST(buffer, realign)
+{
+    BufferAllocated buf(64, 0);
+    buf_append_string(buf, "hello world");
+
+    buf.advance(5);
+    EXPECT_EQ(buf.c_data_raw()[0], 'h');
+
+    buf.realign(0);
+
+    EXPECT_EQ(buf[0], ' ');
+    EXPECT_EQ(buf[5], 'd');
+    EXPECT_THROW(buf[6], BufferException);
+    EXPECT_EQ(buf.size(), 6u);
+    EXPECT_EQ(buf.c_data_raw()[0], ' ');
+}
+
+TEST(buffer, realign2)
+{
+    BufferAllocated buf(64, 0);
+    buf_append_string(buf, "hello world");
+
+    EXPECT_EQ(buf.c_data_raw()[0], 'h');
+
+    buf.realign(5);
+
+    EXPECT_EQ(buf.c_data_raw()[5], 'h');
+    EXPECT_EQ(buf[0], 'h');
+    EXPECT_EQ(buf.size(), 11u);
+}
+
+TEST(buffer, realign3)
+{
+    BufferAllocated buf(11, 0);
+    buf_append_string(buf, "hello world");
+
+    EXPECT_EQ(buf.c_data_raw()[0], 'h');
+
+    buf.realign(5);
+
+    EXPECT_EQ(buf.c_data_raw()[5], 'h');
+    EXPECT_EQ(buf[0], 'h');
+    EXPECT_EQ(buf.size(), 11u);
+    EXPECT_EQ(buf.offset(), 5u);
+}
+
+TEST(buffer, realign4)
+{
+    BufferAllocated buf(32, 0);
+    buf.realign(7u);
+    buf_append_string(buf, "hello world");
+    EXPECT_EQ(buf.offset(), 7u);
+    buf.realign(0);
+
+    EXPECT_EQ(buf.c_data_raw()[0], 'h');
+    EXPECT_EQ(buf[0], 'h');
+    EXPECT_EQ(buf.offset(), 0);
+}
