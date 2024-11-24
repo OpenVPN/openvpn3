@@ -291,7 +291,7 @@ class ProtoStackBase
     //
     // void net_send(const PACKET& net_pkt, const NetSendType nstype) = 0;
 
-    // Pass cleartext data up to application, which may take
+    // Pass cleartext data up to application, which make take
     // ownership of to_app_buf via std::move.
     //
     // void app_recv(BufferPtr&& to_app_buf) = 0;
@@ -440,30 +440,18 @@ class ProtoStackBase
         if (ssl_started_)
             while (ssl_->read_cleartext_ready())
             {
-                ssize_t size = 0;
+                ssize_t size;
                 to_app_buf = BufferAllocatedRc::Create();
                 frame_->prepare(Frame::READ_SSL_CLEARTEXT, *to_app_buf);
                 try
                 {
                     size = ssl_->read_cleartext(to_app_buf->data(), to_app_buf->max_size());
                 }
-                catch (const std::exception &e)
+                catch (...)
                 {
-                    // Add error information to stats, but do not invalidate the session, in
-                    // order to allow TLS alerts to be sent out. There's nothing special that
-                    // needs done for TLS alerts to happen, the underlying SSL library will do
-                    // that automatically. But we do need to not shut it down and allow it to
-                    // put the alert packet on the wire.
-                    //
-                    // Since this is async code, it's not as simple as doing a blocking send
-                    // of the alert packet, so we're left with just not immediately shutting
-                    // down the pipeline.
-                    //
-                    // This will keep size == 0, so the app_recv() call below will not be able
-                    // to advance to S_WAIT_AUTH_ACK.
-                    // The connection will finally be aborted with a KEEPALIVE_TIMEOUT.
-                    error(Error::SSL_ERROR, false);
-                    OPENVPN_LOG("SSL_ERROR: " << e.what());
+                    // SSL fatal errors will invalidate the session
+                    error(Error::SSL_ERROR);
+                    throw;
                 }
                 if (size >= 0)
                 {
@@ -492,13 +480,11 @@ class ProtoStackBase
         next_retransmit_ = *now + rel_send.until_retransmit(*now);
     }
 
-    void error(const Error::Type reason, bool do_invalidate = true)
+    void error(const Error::Type reason)
     {
         if (stats)
             stats->error(reason);
-
-        if (do_invalidate)
-            invalidate(reason);
+        invalidate(reason);
     }
 
   private:
