@@ -859,7 +859,7 @@ class MySessionStats : public SessionStats
  * Create a client ssl config for testing.
  * @return
  */
-static auto create_client_ssl_config(Frame::Ptr frame, ClientRandomAPI::Ptr rng)
+static auto create_client_ssl_config(Frame::Ptr frame, ClientRandomAPI::Ptr rng, bool tls_version_mismatch = false)
 {
     const std::string client_crt = read_text(TEST_KEYCERT_DIR "client.crt");
     const std::string client_key = read_text(TEST_KEYCERT_DIR "client.key");
@@ -877,7 +877,10 @@ static auto create_client_ssl_config(Frame::Ptr frame, ClientRandomAPI::Ptr rng)
     cc->load_cert(client_crt);
     cc->load_private_key(client_key);
 #endif
-    cc->set_tls_version_min(TLS_VER_MIN);
+    if (tls_version_mismatch)
+        cc->set_tls_version_max(TLSVersion::Type::V1_2);
+    else
+        cc->set_tls_version_min(TLS_VER_MIN);
 #ifdef VERBOSE
     cc->set_debug_level(1);
 #endif
@@ -965,7 +968,7 @@ static auto create_client_proto_context(ClientSSLAPI::Config::Ptr cc, Frame::Ptr
 }
 
 // execute the unit test in one thread
-int test(const int thread_num, bool use_tls_ekm)
+int test(const int thread_num, bool use_tls_ekm, bool tls_version_mismatch)
 {
     try
     {
@@ -990,7 +993,7 @@ int test(const int thread_num, bool use_tls_ekm)
         const std::string tls_crypt_v2_server_key = read_text(TEST_KEYCERT_DIR "tls-crypt-v2-server.key");
 
         // client config
-        ClientSSLAPI::Config::Ptr cc = create_client_ssl_config(frame, prng_cli);
+        ClientSSLAPI::Config::Ptr cc = create_client_ssl_config(frame, prng_cli, tls_version_mismatch);
         MySessionStats::Ptr cli_stats(new MySessionStats);
 
         auto cp = create_client_proto_context(std::move(cc), frame, prng_cli, cli_stats, time);
@@ -1008,7 +1011,7 @@ int test(const int thread_num, bool use_tls_ekm)
         sc->load_cert(server_crt);
         sc->load_private_key(server_key);
         sc->load_dh(dh_pem);
-        sc->set_tls_version_min(TLS_VER_MIN);
+        sc->set_tls_version_min(tls_version_mismatch ? TLSVersion::Type::V1_3 : TLS_VER_MIN);
 #ifdef VERBOSE
         sc->set_debug_level(1);
 #endif
@@ -1177,7 +1180,7 @@ int test_retry(const int thread_num, const int n_retries, bool use_tls_ekm)
     int ret = 1;
     for (int i = 0; i < n_retries; ++i)
     {
-        ret = test(thread_num, use_tls_ekm);
+        ret = test(thread_num, use_tls_ekm, false);
         if (!ret)
             return 0;
         std::cout << "Retry " << (i + 1) << '/' << n_retries << std::endl;
@@ -1235,6 +1238,17 @@ TEST_F(ProtoUnitTest, base_single_thread_no_tls_ekm)
 
     EXPECT_EQ(ret, 0);
 }
+
+// Our mbedtls currently has a no-op set_tls_version_max() implementation,
+// so we can't set mismatched client and server TLS versions.
+// For now, just test this for OPENSSL which is full-featured.
+#ifdef USE_OPENSSL
+TEST_F(ProtoUnitTest, base_single_thread_tls_version_mismatch)
+{
+    int ret = test(1, false, true);
+    EXPECT_NE(ret, 0);
+}
+#endif
 
 TEST_F(ProtoUnitTest, base_multiple_thread)
 {
