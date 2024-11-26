@@ -669,7 +669,7 @@ class thread_unsafe_refcount
   initializes rc to 0 for a new object with no references.
 */
 inline thread_unsafe_refcount::thread_unsafe_refcount() noexcept
-    : rc(olong(0)){};
+    : rc(olong(0)) {};
 /**
   @brief Increment ref count by 1
 */
@@ -1109,7 +1109,7 @@ class RCWeak
     typedef RCWeakPtr<RCWeak> WPtr;
 
     RCWeak() noexcept
-        : refcount_(this){};
+        : refcount_(this) {};
 
     virtual ~RCWeak() = default;
     RCWeak(const RCWeak &) = delete;

@@ -832,7 +832,7 @@ class BufferType : public ConstBufferType<T>
      * @param filled A boolean flag indicating if the buffer is filled.
      */
     BufferType(void *data, const size_t size, const bool filled)
-        : ConstBufferType<T>(data, size, filled){};
+        : ConstBufferType<T>(data, size, filled) {};
 
     /**
      * @brief Constructor for BufferType that takes a T pointer, size, and a flag indicating if the buffer is filled.
@@ -841,7 +841,7 @@ class BufferType : public ConstBufferType<T>
      * @param filled A boolean flag indicating if the buffer is filled.
      */
     BufferType(T *data, const size_t size, const bool filled)
-        : ConstBufferType<T>(data, size, filled){};
+        : ConstBufferType<T>(data, size, filled) {};
 
     /**
      * @brief Protected constructor for BufferType that takes a T pointer, offset, size, and capacity.
@@ -852,7 +852,7 @@ class BufferType : public ConstBufferType<T>
      */
   protected:
     BufferType(T *data, const size_t offset, const size_t size, const size_t capacity)
-        : ConstBufferType<T>(data, offset, size, capacity){};
+        : ConstBufferType<T>(data, offset, size, capacity) {};
 };
 
 //  ===============================================================================================

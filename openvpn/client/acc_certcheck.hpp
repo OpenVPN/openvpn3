@@ -42,7 +42,7 @@ struct SslApiBuilder
     SslApiBuilder(SSLLib::SSLAPI::Config::Ptr cfg)
         : mConfig(std::move(cfg)),
           mFactory(mConfig->new_factory()),
-          mServer(mFactory->ssl()){};
+          mServer(mFactory->ssl()) {};
 
     SslApiBuilder(const SslApiBuilder &) = delete;
     SslApiBuilder(SslApiBuilder &&) noexcept = delete;
