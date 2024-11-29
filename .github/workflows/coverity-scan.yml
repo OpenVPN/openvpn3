@@ -10,7 +10,7 @@ jobs:
     steps:
       - name: Check submission cache
         id: check_submit
-        uses: actions/cache/restore@3624ceb22c1c5a301c8db4169662070a689d9ea8 # v4.1.1
+        uses: actions/cache/restore@6849a6489940f00c2f30c0fb92c6274307ccb58a # v4.1.2
         with:
           path: |
             cov-int
@@ -21,12 +21,12 @@ jobs:
         run: sudo apt update && sudo apt install -y libcap-dev libjsoncpp-dev liblzo2-dev liblz4-dev libssl-dev swig
       - name: Checkout OpenVPN 3
         if: steps.check_submit.outputs.cache-hit != 'true'
-        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           path: openvpn3
       - name: Checkout asio
         if: steps.check_submit.outputs.cache-hit != 'true'
-        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           # versioning=regex:^asio-(?<major>\d+)-(?<minor>\d+)-(?<patch>\d+)$
           repository: chriskohlhoff/asio
@@ -34,13 +34,13 @@ jobs:
           path: asio
       - name: Checkout xxHash
         if: steps.check_submit.outputs.cache-hit != 'true'
-        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           # versioning=semver-coerced
           repository: Cyan4973/xxHash
           ref: v0.8.2
           path: xxHash
-      - uses: lukka/get-cmake@b516803a3c5fac40e2e922349d15cdebdba01e60 # v3.30.5
+      - uses: lukka/get-cmake@71b7adfe2603f48bb9ed50d2b01a72499ae94885 # v3.31.0
         if: steps.check_submit.outputs.cache-hit != 'true'
 
       - name: Download Coverity Build Tool
@@ -77,7 +77,7 @@ jobs:
 
       - name: Cache submission
         if: steps.check_submit.outputs.cache-hit != 'true'
-        uses: actions/cache/save@3624ceb22c1c5a301c8db4169662070a689d9ea8 # v4.1.1
+        uses: actions/cache/save@6849a6489940f00c2f30c0fb92c6274307ccb58a # v4.1.2
         with:
           path: |
             cov-int
