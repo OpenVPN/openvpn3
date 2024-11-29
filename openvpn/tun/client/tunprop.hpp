@@ -164,8 +164,8 @@ class TunProp
         }
 
         // add DNS servers and domain prefixes
-        unsigned int dhcp_option_flags = add_dhcp_options(tb, opt, quiet);
-        dhcp_option_flags |= add_dns_options(tb, opt);
+        unsigned int dhcp_option_flags = add_dns_options(tb, opt);
+        dhcp_option_flags |= add_dhcp_options(tb, opt, quiet, dhcp_option_flags == F_ADD_DNS);
 
         // Allow protocols unless explicitly blocked
         tb->tun_builder_set_allow_family(AF_INET, !opt.exists("block-ipv4"));
@@ -534,13 +534,57 @@ class TunProp
         if (dns_options.servers.empty())
             return 0;
 
+#if defined(OPENVPN_PLATFORM_IPHONE)
+        // Only use the first server
+        const auto &server = dns_options.servers.begin()->second;
+        for (const auto &ns_addr : server.addresses)
+        {
+            const auto &addr = ns_addr.address;
+            tb->tun_builder_add_dns_server(addr.to_string(), addr.is_ipv6());
+        }
+        for (const auto &ns_dom : server.domains)
+        {
+            // iOS uses the search domains as split domains
+            tb->tun_builder_add_search_domain(ns_dom.domain);
+        }
+        if (!dns_options.search_domains.empty())
+        {
+            // Use only the first search domain and pass it as adapter suffix
+            tb->tun_builder_set_adapter_domain_suffix(dns_options.search_domains[0].domain);
+        }
+
+#elif defined(OPENVPN_PLATFORM_ANDROID)
+        // Only use the first server, but ignore the unsupported split domains
+        const auto &server = dns_options.servers.begin()->second;
+        for (const auto &ns_addr : server.addresses)
+        {
+            const auto &addr = ns_addr.address;
+            tb->tun_builder_add_dns_server(addr.to_string(), addr.is_ipv6());
+        }
+        for (const auto &s_dom : dns_options.search_domains)
+        {
+            tb->tun_builder_add_search_domain(s_dom.domain);
+        }
+
+#else
         if (!tb->tun_builder_add_dns_options(dns_options))
             throw tun_prop_dhcp_option_error("tun_builder_add_dns_options failed");
+#endif
 
         return F_ADD_DNS;
     }
 
-    static unsigned int add_dhcp_options(TunBuilderBase *tb, const OptionList &opt, const bool quiet)
+    /**
+     * @brief Parse options for DNS, WINS and HTTP Proxy --dhcp-option(s)
+     *        and add them to the tunbuilder (tb) passed.
+     *
+     * @param tb                pointer to tunbuilder to add setting to
+     * @param opt               reference to the (pushed) options
+     * @param quiet             boolean to silence log messages about issues processing the options
+     * @param ignore_dns        boolean to ignore processing of DNS related options
+     * @return unsigned int     F_ADD_DNS when DNS servers were added from --dhcp-option or 0
+     */
+    static unsigned int add_dhcp_options(TunBuilderBase *tb, const OptionList &opt, const bool quiet, bool ignore_dns)
     {
         // Example:
         //   [dhcp-option] [DNS] [172.16.0.23]
@@ -570,7 +614,7 @@ class TunProp
                 try
                 {
                     const std::string &type = o.get(1, 64);
-                    if (type == "DNS" || type == "DNS6")
+                    if ((type == "DNS" || type == "DNS6") && !ignore_dns)
                     {
                         o.exact_args(3);
                         const IP::Addr ip = IP::Addr::from_string(o.get(2, 256), "dns-server-ip");
@@ -579,7 +623,7 @@ class TunProp
                             throw tun_prop_dhcp_option_error(ERR_INVALID_OPTION_PUSHED, "tun_builder_add_dns_server failed");
                         flags |= F_ADD_DNS;
                     }
-                    else if (type == "DOMAIN" || type == "DOMAIN-SEARCH")
+                    else if ((type == "DOMAIN" || type == "DOMAIN-SEARCH") && !ignore_dns)
                     {
                         o.min_args(3);
                         for (size_t j = 2; j < o.size(); ++j)
@@ -593,7 +637,7 @@ class TunProp
                             }
                         }
                     }
-                    else if (type == "ADAPTER_DOMAIN_SUFFIX")
+                    else if ((type == "ADAPTER_DOMAIN_SUFFIX") && !ignore_dns)
                     {
                         o.exact_args(3);
                         const std::string &adapter_domain_suffix = o.get(2, 256);
