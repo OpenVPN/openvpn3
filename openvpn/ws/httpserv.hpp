@@ -550,7 +550,7 @@ class Listener : public ProxyListener
                 return;
             if (pipeline.size() >= parent->config->pipeline_max_size)
                 error_handler(Status::E_PIPELINE_OVERFLOW, "Pipeline overflow");
-            pipeline.push_back(buf);
+            pipeline.push_back(std::move(buf));
         }
 
         void consume_pipeline()

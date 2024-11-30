@@ -402,3 +402,73 @@ TEST(buffer, realign4)
     EXPECT_EQ(buf[0], 'h');
     EXPECT_EQ(buf.offset(), 0);
 }
+
+/*
+   We need to be sure the object is in a useable state after a move operation. This
+   reflects implied expectations in our codebase and does not violate the standard. The
+   following tests are to ensure that the object is in a usable state after a move
+   operation. The invariants of the object will be checked in unit tests post-move and
+   the PR and relevant notes will be noted in Coverity and the codebase. The goal is
+   to ensure such use cases do not lead to undefined behavior. The preexisting move
+   implementation is correct and the object is in a valid state post-move. This set
+   of tests seeks to ensure that stays true.
+
+   The standard says:
+
+   C++11 Standard, Section 12.8/32: "If the parameter is a non-const lvalue reference
+   to a non-volatile object type or a non-const rvalue reference to a non-volatile
+   object type, the implicit move constructor ([class.copy.ctor], [class.copy.ctor]/2)
+   and the implicit move assignment operator ([class.copy.assign], [class.copy.assign]/2)
+   are invoked to initialize the parameter object or to assign to it, respectively. The
+   object referred to by the rvalue expression is guaranteed to be left in a valid but
+   unspecified state."
+*/
+
+TEST(buffer, invariants_after_move_safe)
+{
+    BufferAllocated buf(32, 0u);
+    buf_append_string(buf, "hello world");
+
+    BufferAllocated buf2(std::move(buf));
+
+    EXPECT_EQ(buf.size(), 0u);
+    EXPECT_EQ(buf.capacity(), 0u);
+    EXPECT_THROW(buf[0], BufferException);
+    EXPECT_EQ(buf.c_data(), nullptr);
+    EXPECT_EQ(buf.c_data_raw(), nullptr);
+    EXPECT_EQ(buf.data(), nullptr);
+    EXPECT_EQ(buf.data_raw(), nullptr);
+    EXPECT_EQ(buf.offset(), 0u);
+    EXPECT_EQ(buf.remaining(), 0u);
+}
+
+TEST(buffer, push_back_after_move_safe)
+{
+    BufferAllocated buf(32, 0u);
+    buf_append_string(buf, "hello world");
+
+    BufferAllocated buf2(std::move(buf));
+    buf.realloc(11);
+    buf.push_back('X');
+
+    EXPECT_EQ(buf2.size(), 11u);
+    EXPECT_EQ(buf2[0], 'h');
+    EXPECT_EQ(buf2[10], 'd');
+    EXPECT_EQ(buf[0], 'X');
+}
+
+TEST(buffer, append_after_move_safe)
+{
+    BufferAllocated buf(32, 0u);
+    buf_append_string(buf, "hello world");
+
+    BufferAllocated buf2(std::move(buf));
+    auto buf3 = BufferAllocated(32, 0u);
+    buf_append_string(buf3, "hello again");
+    buf = buf3;
+
+    EXPECT_EQ(buf2.size(), 11u);
+    EXPECT_EQ(buf2[0], 'h');
+    EXPECT_EQ(buf2[10], 'd');
+    EXPECT_EQ(buf, buf3);
+}
