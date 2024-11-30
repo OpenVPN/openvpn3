@@ -31,6 +31,7 @@ set(CORE_TEST_DEFINES
 add_executable(coreUnitTests
         core_tests.cpp
         test_acc.cpp
+        test_alignment.cpp
         test_acc_certcheck.cpp
         test_route_emulation.cpp
         test_log.cpp
