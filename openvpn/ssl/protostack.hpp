@@ -314,6 +314,46 @@ class ProtoStackBase
         return *static_cast<PARENT *>(this);
     }
 
+    //! If there are any pending SSL ciphertext packets, encapsulate and send them out.
+    void send_pending_ssl_ciphertext_packets()
+    {
+        // encapsulate SSL ciphertext packets
+        while (ssl_->read_ciphertext_ready() && rel_send.ready())
+        {
+            typename ReliableSend::Message &m = rel_send.send(*now, tls_timeout);
+            m.packet = PACKET(ssl_->read_ciphertext());
+
+            // encapsulate and send cloned packet, preserve original one for retransmit
+            PACKET pkt = m.packet.clone();
+
+            // encapsulate packet
+            try
+            {
+                parent().encapsulate(m.id(), pkt);
+            }
+            catch (...)
+            {
+                error(Error::ENCAPSULATION_ERROR);
+                throw;
+            }
+
+            // transmit it
+            parent().net_send(pkt, NET_SEND_SSL);
+        }
+    }
+
+    //! A version of send_pending_ssl_ciphertext_packets() that guarantees no exceptions.
+    void send_pending_ssl_ciphertext_packets_nothrow() noexcept
+    {
+        try
+        {
+            send_pending_ssl_ciphertext_packets();
+        }
+        catch (...)
+        {
+        }
+    }
+
     // app data -> SSL -> protocol encapsulation -> reliability layer -> network
     void down_stack_app()
     {
@@ -350,29 +390,7 @@ class ProtoStackBase
                 }
             }
 
-            // encapsulate SSL ciphertext packets
-            while (ssl_->read_ciphertext_ready() && rel_send.ready())
-            {
-                typename ReliableSend::Message &m = rel_send.send(*now, tls_timeout);
-                m.packet = PACKET(ssl_->read_ciphertext());
-
-                // encapsulate and send cloned packet, preserve original one for retransmit
-                PACKET pkt = m.packet.clone();
-
-                // encapsulate packet
-                try
-                {
-                    parent().encapsulate(m.id(), pkt);
-                }
-                catch (...)
-                {
-                    error(Error::ENCAPSULATION_ERROR);
-                    throw;
-                }
-
-                // transmit it
-                parent().net_send(pkt, NET_SEND_SSL);
-            }
+            send_pending_ssl_ciphertext_packets();
         }
     }
 
@@ -446,6 +464,20 @@ class ProtoStackBase
                 try
                 {
                     size = ssl_->read_cleartext(to_app_buf->data(), to_app_buf->max_size());
+                }
+                catch (const ExceptionCode &ec)
+                {
+                    if (ec.is_tls_alert())
+                    {
+                        // The SSL library may have generated a TLS alert in case of error: send it out now.
+                        // Use the nothrow() version of the function, since this best-effort only, and we
+                        // also need `error()` below to get called, to invalidate the session.
+                        send_pending_ssl_ciphertext_packets_nothrow();
+                    }
+
+                    // SSL fatal errors will invalidate the session
+                    error(Error::SSL_ERROR);
+                    throw;
                 }
                 catch (...)
                 {

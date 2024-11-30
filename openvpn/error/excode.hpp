@@ -65,6 +65,12 @@ class ExceptionCode : public std::exception
         return code_ != 0;
     }
 
+    //! Some errors may justify letting the underlying SSL library send out TLS alerts.
+    bool is_tls_alert() const
+    {
+        return code() >= Error::TLS_VERSION_MIN && code() <= Error::TLS_ALERT_MISC;
+    }
+
     virtual ~ExceptionCode() noexcept = default;
 
   private:
