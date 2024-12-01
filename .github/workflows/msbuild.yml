@@ -14,8 +14,8 @@ jobs:
 
     runs-on: windows-latest
     steps:
-    - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
-    - uses: lukka/get-cmake@b516803a3c5fac40e2e922349d15cdebdba01e60 # v3.30.5
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+    - uses: lukka/get-cmake@71b7adfe2603f48bb9ed50d2b01a72499ae94885 # v3.31.0
     - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
       with:
         arch: ${{ matrix.arch }}
@@ -61,8 +61,8 @@ jobs:
 
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
-    - uses: lukka/get-cmake@b516803a3c5fac40e2e922349d15cdebdba01e60 # v3.30.5
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+    - uses: lukka/get-cmake@71b7adfe2603f48bb9ed50d2b01a72499ae94885 # v3.31.0
 
     - name: Install dependencies
       run: sudo apt update && sudo apt install -y mingw-w64 unzip cmake build-essential
