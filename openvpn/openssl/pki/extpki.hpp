@@ -375,7 +375,6 @@ class ExternalPKIECImpl : public ExternalPKIImpl
      * @param sig 	buffer backing the signature
      * @param siglen 	maximum size for the signature, and length of the signature
      * 	   		returned in sig
-     * @return
      */
     void do_sign(const unsigned char *dgst, int dlen, unsigned char *sig, unsigned int &siglen)
     {

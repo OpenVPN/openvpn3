@@ -281,7 +281,6 @@ class Dns
      * @param  itf_name   alias name of the interface a single domain is set for
      * @param  domains    a comma separated list of domain names
      *
-     * @return NO_ERROR on success, an error code otherwise
      */
     static void set_search_domains(const std::string &itf_name, const std::string &domains)
     {

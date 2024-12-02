@@ -231,9 +231,6 @@ static inline std::string x509_get_serial_hex(::X509 *cert)
 /**
  *  Retrieves the X.509 certificate SHA256 fingerprint as binary
  *
- * @param cert     Pointer to a native OpenSSL X509 object containing the
- *                 certificate
- *
  * @return Returns a uint8_t std:vector containing the binary representation
  *         of the certificate's SHA256 fingerprint.
  */

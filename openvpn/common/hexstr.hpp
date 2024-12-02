@@ -345,9 +345,8 @@ OPENVPN_SIMPLE_EXCEPTION(parse_hex_error);
  *  @param dest  std::vector<T> destination buffer to use.
  *  @param str   std::string& containing the hexadecimal string to parse.
  *
- *  @return Returns nothing on success.  Will throw a parse_hex_error
- *          exception if the input is invalid/not parseable as a hexadecimal
- *          number.
+ *  @throws parse_hex_error will throw this exception if the input is
+ *                          invalid/not parsable as a hexadecimal number.
  */
 template <typename V>
 inline void parse_hex(V &dest, const std::string &str)
