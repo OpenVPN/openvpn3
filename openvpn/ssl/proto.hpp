@@ -3602,6 +3602,12 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
             return proto_field_ & iv_proto_flag::IV_PROTO_DYN_TLS_CRYPT;
         }
 
+        //! Checks if the client can handle `dns` (as opposed to `dhcp-option`).
+        bool client_supports_dns_option() const
+        {
+            return proto_field_ & iv_proto_flag::IV_PROTO_DNS_OPTION_V2;
+        }
+
       private:
         unsigned int proto_field_;
     };
