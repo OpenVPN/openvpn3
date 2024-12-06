@@ -431,14 +431,23 @@ TEST(buffer, invariants_after_move_safe)
 
     BufferAllocated buf2(std::move(buf));
 
+    // coverity[USE_AFTER_MOVE]
     EXPECT_EQ(buf.size(), 0u);
+    // coverity[USE_AFTER_MOVE]
     EXPECT_EQ(buf.capacity(), 0u);
+    // coverity[USE_AFTER_MOVE]
     EXPECT_THROW(buf[0], BufferException);
+    // coverity[USE_AFTER_MOVE]
     EXPECT_EQ(buf.c_data(), nullptr);
+    // coverity[USE_AFTER_MOVE]
     EXPECT_EQ(buf.c_data_raw(), nullptr);
+    // coverity[USE_AFTER_MOVE]
     EXPECT_EQ(buf.data(), nullptr);
+    // coverity[USE_AFTER_MOVE]
     EXPECT_EQ(buf.data_raw(), nullptr);
+    // coverity[USE_AFTER_MOVE]
     EXPECT_EQ(buf.offset(), 0u);
+    // coverity[USE_AFTER_MOVE]
     EXPECT_EQ(buf.remaining(), 0u);
 }
 
@@ -451,9 +460,13 @@ TEST(buffer, push_back_after_move_safe)
     buf.realloc(11);
     buf.push_back('X');
 
+    // coverity[USE_AFTER_MOVE]
     EXPECT_EQ(buf2.size(), 11u);
+    // coverity[USE_AFTER_MOVE]
     EXPECT_EQ(buf2[0], 'h');
+    // coverity[USE_AFTER_MOVE]
     EXPECT_EQ(buf2[10], 'd');
+    // coverity[USE_AFTER_MOVE]
     EXPECT_EQ(buf[0], 'X');
 }
 
@@ -467,8 +480,12 @@ TEST(buffer, append_after_move_safe)
     buf_append_string(buf3, "hello again");
     buf = buf3;
 
+    // coverity[USE_AFTER_MOVE]
     EXPECT_EQ(buf2.size(), 11u);
+    // coverity[USE_AFTER_MOVE]
     EXPECT_EQ(buf2[0], 'h');
+    // coverity[USE_AFTER_MOVE]
     EXPECT_EQ(buf2[10], 'd');
+    // coverity[USE_AFTER_MOVE]
     EXPECT_EQ(buf, buf3);
 }
