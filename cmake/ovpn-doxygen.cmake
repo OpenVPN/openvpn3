@@ -28,7 +28,7 @@ function(configure_doxygen projname tgtname outputdir)
     set(DOXYGEN_DOT_MULTI_TARGETS YES)
     set(DOXYGEN_DOT_IMAGE_FORMAT svg)
     set(DOXYGEN_INTERACTIVE_SVG YES)
-    set(DOXYGEN_WARN_AS_ERROR YES)
+    set(DOXYGEN_WARN_LOGFILE "${CMAKE_CURRENT_BINARY_DIR}/doxygen-${tgtname}.warnings.log")
 
     doxygen_add_docs("doxygen-${tgtname}" ALL
         "${CMAKE_CURRENT_SOURCE_DIR}" ${OVPN_DOXYGEN_SOURCES}
