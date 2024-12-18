@@ -193,6 +193,18 @@ class OpenSSLContext : public SSLFactoryAPI
             sni_name = sni_name_arg;
         }
 
+        /**
+         * Add a hook to allow inspection and possible rejection
+         * of leaf cert common names (server-side only).
+         *
+         * @param cn_reject_handler_arg CommonNameReject object
+         *     that implements a custom reject() hook.
+         */
+        void set_cn_reject_handler(CommonNameReject *cn_reject_handler_arg) override
+        {
+            cn_reject_handler = cn_reject_handler_arg;
+        }
+
         void set_private_key_password(const std::string &pwd) override
         {
             pkey.set_private_key_password(pwd);
@@ -664,6 +676,7 @@ class OpenSSLContext : public SSLFactoryAPI
         std::string external_pki_alias;
         TLSSessionTicketBase *session_ticket_handler = nullptr; // server side only
         SNI::HandlerBase *sni_handler = nullptr;                // server side only
+        CommonNameReject *cn_reject_handler = nullptr;
         Frame::Ptr frame;
         unsigned int flags = 0; // defined in sslconsts.hpp
         std::string sni_name;   // client side only
@@ -1999,10 +2012,31 @@ class OpenSSLContext : public SSLFactoryAPI
                 preverify_ok = false;
             }
 
+            // get the Common name
+            std::string cn = OpenSSLPKI::x509_get_field(current_cert, NID_commonName);
+
+            // early rejection of Common Name?
+            if (self->config->cn_reject_handler)
+            {
+                try
+                {
+                    if (self->config->cn_reject_handler->reject(cn))
+                    {
+                        OVPN_LOG_INFO("VERIFY FAIL -- early rejection of leaf cert Common Name");
+                        preverify_ok = false;
+                    }
+                }
+                catch (const std::exception &e)
+                {
+                    OVPN_LOG_INFO("VERIFY FAIL -- early rejection of leaf cert Common Name due to handler exception: " << e.what());
+                    preverify_ok = false;
+                }
+            }
+
             if (self_ssl->authcert)
             {
                 // save the Common Name
-                self_ssl->authcert->cn = OpenSSLPKI::x509_get_field(current_cert, NID_commonName);
+                self_ssl->authcert->cn = std::move(cn); // NOTE: cn is consumed!
 
                 // save the leaf cert serial number
                 load_serial_number_into_authcert(*self_ssl->authcert, current_cert);

@@ -261,6 +261,11 @@ class MbedTLSContext : public SSLFactoryAPI
             throw MbedTLSException("set_sni_name not implemented");
         }
 
+        void set_cn_reject_handler(CommonNameReject *cn_reject_handler_arg) override
+        {
+            throw MbedTLSException("set_cn_reject_handler not implemented");
+        }
+
         void set_private_key_password(const std::string &pwd) override
         {
             priv_key_pwd = pwd;

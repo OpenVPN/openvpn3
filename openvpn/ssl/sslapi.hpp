@@ -35,6 +35,7 @@
 #include <openvpn/ssl/tls_remote.hpp>
 #include <openvpn/ssl/tls_cert_profile.hpp>
 #include <openvpn/ssl/sess_ticket.hpp>
+#include <openvpn/ssl/cn_reject_handler.hpp>
 #include <openvpn/random/randapi.hpp>
 #include "openvpn/log/logger.hpp"
 
@@ -146,6 +147,7 @@ class SSLConfigAPI : public RC<thread_unsafe_refcount>
     virtual void set_sni_handler(SNI::HandlerBase *sni_handler) = 0;                                         // server side
     virtual void set_sni_name(const std::string &sni_name_arg) = 0;                                          // client side
     virtual void set_private_key_password(const std::string &pwd) = 0;
+    virtual void set_cn_reject_handler(CommonNameReject *cn_reject_handler_arg) = 0;
     virtual void load_ca(const std::string &ca_txt, bool strict) = 0;
     virtual void load_crl(const std::string &crl_txt) = 0;
     virtual void load_cert(const std::string &cert_txt) = 0;
