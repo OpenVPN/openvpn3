@@ -314,7 +314,7 @@ class Listener : public ProxyListener
                 begin_websocket();
         }
 
-        void generate_custom_reply_headers(BufferPtr &buf)
+        void generate_custom_reply_headers(BufferPtr &&buf)
         {
             http_out_begin();
             outbuf = std::move(buf);
