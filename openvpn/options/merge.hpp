@@ -377,7 +377,7 @@ class ProfileMerge
 
                                     // save file we referenced
                                     if (ref_succeed_list_.size() < MAX_FN_LIST_SIZE)
-                                        ref_succeed_list_.push_back(path);
+                                        ref_succeed_list_.push_back(std::move(path));
                                 }
                             }
                         }

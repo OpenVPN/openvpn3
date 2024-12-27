@@ -455,7 +455,7 @@ class TunBuilderCapture : public TunBuilderBase, public RC<thread_unsafe_refcoun
             tunnel_address_index_ipv6 = static_cast<int>(tunnel_addresses.size());
         else
             tunnel_address_index_ipv4 = static_cast<int>(tunnel_addresses.size());
-        tunnel_addresses.push_back(r);
+        tunnel_addresses.push_back(std::move(r));
         return true;
     }
 
@@ -480,7 +480,7 @@ class TunBuilderCapture : public TunBuilderBase, public RC<thread_unsafe_refcoun
         r.prefix_length = static_cast<unsigned char>(prefix_length);
         r.metric = (metric < 0 ? route_metric_default : metric);
         r.ipv6 = ipv6;
-        add_routes.push_back(r);
+        add_routes.push_back(std::move(r));
         return true;
     }
 
@@ -491,7 +491,7 @@ class TunBuilderCapture : public TunBuilderBase, public RC<thread_unsafe_refcoun
         r.prefix_length = static_cast<unsigned char>(prefix_length);
         r.metric = metric;
         r.ipv6 = ipv6;
-        exclude_routes.push_back(r);
+        exclude_routes.push_back(std::move(r));
         return true;
     }
 
@@ -517,7 +517,7 @@ class TunBuilderCapture : public TunBuilderBase, public RC<thread_unsafe_refcoun
         DNSServer dns;
         dns.address = address;
         dns.ipv6 = ipv6;
-        dns_servers.push_back(dns);
+        dns_servers.push_back(std::move(dns));
         return true;
     }
 
@@ -525,7 +525,7 @@ class TunBuilderCapture : public TunBuilderBase, public RC<thread_unsafe_refcoun
     {
         SearchDomain dom;
         dom.domain = domain;
-        search_domains.push_back(dom);
+        search_domains.push_back(std::move(dom));
         return true;
     }
 
@@ -557,7 +557,7 @@ class TunBuilderCapture : public TunBuilderBase, public RC<thread_unsafe_refcoun
     {
         ProxyBypass b;
         b.bypass_host = bypass_host;
-        proxy_bypass.push_back(b);
+        proxy_bypass.push_back(std::move(b));
         return true;
     }
 
@@ -585,7 +585,7 @@ class TunBuilderCapture : public TunBuilderBase, public RC<thread_unsafe_refcoun
     {
         WINSServer wins;
         wins.address = address;
-        wins_servers.push_back(wins);
+        wins_servers.push_back(std::move(wins));
         return true;
     }
 

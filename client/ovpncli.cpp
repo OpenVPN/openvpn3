@@ -654,7 +654,7 @@ OPENVPN_CLIENT_EXPORT void OpenVPNClientHelper::parse_config(const Config &confi
             ServerEntry se;
             se.server = i->server;
             se.friendlyName = i->friendlyName;
-            eval.serverList.push_back(se);
+            eval.serverList.push_back(std::move(se));
         }
     }
     catch (const std::exception &e)
