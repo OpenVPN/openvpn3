@@ -63,6 +63,7 @@ enum Type
     CONNECTION_TIMEOUT,                   // connection failed to establish within given time
     PRIMARY_EXPIRE,                       // primary key context expired
     TLS_VERSION_MIN,                      // peer cannot handshake at our minimum required TLS version
+    CERT_VERIFY_FAIL,                     // peer certificate verification failure
     TLS_SIGALG_DISALLOWED_OR_UNSUPPORTED, // signature algorithm required by TLS peer is not supported
     TLS_ALERT_PROTOCOL_VERSION,           // TLS Alert: No common TLS version between server and client
     TLS_ALERT_UNKNOWN_CA,                 // TLS Alert: Unknown CA (client certificate verify failed or peer-fingerprint failed)
@@ -73,7 +74,6 @@ enum Type
     TLS_ALERT_MISC,                       // Any TLS Alert that is in any of the previous TLS alerts
     TLS_AUTH_FAIL,                        // tls-auth HMAC verification failed
     TLS_CRYPT_META_FAIL,                  // tls-crypt-v2 metadata verification failed
-    CERT_VERIFY_FAIL,                     // peer certificate verification failure
     PEM_PASSWORD_FAIL,                    // incorrect or missing PEM private key decryption password
     AUTH_FAILED,                          // general authentication failure
     CLIENT_HALT,                          // HALT message from server received
@@ -158,6 +158,7 @@ inline const char *name(const size_t type)
         "CONNECTION_TIMEOUT",
         "PRIMARY_EXPIRE",
         "TLS_VERSION_MIN",
+        "CERT_VERIFY_FAIL",
         "TLS_SIGALG_DISALLOWED_OR_UNSUPPORTED",
         "TLS_ALERT_PROTOCOL_VERSION",
         "TLS_ALERT_UNKNOWN_CA",
@@ -168,7 +169,6 @@ inline const char *name(const size_t type)
         "TLS_ALERT_MISC",
         "TLS_AUTH_FAIL",
         "TLS_CRYPT_META_FAIL",
-        "CERT_VERIFY_FAIL",
         "PEM_PASSWORD_FAIL",
         "AUTH_FAILED",
         "CLIENT_HALT",

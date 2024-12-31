@@ -741,9 +741,9 @@ class OpenSSLContext : public SSLFactoryAPI
             if (!overflow)
             {
                 const int status = BIO_read(ssl_bio, data, numeric_cast<int>(capacity));
-                if (status < 0)
+                if (status <= 0)
                 {
-                    if (status == -1 && BIO_should_retry(ssl_bio))
+                    if ((status == 0 || status == -1) && BIO_should_retry(ssl_bio))
                         return SSLConst::SHOULD_RETRY;
                     else
                     {
