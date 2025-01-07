@@ -10,7 +10,7 @@ jobs:
     steps:
       - name: Check submission cache
         id: check_submit
-        uses: actions/cache/restore@6849a6489940f00c2f30c0fb92c6274307ccb58a # v4.1.2
+        uses: actions/cache/restore@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
         with:
           path: |
             cov-int
@@ -40,7 +40,7 @@ jobs:
           repository: Cyan4973/xxHash
           ref: v0.8.3
           path: xxHash
-      - uses: lukka/get-cmake@71b7adfe2603f48bb9ed50d2b01a72499ae94885 # v3.31.0
+      - uses: lukka/get-cmake@8567b9d9b63052b8430ef30042e13c3ba5288f16 # v3.31.3
         if: steps.check_submit.outputs.cache-hit != 'true'
 
       - name: Download Coverity Build Tool
@@ -77,7 +77,7 @@ jobs:
 
       - name: Cache submission
         if: steps.check_submit.outputs.cache-hit != 'true'
-        uses: actions/cache/save@6849a6489940f00c2f30c0fb92c6274307ccb58a # v4.1.2
+        uses: actions/cache/save@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
         with:
           path: |
             cov-int
