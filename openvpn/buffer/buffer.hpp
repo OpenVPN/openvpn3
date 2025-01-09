@@ -686,6 +686,9 @@ class ConstBufferType
      * @brief Allocate space for prepending data to the buffer.
      * @param size The number of T objects to allocate space for.
      * @return A pointer to the allocated space in the buffer.
+     * @note This function may move the data in the buffer to make room for the prepended
+     *       data. If insufficient space is available, this will throw with the strong
+     *       exception guarantee.
      */
     T *prepend_alloc(const size_t size);
 
@@ -1574,16 +1577,15 @@ T *ConstBufferType<T>::write_alloc(const size_t size)
 }
 
 template <typename T>
-T *ConstBufferType<T>::prepend_alloc(const size_t size)
+T *ConstBufferType<T>::prepend_alloc(const size_t request_size)
 {
-    if (size <= offset_)
-    {
-        offset_ -= size;
-        size_ += size;
-        return data();
-    }
-    else
-        OPENVPN_BUFFER_THROW(buffer_headroom);
+    if (request_size > offset())
+        realign(request_size);
+
+    offset_ -= request_size;
+    size_ += request_size;
+
+    return data();
 }
 
 template <typename T>

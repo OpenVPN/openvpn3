@@ -344,6 +344,69 @@ TEST(buffer, alloc_buffer_read1)
     EXPECT_EQ(memcmp(raw, data, sizeof(raw)), 0);
 }
 
+TEST(buffer, prepend_alloc)
+{
+    BufferAllocated buf(64, 0);
+    buf_append_string(buf, "hello world");
+    EXPECT_EQ(buf.offset(), 0u);
+
+    buf.prepend_alloc(5);
+    EXPECT_EQ(buf.size(), 16u);
+    EXPECT_EQ(buf.remaining(), 48u);
+}
+
+
+TEST(buffer, prepend_alloc_2)
+{
+    BufferAllocated buf(64, 0);
+    EXPECT_EQ(buf.offset(), 0u);
+    buf.init_headroom(2);
+    EXPECT_EQ(buf.offset(), 2u);
+    buf_append_string(buf, "hello world");
+    EXPECT_EQ(buf.offset(), 2u);
+
+    buf.prepend_alloc(5);
+    EXPECT_EQ(buf.offset(), 0u);
+    EXPECT_EQ(buf.size(), 16u);
+    EXPECT_EQ(buf.remaining(), 48u);
+}
+
+
+TEST(buffer, prepend_alloc_fits)
+{
+    BufferAllocated buf(64, 0);
+    EXPECT_EQ(buf.offset(), 0u);
+    buf.init_headroom(5);
+    EXPECT_EQ(buf.offset(), 5u);
+    buf_append_string(buf, "hello world");
+    EXPECT_EQ(buf.offset(), 5u);
+
+    buf.prepend_alloc(5);
+    EXPECT_EQ(buf.offset(), 0u);
+    EXPECT_EQ(buf.size(), 16u);
+    EXPECT_EQ(buf.remaining(), 48u);
+}
+
+TEST(buffer, prepend_alloc_fail)
+{
+    BufferAllocated buf(11, 0);
+    buf_append_string(buf, "hello world");
+
+    EXPECT_THROW(buf.prepend_alloc(5), std::exception);
+    EXPECT_EQ(buf.size(), 11u);
+    EXPECT_EQ(buf.remaining(), 0u);
+}
+
+TEST(buffer, prepend_alloc_fail2)
+{
+    BufferAllocated buf(14, 0);
+    buf_append_string(buf, "hello world");
+
+    EXPECT_THROW(buf.prepend_alloc(5), std::exception);
+    EXPECT_EQ(buf.size(), 11u);
+    EXPECT_EQ(buf.remaining(), 3u);
+}
+
 TEST(buffer, realign)
 {
     BufferAllocated buf(64, 0);
