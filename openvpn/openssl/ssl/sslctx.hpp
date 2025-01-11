@@ -1954,6 +1954,9 @@ class OpenSSLContext : public SSLFactoryAPI
                                          cert_fail_code(err),
                                          X509_verify_cert_error_string(err));
 
+        // Note on X509_STORE_CTX_set_error: see ssl/statem/statem_lib.c in
+        // OpenSSL source for mapping from X509_STORE_CTX_set_error() codes
+        // to TLS alert codes.
         if (depth == 1) // issuer cert
         {
             // save the issuer cert fingerprint
@@ -1976,7 +1979,7 @@ class OpenSSLContext : public SSLFactoryAPI
                     self_ssl->authcert->add_fail(depth,
                                                  AuthCert::Fail::BAD_CERT_TYPE,
                                                  "bad peer-fingerprint in leaf certificate");
-                X509_STORE_CTX_set_error(ctx, X509_V_ERR_CERT_SIGNATURE_FAILURE);
+                X509_STORE_CTX_set_error(ctx, X509_V_ERR_UNABLE_TO_VERIFY_LEAF_SIGNATURE); // alert code: SSL_R_TLSV1_ALERT_UNKNOWN_CA
                 preverify_ok = false;
             }
 
@@ -1988,7 +1991,7 @@ class OpenSSLContext : public SSLFactoryAPI
                     self_ssl->authcert->add_fail(depth,
                                                  AuthCert::Fail::BAD_CERT_TYPE,
                                                  "bad ns-cert-type in leaf certificate");
-                X509_STORE_CTX_set_error(ctx, X509_V_ERR_INVALID_PURPOSE);
+                X509_STORE_CTX_set_error(ctx, X509_V_ERR_INVALID_PURPOSE); // alert code: SSL_R_SSLV3_ALERT_UNSUPPORTED_CERTIFICATE
                 preverify_ok = false;
             }
 
@@ -2000,7 +2003,7 @@ class OpenSSLContext : public SSLFactoryAPI
                     self_ssl->authcert->add_fail(depth,
                                                  AuthCert::Fail::BAD_CERT_TYPE,
                                                  "bad X509 key usage in leaf certificate");
-                X509_STORE_CTX_set_error(ctx, X509_V_ERR_INVALID_PURPOSE);
+                X509_STORE_CTX_set_error(ctx, X509_V_ERR_INVALID_PURPOSE); // alert code: SSL_R_SSLV3_ALERT_UNSUPPORTED_CERTIFICATE
                 preverify_ok = false;
             }
 
@@ -2012,7 +2015,7 @@ class OpenSSLContext : public SSLFactoryAPI
                     self_ssl->authcert->add_fail(depth,
                                                  AuthCert::Fail::BAD_CERT_TYPE,
                                                  "bad X509 extended key usage in leaf certificate");
-                X509_STORE_CTX_set_error(ctx, X509_V_ERR_INVALID_PURPOSE);
+                X509_STORE_CTX_set_error(ctx, X509_V_ERR_INVALID_PURPOSE); // alert code: SSL_R_SSLV3_ALERT_UNSUPPORTED_CERTIFICATE
                 preverify_ok = false;
             }
 
@@ -2027,14 +2030,14 @@ class OpenSSLContext : public SSLFactoryAPI
                     if (self->config->cn_reject_handler->reject(cn))
                     {
                         OVPN_LOG_INFO("VERIFY FAIL -- early rejection of leaf cert Common Name");
-                        X509_STORE_CTX_set_error(ctx, X509_V_ERR_CERT_REJECTED);
+                        X509_STORE_CTX_set_error(ctx, X509_V_ERR_CERT_REJECTED); // alert code: SSL_R_SSLV3_ALERT_BAD_CERTIFICATE
                         preverify_ok = false;
                     }
                 }
                 catch (const std::exception &e)
                 {
                     OVPN_LOG_INFO("VERIFY FAIL -- early rejection of leaf cert Common Name due to handler exception: " << e.what());
-                    X509_STORE_CTX_set_error(ctx, X509_V_ERR_CERT_REJECTED);
+                    X509_STORE_CTX_set_error(ctx, X509_V_ERR_CERT_REJECTED); // alert code: SSL_R_SSLV3_ALERT_BAD_CERTIFICATE
                     preverify_ok = false;
                 }
             }

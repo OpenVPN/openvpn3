@@ -71,6 +71,8 @@ enum Type
     TLS_ALERT_CERTIFICATE_REQUIRED,       // TLS Alert: certificate is required
     TLS_ALERT_CERTIFICATE_EXPIRED,        // TLS Alert: certificate has expired
     TLS_ALERT_CERTIFICATE_REVOKED,        // TLS Alert: certificate is revoked
+    TLS_ALERT_BAD_CERTIFICATE,            // TLS Alert: bad/rejected certificate
+    TLS_ALERT_UNSUPPORTED_CERTIFICATE,    // TLS Alert: unsupported certificate (X509 key usage)
     TLS_ALERT_MISC,                       // Any TLS Alert that is in any of the previous TLS alerts
     TLS_AUTH_FAIL,                        // tls-auth HMAC verification failed
     TLS_CRYPT_META_FAIL,                  // tls-crypt-v2 metadata verification failed
@@ -166,6 +168,8 @@ inline const char *name(const size_t type)
         "TLS_ALERT_CERTIFICATE_REQUIRED",
         "TLS_ALERT_CERTIFICATE_EXPIRED",
         "TLS_ALERT_CERTIFICATE_REVOKED",
+        "TLS_ALERT_BAD_CERTIFICATE",
+        "TLS_ALERT_UNSUPPORTED_CERTIFICATE",
         "TLS_ALERT_MISC",
         "TLS_AUTH_FAIL",
         "TLS_CRYPT_META_FAIL",

@@ -187,6 +187,12 @@ class OpenSSLException : public ExceptionCode
             case SSL_R_SSLV3_ALERT_CERTIFICATE_REVOKED:
                 set_code(Error::TLS_ALERT_CERTIFICATE_REVOKED, true);
                 break;
+            case SSL_R_SSLV3_ALERT_BAD_CERTIFICATE:
+                set_code(Error::TLS_ALERT_BAD_CERTIFICATE, true);
+                break;
+            case SSL_R_SSLV3_ALERT_UNSUPPORTED_CERTIFICATE:
+                set_code(Error::TLS_ALERT_UNSUPPORTED_CERTIFICATE, true);
+                break;
             default:
                 if (reason > SSL_AD_REASON_OFFSET)
                 {

@@ -597,6 +597,12 @@ class ClientConnect : ClientProto::NotifyCallback,
                 case Error::TLS_ALERT_CERTIFICATE_REVOKED:
                     add_error_and_stop<ClientEvent::TLSAlertCertificateRevoked>(fatal_code);
                     break;
+                case Error::TLS_ALERT_BAD_CERTIFICATE:
+                    add_error_and_stop<ClientEvent::TLSAlertBadCertificate>(fatal_code);
+                    break;
+                case Error::TLS_ALERT_UNSUPPORTED_CERTIFICATE:
+                    add_error_and_stop<ClientEvent::TLSAlertUnsupportedCertificate>(fatal_code);
+                    break;
                 case Error::NEED_CREDS:
                     {
                         ClientEvent::Base::Ptr ev = new ClientEvent::NeedCreds();
