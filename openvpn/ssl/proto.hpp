@@ -393,9 +393,21 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
             V2 = (1 << 1),
             Dynamic = (1 << 2)
         };
-        OpenVPNStaticKey tls_key;             // leave this undefined to disable tls_auth/crypt
-        unsigned tls_crypt_ = TLSCrypt::None; // needed to distinguish between tls-crypt and tls-crypt-v2 server mode
-        BufferAllocated wkc;                  // leave this undefined to disable tls-crypt-v2 on client
+
+        //! leave this undefined to disable tls_auth/crypt
+        OpenVPNStaticKey tls_key;
+
+        //! needed to distinguish between tls-crypt and tls-crypt-v2 server mode
+        unsigned tls_crypt_ = TLSCrypt::None;
+
+        //! do we expect keys to contain a server key ID?
+        bool tls_crypt_v2_serverkey_id = false;
+
+        //! server keys location, if tls_crypt_v2_serverkey_id is true
+        std::string tls_crypt_v2_serverkey_dir;
+
+        //! leave this undefined to disable tls-crypt-v2 on client
+        BufferAllocated wkc;
 
         OvpnHMACFactory::Ptr tls_auth_factory;
         OvpnHMACContext::Ptr tls_auth_context;
@@ -574,10 +586,13 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
                         }
                         else
                         {
-                            // in server mode this is a PEM encoded tls-crypt-v2 server key
-                            TLSCryptV2ServerKey tls_crypt_v2_key;
-                            tls_crypt_v2_key.parse(keyfile);
-                            tls_crypt_v2_key.extract_key(tls_key);
+                            if (!tls_crypt_v2_serverkey_id)
+                            {
+                                // in server mode this is a PEM encoded tls-crypt-v2 server key
+                                TLSCryptV2ServerKey tls_crypt_v2_key;
+                                tls_crypt_v2_key.parse(keyfile);
+                                tls_crypt_v2_key.extract_key(tls_key);
+                            }
                         }
                         tls_crypt_ = TLSCrypt::V2;
                     }
@@ -1008,7 +1023,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
 
         bool tls_crypt_v2_enabled() const
         {
-            return tls_key.defined() && (tls_crypt_ & TLSCrypt::V2);
+            return (tls_key.defined() || tls_crypt_v2_serverkey_id) && (tls_crypt_ & TLSCrypt::V2);
         }
 
         bool dynamic_tls_crypt_enabled() const
@@ -3302,16 +3317,25 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
             return false;
         }
 
+        /**
+         * @brief  Extract and process the TLS crypt WKc information.
+         * @param  recv             Buffer containing the raw packet.
+         * @return true on success.
+         */
         bool unwrap_tls_crypt_wkc(Buffer &recv)
         {
             // the ``WKc`` is located at the end of the packet, after the tls-crypt
             // payload.
-            // Format is as follows (as documented by Steffan Karger):
+            //
+            // K_id is optional, and controlled by proto.config->tls_crypt_v2_serverkey_id.
+            // If it is missing, we will use a single server key for all clients.
+            //
+            // Format is as follows:
             //
             // ``len = len(WKc)`` (16 bit, network byte order)
-            // ``T = HMAC-SHA256(Ka, len || Kc || metadata)``
+            // ``T = HMAC-SHA256(Ka, len || K_id || Kc || metadata)``
             // ``IV = 128 most significant bits of T``
-            // ``WKc = T || AES-256-CTR(Ke, IV, Kc || metadata) || len``
+            // ``WKc = T || AES-256-CTR(Ke, IV, Kc || metadata) || K_id || len``
 
             const unsigned char *orig_data = recv.data();
             const size_t orig_size = recv.size();
@@ -3335,6 +3359,16 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
             // avoid unaligned access
             std::memcpy(&wkc_len, wkc_raw + wkc_raw_size, sizeof(wkc_len));
             wkc_len = ntohs(wkc_len);
+
+            uint32_t k_id = 0;
+            const size_t serverkey_id_size = proto.config->tls_crypt_v2_serverkey_id ? sizeof(k_id) : 0;
+
+            if (proto.config->tls_crypt_v2_serverkey_id)
+            {
+                std::memcpy(&k_id, wkc_raw + wkc_raw_size - serverkey_id_size, sizeof(k_id));
+                k_id = ntohl(k_id);
+            }
+
             // length sanity check (the size of the ``len`` field is included in the value)
             if ((wkc_len - sizeof(uint16_t)) != wkc_raw_size)
                 return false;
@@ -3344,11 +3378,41 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
             // the WKc length in network order
             wkc_len = htons(wkc_len);
             plaintext.write(&wkc_len, sizeof(wkc_len));
+
+            if (proto.config->tls_crypt_v2_serverkey_id)
+            {
+                std::stringstream ss;
+                ss << std::hex << std::setfill('0') << std::uppercase << std::setw(8) << k_id;
+
+                const std::string serverkey_fn = ss.str() + ".key";
+                const std::string serverkey_path = proto.config->tls_crypt_v2_serverkey_dir + "/"
+                                                   + serverkey_fn.substr(0, 2) + "/" + serverkey_fn;
+
+                // If the key is missing, an exception will be thrown here, for example:
+                // "cannot open for read: <KEYS_DIR>/06/063FE634.key"
+                const std::string serverkey = read_text(serverkey_path);
+
+                OVPN_LOG_VERBOSE(proto.debug_prefix() << " Using TLS-crypt-V2 server key " << serverkey_path);
+
+                TLSCryptV2ServerKey tls_crypt_v2_key;
+                tls_crypt_v2_key.parse(serverkey);
+                tls_crypt_v2_key.extract_key(proto.config->tls_key);
+
+                // the server key is composed by one key set only, therefore direction and
+                // mode should not be specified when slicing
+                proto.tls_crypt_server->init(proto.config->ssl_factory->libctx(),
+                                             proto.config->tls_key.slice(OpenVPNStaticKey::HMAC),
+                                             proto.config->tls_key.slice(OpenVPNStaticKey::CIPHER));
+
+                k_id = htonl(k_id);
+                plaintext.write(&k_id, sizeof(k_id));
+            }
+
             const size_t decrypt_bytes = proto.tls_crypt_server->decrypt(wkc_raw,
-                                                                         plaintext.data() + 2,
-                                                                         plaintext.max_size() - 2,
+                                                                         plaintext.data() + 2 + serverkey_id_size,
+                                                                         plaintext.max_size() - 2 - serverkey_id_size,
                                                                          wkc_raw + hmac_size,
-                                                                         wkc_raw_size - hmac_size);
+                                                                         wkc_raw_size - hmac_size - serverkey_id_size);
             plaintext.inc_size(decrypt_bytes);
             // decrypted data must at least contain a full 2048bits client key
             // (metadata is optional)
@@ -3371,9 +3435,12 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
                 return false;
             }
 
-            // we can now remove the WKc length from the plaintext, as it is not
-            // really part of the key material
+            // we can now remove the WKc length (and the server key ID, if present)
+            // from the plaintext, as they are not really part of the key material
             plaintext.advance(sizeof(wkc_len));
+
+            if (proto.config->tls_crypt_v2_serverkey_id)
+                plaintext.advance(sizeof(k_id));
 
             // WKc has been authenticated: it contains the client key followed
             // by the optional metadata. Let's initialize the tls-crypt context
@@ -3866,11 +3933,14 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
         // server context is used only to process incoming WKc's
         tls_crypt_server = c.tls_crypt_context->new_obj_recv();
 
-        // the server key is composed by one key set only, therefore direction and
-        // mode should not be specified when slicing
-        tls_crypt_server->init(c.ssl_factory->libctx(),
-                               c.tls_key.slice(OpenVPNStaticKey::HMAC),
-                               c.tls_key.slice(OpenVPNStaticKey::CIPHER));
+        if (!c.tls_crypt_v2_serverkey_id)
+        {
+            // the server key is composed by one key set only, therefore direction and
+            // mode should not be specified when slicing
+            tls_crypt_server->init(c.ssl_factory->libctx(),
+                                   c.tls_key.slice(OpenVPNStaticKey::HMAC),
+                                   c.tls_key.slice(OpenVPNStaticKey::CIPHER));
+        }
 
         tls_crypt_metadata = c.tls_crypt_metadata_factory->new_obj();
     }
