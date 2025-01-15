@@ -1,5 +1,5 @@
 #include "test_common.h"
-#include "test_generators.h"
+#include "test_generators.hpp"
 
 #include <iostream>
 

@@ -1,5 +1,5 @@
-#ifndef TEST_GENERATORS_H
-#define TEST_GENERATORS_H
+#ifndef TEST_GENERATORS_HPP
+#define TEST_GENERATORS_HPP
 #ifdef __GNUC__
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wconversion" // turn off warning for rapidcheck
@@ -373,4 +373,4 @@ struct Arbitrary<RedirectGatewayFlagsValues>
 
 
 } // namespace rc
-#endif // TEST_GENERATORS_H
+#endif // TEST_GENERATORS_HPP
