@@ -38,7 +38,7 @@
 //   must define TEST_x to define compressor/decompressor pair
 //   OPENVPN_DEBUG_COMPRESS = 0|1|2
 
-#include "test_common.h"
+#include "test_common.hpp"
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>

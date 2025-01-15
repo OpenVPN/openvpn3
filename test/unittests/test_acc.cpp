@@ -11,7 +11,7 @@
 
 
 
-#include "test_common.h"
+#include "test_common.hpp"
 #include <openvpn/ssl/customcontrolchannel.hpp>
 #include <regex>
 

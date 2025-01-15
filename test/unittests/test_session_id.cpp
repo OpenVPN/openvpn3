@@ -1,4 +1,4 @@
-#include "test_common.h"
+#include "test_common.hpp"
 
 #include <openvpn/common/sess_id.hpp>
 #include <openvpn/openssl/util/tokenencrypt.hpp>

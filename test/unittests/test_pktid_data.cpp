@@ -1,4 +1,4 @@
-#include "test_common.h"
+#include "test_common.hpp"
 
 #include <openvpn/crypto/packet_id_control.hpp>
 #include <openvpn/crypto/packet_id_data.hpp>

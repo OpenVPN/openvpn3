@@ -18,7 +18,7 @@
    to their parent object (Object).
 */
 
-#include "test_common.h"
+#include "test_common.hpp"
 
 #include <vector>
 

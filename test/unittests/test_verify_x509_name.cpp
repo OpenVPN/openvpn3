@@ -13,7 +13,7 @@
 //
 
 #include <iostream>
-#include "test_common.h"
+#include "test_common.hpp"
 #include "openvpn/client/cliconstants.hpp"
 #include "openvpn/common/options.hpp"
 #include "openvpn/ssl/verify_x509_name.hpp"

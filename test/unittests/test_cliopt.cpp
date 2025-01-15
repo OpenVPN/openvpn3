@@ -1,5 +1,5 @@
 #include <iostream>
-#include "test_common.h"
+#include "test_common.hpp"
 
 /* if initproces.hpp is not included, mingw/windows compilation fails with
  * weird stack struct creation related errors in OpenSSL */

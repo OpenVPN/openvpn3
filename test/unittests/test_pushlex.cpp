@@ -14,7 +14,7 @@
    @brief Unit test for PushLex
 */
 
-#include "test_common.h"
+#include "test_common.hpp"
 
 #include <openvpn/buffer/bufstr.hpp>
 #include <openvpn/options/pushlex.hpp>

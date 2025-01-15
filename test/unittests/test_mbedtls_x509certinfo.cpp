@@ -15,7 +15,7 @@
 
 #include <string>
 
-#include "test_common.h"
+#include "test_common.hpp"
 #include "openvpn/mbedtls/pki/x509cert.hpp"
 #include "openvpn/mbedtls/pki/x509certinfo.hpp"
 

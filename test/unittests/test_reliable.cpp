@@ -1,4 +1,4 @@
-#include "test_common.h"
+#include "test_common.hpp"
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>

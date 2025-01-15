@@ -79,7 +79,7 @@ Run also the tests that are normally disabled
 ## Writing unit tests ##
 
 Each new test suite should be a new a file called `test_suitename.cpp` and added to the
-`CMakeLists.txt` file. Each test includes an `#include test_common.h` at the top to setup
+`CMakeLists.txt` file. Each test includes an `#include test_common.hpp` at the top to setup
 common openvpn3 library parameters.
 
 Currently all tests can fit in the same compilation unit `coreUnitTests`. If a unit test

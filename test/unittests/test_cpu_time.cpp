@@ -29,7 +29,7 @@
 
 // #define DEBUG  // Define this macro to get more details
 
-#include "test_common.h"
+#include "test_common.hpp"
 #include <cstdint>
 #include <unistd.h>
 #include <memory>

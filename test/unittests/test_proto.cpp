@@ -14,7 +14,7 @@
    @brief Unit test for OpenVPN Protocol implementation (class ProtoContext)
 */
 
-#include "test_common.h"
+#include "test_common.hpp"
 
 #include <iostream>
 #include <string>

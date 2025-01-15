@@ -1,7 +1,7 @@
 // This test demonstrates an alternative to dynamic_cast
 // using std::typeindex that is much faster.
 
-#include "test_common.h"
+#include "test_common.hpp"
 
 #include <typeindex>
 #include <vector>

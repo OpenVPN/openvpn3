@@ -1,5 +1,5 @@
 
-#include "test_common.h"
+#include "test_common.hpp"
 
 #include <openvpn/log/logger.hpp>
 

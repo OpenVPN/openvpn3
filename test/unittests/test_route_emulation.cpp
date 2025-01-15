@@ -12,7 +12,7 @@
 
 /* Without doing this log dance core will not compile ... */
 
-#include "test_common.h"
+#include "test_common.hpp"
 
 #include <openvpn/client/cliemuexr.hpp>
 

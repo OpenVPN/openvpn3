@@ -10,7 +10,7 @@
 //
 
 
-#include "test_common.h"
+#include "test_common.hpp"
 
 #include <json/value.h>
 #include <openvpn/client/dns.hpp>

@@ -1,4 +1,4 @@
-#include "test_common.h"
+#include "test_common.hpp"
 
 #include <openvpn/time/time.hpp>
 #include <openvpn/random/mtrandapi.hpp>

@@ -11,7 +11,7 @@
 
 
 #include <fstream>
-#include "test_common.h"
+#include "test_common.hpp"
 
 #include <openvpn/common/argv.hpp>
 #include <openvpn/win/call.hpp>

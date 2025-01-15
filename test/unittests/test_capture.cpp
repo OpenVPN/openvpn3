@@ -1,4 +1,4 @@
-#include "test_common.h"
+#include "test_common.hpp"
 #include "test_generators.hpp"
 
 #include <iostream>

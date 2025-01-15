@@ -14,7 +14,7 @@
 
 #include <algorithm>
 
-#include "test_common.h"
+#include "test_common.hpp"
 
 #include <openvpn/common/options.hpp>
 #include <openvpn/random/mtrandapi.hpp>

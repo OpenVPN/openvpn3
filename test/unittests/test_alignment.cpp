@@ -9,7 +9,7 @@
 //    SPDX-License-Identifier: MPL-2.0 OR AGPL-3.0-only WITH openvpn3-openssl-exception
 //
 
-#include "test_common.h"
+#include "test_common.hpp"
 
 #include <openvpn/common/alignment.hpp>
 

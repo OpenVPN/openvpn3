@@ -1,5 +1,5 @@
 #include <iostream>
-#include "test_common.h"
+#include "test_common.hpp"
 
 #include <openvpn/random/randapi.hpp>
 
