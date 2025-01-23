@@ -140,6 +140,15 @@ RC_GTEST_PROP(RemoteAddress, ThrowsValidatingMismatchedIPVersion, (const std::st
     RC_ASSERT_THROWS_AS(remote_address.validate(title), openvpn::IP::ip_exception);
 }
 
+RC_GTEST_PROP(RemoteAddress, ThrowsValidatingInvalidIP, (const std::string &title, bool ipv6))
+{
+    TunBuilderCapture::RemoteAddress remote_address;
+    remote_address.address = ipv6 ? *rc::IPv6Address(false).as("Invalid IPv6 address") : *rc::IPv4Address(false).as("Invalid IPv4 address");
+    // Assumption: you have to specify manually
+    remote_address.ipv6 = ipv6;
+    RC_ASSERT_THROWS_AS(remote_address.validate(title), openvpn::IP::ip_exception);
+}
+
 RC_GTEST_PROP(RemoteAddress, EmptyJsonRoundTripHaveSameStringRepresentation, (const std::string &title))
 {
     const TunBuilderCapture::RemoteAddress remote_address;
@@ -188,31 +197,52 @@ RC_GTEST_PROP(RemoteAddress, JsonRoundTripHaveSameDefinedStatus, (const std::str
     RC_ASSERT(remote_address.defined() == from_json.defined());
 }
 
-RC_GTEST_PROP(RemoteAddress, JsonRoundTripValidatesSameWay, (const std::string &title, bool ipv6))
+RC_GTEST_PROP(RemoteAddress, JsonRoundTripThrowsValidatingMismatchedIPVersion, (const std::string &title, bool ipv6))
 {
-    // Invalid
-    {
-        TunBuilderCapture::RemoteAddress remote_address;
-        // Intentionally generate IP Address with mismatched version: IPv4 if ipv6 is true, IPv6 otherwise
-        remote_address.address = ipv6 ? *rc::IPv4Address().as("Valid IPv4 address") : *rc::IPv6Address().as("Valid IPv6 address");
-        remote_address.ipv6 = ipv6;
-        RC_ASSERT_THROWS_AS(remote_address.validate(title), openvpn::IP::ip_exception);
-        const auto address_as_json = remote_address.to_json();
-        TunBuilderCapture::RemoteAddress from_json;
-        from_json.from_json(address_as_json, title);
-        RC_ASSERT_THROWS_AS(from_json.validate(title), openvpn::IP::ip_exception);
-    }
-    // Valid
-    {
-        TunBuilderCapture::RemoteAddress remote_address;
-        remote_address.address = ipv6 ? *rc::IPv6Address().as("Valid IPv4 address") : *rc::IPv4Address().as("Valid IPv6 address");
-        remote_address.ipv6 = ipv6;
-        remote_address.validate(title);
-        const auto address_as_json = remote_address.to_json();
-        TunBuilderCapture::RemoteAddress from_json;
-        from_json.from_json(address_as_json, title);
-        from_json.validate(title);
-    }
+    TunBuilderCapture::RemoteAddress remote_address;
+    // Intentionally generate IP Address with mismatched version: IPv4 if ipv6 is true, IPv6 otherwise
+    remote_address.address = ipv6 ? *rc::IPv4Address().as("Valid IPv4 address") : *rc::IPv6Address().as("Valid IPv6 address");
+    remote_address.ipv6 = ipv6;
+    RC_ASSERT_THROWS_AS(remote_address.validate(title), openvpn::IP::ip_exception);
+    const auto address_as_json = remote_address.to_json();
+    TunBuilderCapture::RemoteAddress from_json;
+    from_json.from_json(address_as_json, title);
+    RC_ASSERT_THROWS_AS(from_json.validate(title), openvpn::IP::ip_exception);
+}
+
+RC_GTEST_PROP(RemoteAddress, JsonRoundTripThrowsValidatingInvalidIP, (const std::string &title, bool ipv6))
+{
+    TunBuilderCapture::RemoteAddress remote_address;
+    remote_address.address = ipv6 ? *rc::IPv6Address(false).as("Invalid IPv6 address") : *rc::IPv4Address(false).as("Invalid IPv4 address");
+    remote_address.ipv6 = ipv6;
+    RC_ASSERT_THROWS_AS(remote_address.validate(title), openvpn::IP::ip_exception);
+    const auto address_as_json = remote_address.to_json();
+    TunBuilderCapture::RemoteAddress from_json;
+    from_json.from_json(address_as_json, title);
+    RC_ASSERT_THROWS_AS(from_json.validate(title), openvpn::IP::ip_exception);
+}
+
+RC_GTEST_PROP(RemoteAddress, JsonRoundTripValidatesCorrectIP, (const std::string &title, bool ipv6))
+{
+    TunBuilderCapture::RemoteAddress remote_address;
+    remote_address.address = ipv6 ? *rc::IPv6Address().as("Valid IPv6 address") : *rc::IPv4Address().as("Valid IPv4 address");
+    remote_address.ipv6 = ipv6;
+    remote_address.validate(title);
+    const auto address_as_json = remote_address.to_json();
+    TunBuilderCapture::RemoteAddress from_json;
+    from_json.from_json(address_as_json, title);
+    from_json.validate(title);
+}
+
+RC_GTEST_PROP(RemoteAddress, FromInvalidJsonDoesNotChangeOriginalObject, (const std::string &address, const std::string &title, bool ipv6))
+{
+    TunBuilderCapture::RemoteAddress from_json;
+    from_json.ipv6 = ipv6;
+    from_json.address = address;
+    const Json::Value invalid_json;
+    from_json.from_json(invalid_json, title);
+    RC_ASSERT(from_json.ipv6 == ipv6);
+    RC_ASSERT(from_json.address == address);
 }
 
 //  ===============================================================================================
