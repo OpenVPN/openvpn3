@@ -309,6 +309,17 @@ RC_GTEST_PROP(RerouteGW, JsonRoundTripHaveSameStringRepresentation, (bool ipv4, 
     from_json.from_json(reroute_gw_as_json, title);
     RC_ASSERT(reroute_gw.to_string() == from_json.to_string());
 }
+
+RC_GTEST_PROP(RerouteGW, FromInvalidJsonThrows, (bool ipv4, bool ipv6, rc::RedirectGatewayFlagsValues flags, const std::string &title))
+{
+    TunBuilderCapture::RerouteGW from_json;
+    from_json.ipv4 = ipv4;
+    from_json.ipv6 = ipv6;
+    from_json.flags = flags;
+    const Json::Value invalid_json;
+    RC_ASSERT_THROWS_AS(from_json.from_json(invalid_json, title), json::json_parse);
+}
+
 //  ===============================================================================================
 //  RouteBase tests
 //  ===============================================================================================
