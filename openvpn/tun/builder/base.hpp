@@ -19,10 +19,9 @@
 #endif
 
 #include <openvpn/addr/ip.hpp>
+#include <openvpn/client/dns_options.hpp>
 
 namespace openvpn {
-
-struct DnsOptions;
 
 /**
  * @brief TunBuilder methods, loosely based on the Android VpnService.Builder abstraction.
@@ -185,48 +184,15 @@ class TunBuilderBase
     }
 
     /**
-     * @brief Callback to add --dns options to VPN interface.
+     * @brief Callback to set DNS related options to VPN interface.
      *
-     * This function may be called more than once to override previous options.
+     * Unlike others, this function is called only once and overrides when called multiple times.
      *
      * @param dns A reference to the DnsOptions object containing the DNS options.
      *
      * @return `true` if the DNS options were successfully added, `false` otherwise
      */
-    virtual bool tun_builder_add_dns_options(const DnsOptions &dns)
-    {
-        return false;
-    }
-
-    /**
-     * @brief Callback to add a DNS server to the VPN interface.
-     *
-     * This method may be called multiple times per TunBuilder session.
-     * If `reroute_dns` is true, all DNS traffic should be routed over the tunnel.
-     * If false, only DNS traffic that matches an added search domain should be routed.
-     * This method is guaranteed to be called after `tun_builder_reroute_gw()`.
-     *
-     * @param address The address of the DNS server.
-     * @param ipv6 Indicates whether the address is an IPv6 address.
-     *
-     * @return `true` if the DNS server was successfully added, `false` otherwise
-     */
-    virtual bool tun_builder_add_dns_server(const std::string &address, bool ipv6)
-    {
-        return false;
-    }
-
-    /**
-     * @brief Callback to add a search domain to the DNS resolver.
-     *
-     * This function can be called multiple times per TunBuilder session.
-     * It is guaranteed to be called after `tun_builder_reroute_gw()`.
-     *
-     * @param domain The search domain to add.
-     *
-     * @return `true` if the domain was successfully added, `false` otherwise
-     */
-    virtual bool tun_builder_add_search_domain(const std::string &domain)
+    virtual bool tun_builder_set_dns_options(const DnsOptions &dns)
     {
         return false;
     }
@@ -379,22 +345,6 @@ class TunBuilderBase
      * @return `true` if it was successfully set, `false` otherwise
      */
     virtual bool tun_builder_set_allow_local_dns(bool allow)
-    {
-        return true;
-    }
-
-    /**
-     * @brief Set a DNS suffix on the TUN/TAP adapter.
-     *
-     * This callback is used to set the DNS suffix for the TUN/TAP adapter.
-     * This functionality is currently only implemented on Windows, where
-     * it will set the "Connection-specific DNS Suffix" property on the TAP driver.
-     *
-     * @param name The DNS suffix to be set on the adapter.
-     *
-     * @return `true` if it was successfully set, `false` otherwise
-     */
-    virtual bool tun_builder_set_adapter_domain_suffix(const std::string &name)
     {
         return true;
     }

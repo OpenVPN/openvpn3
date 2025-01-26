@@ -12,6 +12,7 @@
 #ifndef OPENVPN_TUN_CLIENT_DHCP_CAPTURE_H
 #define OPENVPN_TUN_CLIENT_DHCP_CAPTURE_H
 
+#include "openvpn/client/dns.hpp"
 #include <cstring>
 
 #include <openvpn/common/socktypes.hpp>
@@ -32,7 +33,7 @@ class DHCPCapture
     {
         if (props->vpn_ipv4() || props->vpn_ipv4())
             OPENVPN_LOG("NOTE: pushed ifconfig directive is ignored in layer 2 mode");
-        if (!props->dns_servers.empty())
+        if (!props->dns_options.servers.empty())
             OPENVPN_LOG("NOTE: pushed DNS servers are ignored in layer 2 mode");
         reset();
     }
@@ -64,7 +65,7 @@ class DHCPCapture
                 const IPv4::Addr router = extract_router(dhcp, optlen);
 
                 /* get DNS server addresses */
-                const std::vector<IPv4::Addr> dns_servers = get_dns(dhcp, optlen);
+                const std::vector<DnsAddress> dns_addresses = get_dns(dhcp, optlen);
 
                 /* recompute the UDP checksum */
                 dhcp->udp.check = 0;
@@ -101,12 +102,15 @@ class DHCPCapture
                     {
                         reset();
                         props->tun_builder_add_address(host.to_string(), prefix_len, router.to_string(), false, false);
-                        if (dns_servers.empty())
+                        if (dns_addresses.empty())
                             OPENVPN_LOG("NOTE: failed to obtain DNS servers via DHCP");
                         else
                         {
-                            for (const auto &a : dns_servers)
-                                props->tun_builder_add_dns_server(a.to_string(), false);
+                            DnsServer server;
+                            server.addresses = dns_addresses;
+                            DnsOptions dns_options;
+                            dns_options.servers[0] = server;
+                            props->tun_builder_set_dns_options(dns_options);
                         }
                     }
                     return configured = complete;
@@ -125,7 +129,7 @@ class DHCPCapture
     void reset()
     {
         props->reset_tunnel_addresses();
-        props->reset_dns_servers();
+        props->reset_dns_options();
     }
 
     static int dhcp_message_type(const DHCPPacket *dhcp, const unsigned int optlen)
@@ -257,10 +261,10 @@ class DHCPCapture
         return ret;
     }
 
-    static std::vector<IPv4::Addr> get_dns(const DHCPPacket *dhcp, const unsigned int optlen)
+    static std::vector<DnsAddress> get_dns(const DHCPPacket *dhcp, const unsigned int optlen)
     {
         const std::uint8_t *p = dhcp->options;
-        std::vector<IPv4::Addr> ret;
+        std::vector<DnsAddress> ret;
 
         for (unsigned int i = 0; i < optlen;)
         {
@@ -280,7 +284,7 @@ class DHCPCapture
                     {
                         /* get DNS addresses */
                         for (unsigned int j = 0; j < len; j += 4)
-                            ret.push_back(IPv4::Addr::from_bytes_net(p + i + j + 2));
+                            ret.push_back({IPv4::Addr::from_bytes_net(p + i + j + 2).to_string(), 0});
 
                         i += (len + 2); /* advance to next option */
                     }

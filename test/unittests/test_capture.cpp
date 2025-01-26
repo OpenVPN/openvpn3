@@ -10,6 +10,12 @@ using namespace openvpn;
 
 TEST(misc, capture)
 {
+    DnsServer server;
+    server.addresses = {{{"8.8.8.8"}, 0}, {{"8.8.4.4"}, 53}};
+    DnsOptions dns_options;
+    dns_options.servers[0] = std::move(server);
+    dns_options.search_domains = {{"yonan.net"}, {"openvpn.net"}};
+
     TunBuilderCapture::Ptr tbc(new TunBuilderCapture);
 
     tbc->tun_builder_set_remote_address("52.7.171.249", false);
@@ -24,11 +30,7 @@ TEST(misc, capture)
     tbc->tun_builder_add_route("fc00::", 7, 66, true);
     tbc->tun_builder_exclude_route("10.10.0.0", 24, 77, false);
     tbc->tun_builder_exclude_route("::1", 128, -1, true);
-    tbc->tun_builder_add_dns_server("8.8.8.8", false);
-    tbc->tun_builder_add_dns_server("8.8.4.4", false);
-    tbc->tun_builder_add_search_domain("yonan.net");
-    tbc->tun_builder_add_search_domain("openvpn.net");
-    tbc->tun_builder_add_search_domain("privatetunnel.com");
+    tbc->tun_builder_set_dns_options(dns_options);
     tbc->tun_builder_set_mtu(1500);
     tbc->tun_builder_set_session_name("onewaytickettothemoon");
     tbc->tun_builder_add_proxy_bypass("bypass.example.com");
@@ -50,7 +52,7 @@ TEST(misc, capture)
     /// write_string(fn1, j1_txt);
     // OPENVPN_LOG("JSON #1:\n" << j1_txt);
 
-    const std::string fn2 = "cap2.txt";
+    // const std::string fn2 = "cap2.txt";
     TunBuilderCapture::Ptr tbc2 = TunBuilderCapture::from_json(j1);
     tbc2->validate();
     Json::Value j2 = tbc2->to_json();
@@ -384,145 +386,4 @@ RC_GTEST_PROP(RouteBased, JsonRoundTripHaveSameStringRepresentation, (rc::RouteB
         from_json.from_json(route_based_as_json, title);
         RC_ASSERT(route_base_variant.to_string() == from_json.to_string()); },
                route_based);
-}
-
-//  ===============================================================================================
-//  DNSServer tests
-//  ===============================================================================================
-
-TEST(DNSServer, EmptyStringRepresentation)
-{
-    const TunBuilderCapture::DNSServer dns_server;
-    ASSERT_TRUE(dns_server.to_string().empty());
-}
-
-TEST(DNSServer, EmptyStringRepresentationIncludesIPv6Setting)
-{
-    TunBuilderCapture::DNSServer dns_server;
-    dns_server.ipv6 = true;
-    ASSERT_EQ(dns_server.to_string(), " [IPv6]");
-}
-
-RC_GTEST_PROP(DNSServer, StringRepresentationReturnsAddress, (const std::string &address))
-{
-    TunBuilderCapture::DNSServer dns_server;
-    dns_server.address = address;
-    RC_ASSERT(dns_server.to_string() == address);
-}
-
-RC_GTEST_PROP(DNSServer, StringRepresentationIncludesIPv6Setting, (const std::string &address))
-{
-    TunBuilderCapture::DNSServer dns_server;
-    dns_server.ipv6 = true;
-    dns_server.address = address;
-    RC_ASSERT(dns_server.to_string() == address + " [IPv6]");
-}
-
-RC_GTEST_PROP(DNSServer, EmptyThrowsOnValidation, (const std::string &title))
-{
-    const TunBuilderCapture::DNSServer dns_server;
-    RC_ASSERT_THROWS_AS(dns_server.validate(title), openvpn::IP::ip_exception);
-}
-
-RC_GTEST_PROP(DNSServer, ValidatesCorrectIP, (const std::string &title, bool ipv6))
-{
-    TunBuilderCapture::DNSServer dns_server;
-    dns_server.ipv6 = ipv6;
-    dns_server.address = ipv6 ? *rc::IPv6Address().as("Valid IPv6 address") : *rc::IPv4Address().as("Valid IPv4 address");
-    dns_server.validate(title);
-}
-
-RC_GTEST_PROP(DNSServer, ThrowsValidatingMismatchedIPVersion, (const std::string &title, bool ipv6))
-{
-    TunBuilderCapture::DNSServer dns_server;
-    // Intentionally generate IP Address with mismatched version: IPv4 if ipv6 is true, IPv6 otherwise
-    dns_server.address = ipv6 ? *rc::IPv4Address().as("Valid IPv4 address") : *rc::IPv6Address().as("Valid IPv6 address");
-    // Assumption: you have to specify manually
-    dns_server.ipv6 = ipv6;
-    RC_ASSERT_THROWS_AS(dns_server.validate(title), openvpn::IP::ip_exception);
-}
-
-RC_GTEST_PROP(DNSServer, ThrowsValidatingInvalidIP, (const std::string &title, bool ipv6))
-{
-    TunBuilderCapture::DNSServer dns_server;
-    dns_server.address = ipv6 ? *rc::IPv6Address(false).as("Invalid IPv6 address") : *rc::IPv4Address(false).as("Invalid IPv4 address");
-    // Assumption: you have to specify manually
-    dns_server.ipv6 = ipv6;
-    RC_ASSERT_THROWS_AS(dns_server.validate(title), openvpn::IP::ip_exception);
-}
-
-RC_GTEST_PROP(DNSServer, EmptyJsonRoundTripHaveSameStringRepresentation, (const std::string &title))
-{
-    const TunBuilderCapture::DNSServer dns_server;
-    const auto address_as_json = dns_server.to_json();
-    TunBuilderCapture::DNSServer from_json;
-    from_json.from_json(address_as_json, title);
-    RC_ASSERT(dns_server.to_string() == from_json.to_string());
-}
-
-RC_GTEST_PROP(DNSServer, EmptyJsonRoundTripThrowsOnValidation, (const std::string &title))
-{
-    const TunBuilderCapture::DNSServer dns_server;
-    RC_ASSERT_THROWS_AS(dns_server.validate(title), openvpn::IP::ip_exception);
-    const auto address_as_json = dns_server.to_json();
-    TunBuilderCapture::DNSServer from_json;
-    from_json.from_json(address_as_json, title);
-    RC_ASSERT_THROWS_AS(from_json.validate(title), openvpn::IP::ip_exception);
-}
-
-RC_GTEST_PROP(DNSServer, JsonRoundTripHaveSameStringRepresentation, (const std::string &address, const std::string &title, bool ipv6))
-{
-    TunBuilderCapture::DNSServer dns_server;
-    dns_server.ipv6 = ipv6;
-    dns_server.address = address;
-    const auto address_as_json = dns_server.to_json();
-    TunBuilderCapture::DNSServer from_json;
-    from_json.from_json(address_as_json, title);
-    RC_ASSERT(dns_server.to_string() == from_json.to_string());
-}
-
-RC_GTEST_PROP(DNSServer, JsonRoundTripThrowsValidatingMismatchedIPVersion, (const std::string &title, bool ipv6))
-{
-    TunBuilderCapture::DNSServer dns_server;
-    // Intentionally generate IP Address with mismatched version: IPv4 if ipv6 is true, IPv6 otherwise
-    dns_server.address = ipv6 ? *rc::IPv4Address().as("Valid IPv4 address") : *rc::IPv6Address().as("Valid IPv6 address");
-    dns_server.ipv6 = ipv6;
-    RC_ASSERT_THROWS_AS(dns_server.validate(title), openvpn::IP::ip_exception);
-    const auto address_as_json = dns_server.to_json();
-    TunBuilderCapture::DNSServer from_json;
-    from_json.from_json(address_as_json, title);
-    RC_ASSERT_THROWS_AS(from_json.validate(title), openvpn::IP::ip_exception);
-}
-
-RC_GTEST_PROP(DNSServer, JsonRoundTripThrowsValidatingInvalidIP, (const std::string &title, bool ipv6))
-{
-    TunBuilderCapture::DNSServer dns_server;
-    dns_server.address = ipv6 ? *rc::IPv6Address(false).as("Invalid IPv6 address") : *rc::IPv4Address(false).as("Invalid IPv4 address");
-    dns_server.ipv6 = ipv6;
-    RC_ASSERT_THROWS_AS(dns_server.validate(title), openvpn::IP::ip_exception);
-    const auto address_as_json = dns_server.to_json();
-    TunBuilderCapture::DNSServer from_json;
-    from_json.from_json(address_as_json, title);
-    RC_ASSERT_THROWS_AS(from_json.validate(title), openvpn::IP::ip_exception);
-}
-
-RC_GTEST_PROP(DNSServer, JsonRoundTripValidatesCorrectIP, (const std::string &title, bool ipv6))
-{
-    TunBuilderCapture::DNSServer dns_server;
-    dns_server.address = ipv6 ? *rc::IPv6Address().as("Valid IPv6 address") : *rc::IPv4Address().as("Valid IPv4 address");
-    dns_server.ipv6 = ipv6;
-    dns_server.validate(title);
-    const auto address_as_json = dns_server.to_json();
-    TunBuilderCapture::DNSServer from_json;
-    from_json.from_json(address_as_json, title);
-    from_json.validate(title);
-}
-
-RC_GTEST_PROP(DNSServer, FromInvalidJsonThrows, (const std::string &address, const std::string &title, bool ipv6))
-{
-    TunBuilderCapture::DNSServer from_json;
-    from_json.ipv6 = ipv6;
-    from_json.address = address;
-    const Json::Value invalid_json;
-    RC_ASSERT_THROWS_AS(from_json.from_json(invalid_json, title), json::json_parse);
 }

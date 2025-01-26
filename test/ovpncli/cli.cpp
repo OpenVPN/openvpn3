@@ -162,11 +162,6 @@ class ClientBase : public ClientAPI::OpenVPNClient
         return tbc.tun_builder_set_session_name(name);
     }
 
-    bool tun_builder_add_dns_server(const std::string &address, bool ipv6) override
-    {
-        return tbc.tun_builder_add_dns_server(address, ipv6);
-    }
-
     void tun_builder_teardown(bool disconnect) override
     {
         std::ostringstream os;
@@ -183,9 +178,9 @@ class ClientBase : public ClientAPI::OpenVPNClient
         return tun->add_bypass_route(remote, ipv6, os);
     }
 
-    bool tun_builder_add_dns_options(const DnsOptions &dns) override
+    bool tun_builder_set_dns_options(const DnsOptions &dns) override
     {
-        return tbc.tun_builder_add_dns_options(dns);
+        return tbc.tun_builder_set_dns_options(dns);
     }
 
     bool tun_builder_set_mtu(int mtu) override

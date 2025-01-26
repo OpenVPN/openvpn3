@@ -209,6 +209,14 @@ struct ConfigCommon
     // DNS servers, use the standard Google DNS servers.
     bool googleDnsFallback = false;
 
+    // If true --dhcp-option DOMAIN{-SEARCH} are parsed as split
+    // domains, ADAPTER_DOMAIN_SUFFIX is the only search domain
+#if defined(OPENVPN_PLATFORM_WIN) || defined(OPENVPN_PLATFORM_MAC) || defined(OPENVPN_PLATFORM_LINUX) || defined(OPENVPN_PLATFORM_IPHONE)
+    bool dhcpSearchDomainsAsSplitDomains = true;
+#else
+    bool dhcpSearchDomainsAsSplitDomains = false;
+#endif
+
     // if true, do synchronous DNS lookup.
     bool synchronousDnsLookup = false;
 

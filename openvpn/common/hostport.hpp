@@ -16,7 +16,6 @@
 
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/number.hpp>
-#include <openvpn/common/options.hpp>
 #include <openvpn/common/unicode.hpp>
 
 namespace openvpn::HostPort {

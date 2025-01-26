@@ -12,17 +12,13 @@
 
 #pragma once
 
-#include <map>
 #include <vector>
 #include <cstdint>
 #include <algorithm>
 #include <sstream>
 
 #include <openvpn/options/continuation.hpp>
-#include <openvpn/common/hostport.hpp>
-#include <openvpn/common/number.hpp>
-#include <openvpn/common/jsonlib.hpp>
-#include <openvpn/addr/ip.hpp>
+#include <openvpn/client/dns_options.hpp>
 
 #ifdef HAVE_JSON
 #include <openvpn/common/jsonhelper.hpp>
@@ -31,276 +27,281 @@
 namespace openvpn {
 
 /**
- * @class DnsAddress
- * @brief A name server address and optional port
+ * @class DnsOptions
+ * @brief All DNS options set with the --dns or --dhcp-option directive
  */
-struct DnsAddress
+struct DnsOptionsParser : public DnsOptions
 {
-    /**
-     * @brief Return string representation of the DnsAddress object
-     *
-     * @return std::string  the string representation generated
-     */
-    std::string to_string() const
+    DnsOptionsParser(const OptionList &opt, bool use_dhcp_search_domains_as_split_domains)
     {
-        std::ostringstream os;
-        os << address.to_string();
-        if (port)
+        parse_dns_options(opt);
+        parse_dhcp_options(opt, use_dhcp_search_domains_as_split_domains, !servers.empty());
+        if (!parse_errors.empty())
         {
-            os << " " << port;
+            OPENVPN_THROW_ARG1(option_error, ERR_INVALID_OPTION_DNS, parse_errors);
         }
-        return os.str();
     }
 
-    void validate(const std::string &title) const
-    {
-        IP::Addr::validate(address.to_string(), title);
-    }
-
-#ifdef HAVE_JSON
-    Json::Value to_json() const
-    {
-        Json::Value root(Json::objectValue);
-        root["address"] = Json::Value(address.to_string());
-        if (port)
-        {
-            root["port"] = Json::Value(port);
-        }
-        return root;
-    }
-
-    void from_json(const Json::Value &root, const std::string &title)
-    {
-        json::assert_dict(root, title);
-        json::to_uint_optional(root, port, "port", 0u, title);
-
-        std::string addr_str;
-        json::to_string(root, addr_str, "address", title);
-        address = IP::Addr::from_string(addr_str);
-    }
-#endif
-
-    IP::Addr address;
-    unsigned int port = 0;
-};
-
-/**
- * @class DnsDomain
- * @brief A DNS domain name
- */
-struct DnsDomain
-{
-    /**
-     * @brief Return string representation of the DnsDomain object
-     *
-     * @return std::string  the string representation generated
-     */
-    std::string to_string() const
-    {
-        return domain;
-    }
-
-    void validate(const std::string &title) const
-    {
-        HostPort::validate_host(domain, title);
-    }
-
-#ifdef HAVE_JSON
-    Json::Value to_json() const
-    {
-        return Json::Value(domain);
-    }
-
-    void from_json(const Json::Value &value, const std::string &title)
-    {
-        if (!value.isString())
-        {
-            throw json::json_parse("string " + title + " is of incorrect type");
-        }
-        domain = value.asString();
-    }
-#endif
-
-    std::string domain;
-};
-
-/**
- * @class DnsServer
- * @brief DNS settings for a name server
- */
-struct DnsServer
-{
-    static std::int32_t parse_priority(const std::string &prio_str)
+    static int parse_priority(const std::string &prio_str)
     {
         const auto min_prio = std::numeric_limits<std::int8_t>::min();
         const auto max_prio = std::numeric_limits<std::int8_t>::max();
 
-        std::int32_t priority;
-        if (!parse_number_validate<std::int32_t>(prio_str, 4, min_prio, max_prio, &priority))
+        int priority;
+        if (!parse_number_validate<int>(prio_str, 4, min_prio, max_prio, &priority))
             OPENVPN_THROW_ARG1(option_error, ERR_INVALID_OPTION_DNS, "dns server priority '" << prio_str << "' invalid");
         return priority;
     }
 
-    enum class Security
-    {
-        Unset,
-        No,
-        Yes,
-        Optional
-    };
+  protected:
+    std::string parse_errors;
 
-    std::string dnssec_string(const Security dnssec) const
+    void parse_dns_options(const OptionList &opt)
     {
-        switch (dnssec)
+        auto indices = opt.get_index_ptr("dns");
+        if (indices == nullptr)
         {
-        case Security::No:
-            return "No";
-        case Security::Yes:
-            return "Yes";
-        case Security::Optional:
-            return "Optional";
-        default:
-            return "Unset";
+            return;
+        }
+
+        for (const auto i : *indices)
+        {
+            try
+            {
+                const auto &o = opt[i];
+                if (o.size() >= 3 && o.ref(1) == "search-domains")
+                {
+                    for (std::size_t j = 2; j < o.size(); j++)
+                    {
+                        search_domains.push_back({o.ref(j)});
+                    }
+                }
+                else if (o.size() >= 5 && o.ref(1) == "server")
+                {
+                    auto priority = parse_priority(o.ref(2));
+                    auto &server = get_server(priority);
+
+                    const auto &server_suboption = o.ref(3);
+                    if (server_suboption == "address" && o.size() <= 12)
+                    {
+                        for (std::size_t j = 4; j < o.size(); j++)
+                        {
+                            IP::Addr addr;
+                            unsigned int port = 0;
+                            std::string addr_str = o.ref(j);
+
+                            const bool v4_port_found = addr_str.find(':') != std::string::npos
+                                                       && addr_str.find(':') == addr_str.rfind(':');
+
+                            if (addr_str[0] == '[' || v4_port_found)
+                            {
+                                const auto &addr_port_str = o.ref(j);
+                                std::string port_str;
+                                if (!HostPort::split_host_port(addr_port_str, addr_str, port_str, "", false, &port))
+                                {
+                                    OPENVPN_THROW_ARG1(option_error, ERR_INVALID_OPTION_DNS, "dns server " << priority << " invalid address: " << addr_port_str);
+                                }
+                            }
+
+                            try
+                            {
+                                addr = IP::Addr(addr_str);
+                            }
+                            catch (const IP::ip_exception &)
+                            {
+                                OPENVPN_THROW_ARG1(option_error, ERR_INVALID_OPTION_DNS, "dns server " << priority << " invalid address: " << addr_str);
+                            }
+
+                            server.addresses.push_back({addr.to_string(), port});
+                        }
+                    }
+                    else if (server_suboption == "resolve-domains")
+                    {
+                        for (std::size_t j = 4; j < o.size(); j++)
+                        {
+                            server.domains.push_back({o.ref(j)});
+                        }
+                    }
+                    else if (server_suboption == "dnssec" && o.size() == 5)
+                    {
+                        const auto &dnssec_value = o.ref(4);
+                        if (dnssec_value == "yes")
+                        {
+                            server.dnssec = DnsServer::Security::Yes;
+                        }
+                        else if (dnssec_value == "no")
+                        {
+                            server.dnssec = DnsServer::Security::No;
+                        }
+                        else if (dnssec_value == "optional")
+                        {
+                            server.dnssec = DnsServer::Security::Optional;
+                        }
+                        else
+                        {
+                            OPENVPN_THROW_ARG1(option_error, ERR_INVALID_OPTION_DNS, "dns server " << priority << " dnssec setting '" << dnssec_value << "' invalid");
+                        }
+                    }
+                    else if (server_suboption == "transport" && o.size() == 5)
+                    {
+                        const auto &transport_value = o.ref(4);
+                        if (transport_value == "plain")
+                        {
+                            server.transport = DnsServer::Transport::Plain;
+                        }
+                        else if (transport_value == "DoH")
+                        {
+                            server.transport = DnsServer::Transport::HTTPS;
+                        }
+                        else if (transport_value == "DoT")
+                        {
+                            server.transport = DnsServer::Transport::TLS;
+                        }
+                        else
+                        {
+                            OPENVPN_THROW_ARG1(option_error, ERR_INVALID_OPTION_DNS, "dns server " << priority << " transport '" << transport_value << "' invalid");
+                        }
+                    }
+                    else if (server_suboption == "sni" && o.size() == 5)
+                    {
+                        server.sni = o.ref(4);
+                    }
+                    else
+                    {
+                        OPENVPN_THROW_ARG1(option_error, ERR_INVALID_OPTION_DNS, "dns server " << priority << " option '" << server_suboption << "' unknown or too many parameters");
+                    }
+                }
+                else
+                {
+                    OPENVPN_THROW_ARG1(option_error, ERR_INVALID_OPTION_DNS, "dns option unknown or invalid number of parameters " << o.render(Option::RENDER_TRUNC_64 | Option::RENDER_BRACKET));
+                }
+            }
+            catch (const std::exception &e)
+            {
+                parse_errors += "\n";
+                parse_errors += e.what();
+            }
+        }
+
+        // Check and remove servers without an address
+        std::vector<int> remove_servers;
+        for (const auto &[priority, server] : servers)
+        {
+            if (server.addresses.empty())
+            {
+                parse_errors += "\n";
+                parse_errors += "dns server " + std::to_string(priority) + " does not have an address assigned";
+                remove_servers.push_back(priority);
+            }
+        }
+        for (const auto &prio : remove_servers)
+        {
+            servers.erase(prio);
+        }
+
+        // Clear search domains when no servers were configured
+        if (servers.empty())
+        {
+            search_domains.clear();
         }
     }
 
-    enum class Transport
+    void parse_dhcp_options(const OptionList &opt, bool use_search_as_split_domains, bool ignore_values)
     {
-        Unset,
-        Plain,
-        HTTPS,
-        TLS
-    };
-
-    std::string transport_string(const Transport transport) const
-    {
-        switch (transport)
+        auto dhcp_map = opt.map().find("dhcp-option");
+        if (dhcp_map == opt.map().end())
         {
-        case Transport::Plain:
-            return "Plain";
-        case Transport::HTTPS:
-            return "HTTPS";
-        case Transport::TLS:
-            return "TLS";
-        default:
-            return "Unset";
+            return;
+        }
+
+        // Example:
+        //   [dhcp-option] [DNS] [172.16.0.23]
+        //   [dhcp-option] [DOMAIN] [openvpn.net]
+        //   [dhcp-option] [DOMAIN] [example.com]
+        //   [dhcp-option] [DOMAIN] [foo1.com foo2.com foo3.com ...]
+        //   [dhcp-option] [DOMAIN] [bar1.com] [bar2.com] [bar3.com] ...
+        //   [dhcp-option] [ADAPTER_DOMAIN_SUFFIX] [mycompany.com]
+        std::string adapter_domain_suffix;
+        for (const auto &i : dhcp_map->second)
+        {
+            try
+            {
+
+                const Option &o = opt[i];
+                const std::string &type = o.get(1, 64);
+                if (type == "DNS" || type == "DNS6")
+                {
+                    o.exact_args(3);
+                    try
+                    {
+                        const IP::Addr addr = IP::Addr::from_string(o.get(2, 256), "dns-server-ip");
+                        if (!ignore_values)
+                        {
+                            auto &server = get_server(0);
+                            server.addresses.push_back({addr.to_string(), 0});
+                            from_dhcp_options = true;
+                        }
+                    }
+                    catch (const IP::ip_exception &)
+                    {
+                        OPENVPN_THROW_ARG1(option_error, ERR_INVALID_OPTION_DNS, o.render(Option::RENDER_BRACKET) << " invalid address");
+                    }
+                }
+                else if (type == "DOMAIN" || type == "DOMAIN-SEARCH")
+                {
+                    o.min_args(3);
+                    for (size_t i = 2; i < o.size(); ++i)
+                    {
+                        using StrVec = std::vector<std::string>;
+                        StrVec domains = Split::by_space<StrVec, StandardLex, SpaceMatch, Split::NullLimit>(o.get(i, 256));
+                        if (ignore_values)
+                        {
+                            continue;
+                        }
+                        for (const auto &domain : domains)
+                        {
+                            from_dhcp_options = true;
+                            if (use_search_as_split_domains)
+                            {
+                                auto &server = get_server(0);
+                                server.domains.push_back({domain});
+                            }
+                            else
+                            {
+                                search_domains.push_back({domain});
+                            }
+                        }
+                    }
+                }
+                else if (type == "ADAPTER_DOMAIN_SUFFIX")
+                {
+                    o.exact_args(3);
+                    if (!ignore_values)
+                    {
+                        adapter_domain_suffix = o.ref(2);
+                        from_dhcp_options = true;
+                    }
+                }
+            }
+            catch (const std::exception &e)
+            {
+                parse_errors += "\n";
+                parse_errors += e.what();
+            }
+        }
+
+        if (!adapter_domain_suffix.empty())
+        {
+            search_domains.insert(search_domains.begin(), {std::move(adapter_domain_suffix)});
+        }
+
+        if (!ignore_values && servers.size() && servers[0].addresses.empty())
+        {
+            parse_errors += "\n";
+            parse_errors += "dns server does not have an address assigned";
+            servers.clear();
         }
     }
-
-    std::string to_string(const char *prefix = "") const
-    {
-        std::ostringstream os;
-        os << prefix << "Addresses:" << std::endl;
-        for (const auto &address : addresses)
-        {
-            os << prefix << "  " << address.to_string() << std::endl;
-        }
-        if (!domains.empty())
-        {
-            os << prefix << "Domains:" << std::endl;
-            for (const auto &domain : domains)
-            {
-                os << prefix << "  " << domain.to_string() << std::endl;
-            }
-        }
-        if (dnssec != Security::Unset)
-        {
-            os << prefix << "DNSSEC: " << dnssec_string(dnssec) << std::endl;
-        }
-        if (transport != Transport::Unset)
-        {
-            os << prefix << "Transport: " << transport_string(transport) << std::endl;
-        }
-        if (!sni.empty())
-        {
-            os << prefix << "SNI: " << sni << std::endl;
-        }
-        return os.str();
-    }
-
-#ifdef HAVE_JSON
-    Json::Value to_json() const
-    {
-        Json::Value server(Json::objectValue);
-        json::from_vector(server, addresses, "addresses");
-        if (!domains.empty())
-        {
-            json::from_vector(server, domains, "domains");
-        }
-        if (dnssec != Security::Unset)
-        {
-            server["dnssec"] = Json::Value(dnssec_string(dnssec));
-        }
-        if (transport != Transport::Unset)
-        {
-            server["transport"] = Json::Value(transport_string(transport));
-        }
-        if (!sni.empty())
-        {
-            server["sni"] = Json::Value(sni);
-        }
-        return server;
-    }
-
-    void from_json(const Json::Value &root, const std::string &title)
-    {
-        json::assert_dict(root, title);
-        json::to_vector(root, addresses, "addresses", title);
-        if (json::exists(root, "domains"))
-        {
-            json::to_vector(root, domains, "domains", title);
-        }
-        if (json::exists(root, "dnssec"))
-        {
-            std::string dnssec_str;
-            json::to_string(root, dnssec_str, "dnssec", title);
-            if (dnssec_str == "Optional")
-            {
-                dnssec = Security::Optional;
-            }
-            else if (dnssec_str == "Yes")
-            {
-                dnssec = Security::Yes;
-            }
-            else if (dnssec_str == "No")
-            {
-                dnssec = Security::No;
-            }
-            else
-            {
-                throw json::json_parse("dnssec value " + dnssec_str + "is unknown");
-            }
-        }
-        if (json::exists(root, "transport"))
-        {
-            std::string transport_str;
-            json::to_string(root, transport_str, "transport", title);
-            if (transport_str == "Plain")
-            {
-                transport = Transport::Plain;
-            }
-            else if (transport_str == "HTTPS")
-            {
-                transport = Transport::HTTPS;
-            }
-            else if (transport_str == "TLS")
-            {
-                transport = Transport::TLS;
-            }
-            else
-            {
-                throw json::json_parse("transport value " + transport_str + "is unknown");
-            }
-        }
-        json::to_string_optional(root, sni, "sni", "", title);
-    }
-#endif
-
-    std::vector<DnsAddress> addresses;
-    std::vector<DnsDomain> domains;
-    Security dnssec = Security::Unset;
-    Transport transport = Transport::Unset;
-    std::string sni;
 };
 
 struct DnsOptionsMerger : public PushOptionsMerger
@@ -323,7 +324,7 @@ struct DnsOptionsMerger : public PushOptionsMerger
             {
                 return true;
             }
-            const auto priority = DnsServer::parse_priority(opt.ref(2));
+            const auto priority = DnsOptionsParser::parse_priority(opt.ref(2));
             const auto it = std::find(pushed_prios_.begin(), pushed_prios_.end(), priority);
 
             // Filter out server option if an option with this priority was pushed
@@ -345,207 +346,13 @@ struct DnsOptionsMerger : public PushOptionsMerger
             {
                 if (pushed[i].size() < 3 || pushed[i].ref(1) != "server")
                     continue;
-                const auto priority = DnsServer::parse_priority(pushed[i].ref(2));
+                const auto priority = DnsOptionsParser::parse_priority(pushed[i].ref(2));
                 pushed_prios.emplace_back(priority);
             }
         }
 
         DnsFilter filter(std::move(pushed_prios));
         pushed.extend(config, &filter);
-    }
-};
-
-/**
- * @class DnsOptions
- * @brief All options set with the --dns directive
- */
-struct DnsOptions
-{
-    DnsOptions() = default;
-
-    explicit DnsOptions(const OptionList &opt)
-    {
-        auto indices = opt.get_index_ptr("dns");
-        if (indices == nullptr)
-        {
-            return;
-        }
-
-        for (const auto i : *indices)
-        {
-            const auto &o = opt[i];
-            if (o.size() >= 3 && o.ref(1) == "search-domains")
-            {
-                for (std::size_t j = 2; j < o.size(); j++)
-                {
-                    search_domains.push_back({o.ref(j)});
-                }
-            }
-            else if (o.size() >= 5 && o.ref(1) == "server")
-            {
-                auto priority = DnsServer::parse_priority(o.ref(2));
-                auto &server = get_server(priority);
-
-                if (o.ref(3) == "address" && o.size() <= 12)
-                {
-                    for (std::size_t j = 4; j < o.size(); j++)
-                    {
-                        IP::Addr addr;
-                        unsigned int port = 0;
-                        std::string addr_str = o.ref(j);
-
-                        const bool v4_port_found = addr_str.find(':') != std::string::npos
-                                                   && addr_str.find(':') == addr_str.rfind(':');
-
-                        if (addr_str[0] == '[' || v4_port_found)
-                        {
-                            std::string port_str;
-                            if (!HostPort::split_host_port(o.ref(j), addr_str, port_str, "", false, &port))
-                            {
-                                OPENVPN_THROW_ARG1(option_error, ERR_INVALID_OPTION_DNS, "dns server " << priority << " invalid address: " << o.ref(j));
-                            }
-                        }
-
-                        try
-                        {
-                            addr = IP::Addr(addr_str);
-                        }
-                        catch (const IP::ip_exception &)
-                        {
-                            OPENVPN_THROW_ARG1(option_error, ERR_INVALID_OPTION_DNS, "dns server " << priority << " invalid address: " << o.ref(j));
-                        }
-
-                        server.addresses.push_back({addr, port});
-                    }
-                }
-                else if (o.ref(3) == "resolve-domains")
-                {
-                    for (std::size_t j = 4; j < o.size(); j++)
-                    {
-                        server.domains.push_back({o.ref(j)});
-                    }
-                }
-                else if (o.ref(3) == "dnssec" && o.size() == 5)
-                {
-                    if (o.ref(4) == "yes")
-                    {
-                        server.dnssec = DnsServer::Security::Yes;
-                    }
-                    else if (o.ref(4) == "no")
-                    {
-                        server.dnssec = DnsServer::Security::No;
-                    }
-                    else if (o.ref(4) == "optional")
-                    {
-                        server.dnssec = DnsServer::Security::Optional;
-                    }
-                    else
-                    {
-                        OPENVPN_THROW_ARG1(option_error, ERR_INVALID_OPTION_DNS, "dns server " << priority << " dnssec setting '" << o.ref(4) << "' invalid");
-                    }
-                }
-                else if (o.ref(3) == "transport" && o.size() == 5)
-                {
-                    if (o.ref(4) == "plain")
-                    {
-                        server.transport = DnsServer::Transport::Plain;
-                    }
-                    else if (o.ref(4) == "DoH")
-                    {
-                        server.transport = DnsServer::Transport::HTTPS;
-                    }
-                    else if (o.ref(4) == "DoT")
-                    {
-                        server.transport = DnsServer::Transport::TLS;
-                    }
-                    else
-                    {
-                        OPENVPN_THROW_ARG1(option_error, ERR_INVALID_OPTION_DNS, "dns server " << priority << " transport '" << o.ref(4) << "' invalid");
-                    }
-                }
-                else if (o.ref(3) == "sni" && o.size() == 5)
-                {
-                    server.sni = o.ref(4);
-                }
-                else
-                {
-                    OPENVPN_THROW_ARG1(option_error, ERR_INVALID_OPTION_DNS, "dns server " << priority << " option '" << o.ref(3) << "' unknown or too many parameters");
-                }
-            }
-            else
-            {
-                OPENVPN_THROW_ARG1(option_error, ERR_INVALID_OPTION_DNS, "dns option unknown or invalid number of parameters " << o.render(Option::RENDER_TRUNC_64 | Option::RENDER_BRACKET));
-            }
-        }
-
-        for (const auto &[priority, server] : servers)
-        {
-            if (server.addresses.empty())
-            {
-                OPENVPN_THROW_ARG1(option_error, ERR_INVALID_OPTION_DNS, "dns server " << priority << " does not have an address assigned");
-            }
-        }
-    }
-
-    std::string to_string() const
-    {
-        std::ostringstream os;
-        if (!servers.empty())
-        {
-            os << "DNS Servers:" << std::endl;
-            for (const auto &elem : servers)
-            {
-                os << "  Priority: " << elem.first << std::endl;
-                os << elem.second.to_string("  ");
-            }
-        }
-        if (!search_domains.empty())
-        {
-            os << "DNS Search Domains:" << std::endl;
-            for (const auto &domain : search_domains)
-            {
-                os << "  " << domain.to_string() << std::endl;
-            }
-        }
-        return os.str();
-    }
-
-#ifdef HAVE_JSON
-    Json::Value to_json() const
-    {
-        Json::Value root(Json::objectValue);
-        Json::Value servers_json(Json::objectValue);
-        for (const auto &[prio, server] : servers)
-        {
-            servers_json[std::to_string(prio)] = server.to_json();
-        }
-        root["servers"] = std::move(servers_json);
-        json::from_vector(root, search_domains, "search_domains");
-        return root;
-    }
-
-    void from_json(const Json::Value &root, const std::string &title)
-    {
-        json::assert_dict(root, title);
-        json::assert_dict(root["servers"], title);
-        for (const auto &prio : root["servers"].getMemberNames())
-        {
-            DnsServer server;
-            server.from_json(root["servers"][prio], title);
-            servers[std::stoi(prio)] = std::move(server);
-        }
-        json::to_vector(root, search_domains, "search_domains", title);
-    }
-#endif
-
-    std::vector<DnsDomain> search_domains;
-    std::map<std::int32_t, DnsServer> servers;
-
-  protected:
-    DnsServer &get_server(const std::int32_t priority)
-    {
-        auto it = servers.insert(std::make_pair(priority, DnsServer())).first;
-        return (*it).second;
     }
 };
 

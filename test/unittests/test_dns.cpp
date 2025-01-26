@@ -38,7 +38,7 @@ TEST(Dns, Options)
         nullptr);
     config.update_map();
 
-    DnsOptions dns(config);
+    DnsOptionsParser dns(config, false);
 
     ASSERT_EQ(dns.search_domains.size(), 3u);
     ASSERT_EQ(dns.search_domains[0].to_string(), "domain0");
@@ -58,8 +58,7 @@ TEST(Dns, Options)
             ASSERT_EQ(i, 1);
 
             ASSERT_TRUE(server.addresses.size() == 1u);
-            ASSERT_EQ(server.addresses[0].address.version(), IP::Addr::V4);
-            ASSERT_EQ(server.addresses[0].address.to_string(), "2.2.2.2");
+            ASSERT_EQ(server.addresses[0].address, "2.2.2.2");
             ASSERT_EQ(server.addresses[0].port, 5353u);
 
             ASSERT_EQ(server.domains.size(), 2u);
@@ -76,12 +75,10 @@ TEST(Dns, Options)
             ASSERT_EQ(i, 2);
 
             ASSERT_TRUE(server.addresses.size() == 2u);
-            ASSERT_EQ(server.addresses[0].address.version(), IP::Addr::V4);
-            ASSERT_EQ(server.addresses[0].address.to_string(), "1.1.1.1");
+            ASSERT_EQ(server.addresses[0].address, "1.1.1.1");
             ASSERT_EQ(server.addresses[0].port, 0u);
 
-            ASSERT_EQ(server.addresses[1].address.version(), IP::Addr::V6);
-            ASSERT_EQ(server.addresses[1].address.to_string(), "1::1");
+            ASSERT_EQ(server.addresses[1].address, "1::1");
             ASSERT_EQ(server.addresses[1].port, 5353u);
 
             ASSERT_EQ(server.domains.size(), 0u);
@@ -96,16 +93,13 @@ TEST(Dns, Options)
             ASSERT_EQ(i, 3);
 
             ASSERT_TRUE(server.addresses.size() == 3u);
-            ASSERT_EQ(server.addresses[0].address.version(), IP::Addr::V6);
-            ASSERT_EQ(server.addresses[0].address.to_string(), "3::3");
+            ASSERT_EQ(server.addresses[0].address, "3::3");
             ASSERT_EQ(server.addresses[0].port, 0u);
 
-            ASSERT_EQ(server.addresses[1].address.version(), IP::Addr::V4);
-            ASSERT_EQ(server.addresses[1].address.to_string(), "3.2.1.0");
+            ASSERT_EQ(server.addresses[1].address, "3.2.1.0");
             ASSERT_EQ(server.addresses[1].port, 4242u);
 
-            ASSERT_EQ(server.addresses[2].address.version(), IP::Addr::V6);
-            ASSERT_EQ(server.addresses[2].address.to_string(), "3:3::3:3");
+            ASSERT_EQ(server.addresses[2].address, "3:3::3:3");
             ASSERT_EQ(server.addresses[2].port, 3333u);
 
             ASSERT_EQ(server.domains.size(), 0u);
@@ -145,7 +139,7 @@ TEST(Dns, ServerNoAddress)
     OptionList config;
     config.parse_from_config("dns server 0 resolve-domains dom0\n", nullptr);
     config.update_map();
-    JY_EXPECT_THROW(DnsOptions dns(config),
+    JY_EXPECT_THROW(DnsOptionsParser dns(config, false),
                     option_error,
                     "dns server 0 does not have an address assigned");
 }
@@ -155,7 +149,7 @@ TEST(Dns, ServerEightAddresses)
     OptionList config;
     config.parse_from_config("dns server 0 address 1::1 2::2 3::3 4::4 5::5 6::6 7::7 8::8\n", nullptr);
     config.update_map();
-    DnsOptions dns(config);
+    DnsOptionsParser dns(config, false);
     ASSERT_EQ(dns.servers.size(), 1u);
     ASSERT_EQ(dns.servers[0].addresses.size(), 8u);
 }
@@ -165,7 +159,7 @@ TEST(Dns, ServerTooManyAddresses)
     OptionList config;
     config.parse_from_config("dns server 0 address 1::1 2::2 3::3 4::4 5::5 6::6 7::7 8::8 9::9\n", nullptr);
     config.update_map();
-    JY_EXPECT_THROW(DnsOptions dns(config),
+    JY_EXPECT_THROW(DnsOptionsParser dns(config, false),
                     option_error,
                     "dns server 0 option 'address' unknown or too many parameters");
 }
@@ -175,7 +169,7 @@ TEST(Dns, ServerInvalidAddress)
     OptionList config;
     config.parse_from_config("dns server 0 address 1.1.1.1 foobar\n", nullptr);
     config.update_map();
-    JY_EXPECT_THROW(DnsOptions dns(config),
+    JY_EXPECT_THROW(DnsOptionsParser dns(config, false),
                     option_error,
                     "dns server 0 invalid address: foobar");
 }
@@ -186,7 +180,7 @@ TEST(Dns, ServerInvalidDnssec)
         OptionList config;
         config.parse_from_config("dns server 0 dnssec foo\n", nullptr);
         config.update_map();
-        JY_EXPECT_THROW(DnsOptions dns(config),
+        JY_EXPECT_THROW(DnsOptionsParser dns(config, false),
                         option_error,
                         "dns server 0 dnssec setting 'foo' invalid");
     }
@@ -194,7 +188,7 @@ TEST(Dns, ServerInvalidDnssec)
         OptionList config;
         config.parse_from_config("dns server 0 dnssec yes no\n", nullptr);
         config.update_map();
-        JY_EXPECT_THROW(DnsOptions dns(config),
+        JY_EXPECT_THROW(DnsOptionsParser dns(config, false),
                         option_error,
                         "dns server 0 option 'dnssec' unknown or too many parameters");
     }
@@ -206,7 +200,7 @@ TEST(Dns, ServerInvalidTransport)
         OptionList config;
         config.parse_from_config("dns server 0 transport avian-carrier\n", nullptr);
         config.update_map();
-        JY_EXPECT_THROW(DnsOptions dns(config),
+        JY_EXPECT_THROW(DnsOptionsParser dns(config, false),
                         option_error,
                         "dns server 0 transport 'avian-carrier' invalid");
     }
@@ -214,10 +208,100 @@ TEST(Dns, ServerInvalidTransport)
         OptionList config;
         config.parse_from_config("dns server 0 transport DoT D'oh\n", nullptr);
         config.update_map();
-        JY_EXPECT_THROW(DnsOptions dns(config),
+        JY_EXPECT_THROW(DnsOptionsParser dns(config, false),
                         option_error,
                         "dns server 0 option 'transport' unknown or too many parameters");
     }
+}
+
+TEST(Dns, dhcp_options)
+{
+    OptionList config;
+    config.parse_from_config(
+        "dhcp-option DNS 1.1.1.1\n"
+        "dhcp-option DNS6 1::1\n"
+        "dhcp-option DOMAIN domain0\n"
+        "dhcp-option DOMAIN-SEARCH domain1\n"
+        "dhcp-option ADAPTER_DOMAIN_SUFFIX adsX\n"
+        "dhcp-option ADAPTER_DOMAIN_SUFFIX ads\n",
+        nullptr);
+    config.update_map();
+
+    DnsOptionsParser dns(config, false);
+
+    ASSERT_TRUE(dns.from_dhcp_options);
+
+    ASSERT_EQ(dns.search_domains.size(), 3u);
+    ASSERT_EQ(dns.search_domains[0].to_string(), "ads");
+    ASSERT_EQ(dns.search_domains[1].to_string(), "domain0");
+    ASSERT_EQ(dns.search_domains[2].to_string(), "domain1");
+
+    ASSERT_EQ(dns.servers.size(), 1u);
+    ASSERT_TRUE(dns.servers[0].addresses.size() == 2u);
+    ASSERT_EQ(dns.servers[0].addresses[0].address, "1.1.1.1");
+    ASSERT_EQ(dns.servers[0].addresses[0].port, 0u);
+
+    ASSERT_EQ(dns.servers[0].addresses[1].address, "1::1");
+    ASSERT_EQ(dns.servers[0].addresses[1].port, 0u);
+}
+
+TEST(Dns, dhcp_options_with_split_domains)
+{
+    OptionList config;
+    config.parse_from_config(
+        "dhcp-option DNS 1.1.1.1\n"
+        "dhcp-option DNS6 1::1\n"
+        "dhcp-option DOMAIN domain0\n"
+        "dhcp-option DOMAIN-SEARCH domain1\n"
+        "dhcp-option ADAPTER_DOMAIN_SUFFIX adsX\n"
+        "dhcp-option ADAPTER_DOMAIN_SUFFIX ads\n",
+        nullptr);
+    config.update_map();
+
+    DnsOptionsParser dns(config, true);
+
+    ASSERT_TRUE(dns.from_dhcp_options);
+
+    ASSERT_EQ(dns.search_domains.size(), 1u);
+    ASSERT_EQ(dns.search_domains[0].to_string(), "ads");
+
+    ASSERT_EQ(dns.servers.size(), 1u);
+
+    ASSERT_TRUE(dns.servers[0].addresses.size() == 2u);
+    ASSERT_EQ(dns.servers[0].addresses[0].address, "1.1.1.1");
+    ASSERT_EQ(dns.servers[0].addresses[0].port, 0u);
+    ASSERT_EQ(dns.servers[0].addresses[1].address, "1::1");
+    ASSERT_EQ(dns.servers[0].addresses[1].port, 0u);
+
+    ASSERT_TRUE(dns.servers[0].domains.size() == 2u);
+    ASSERT_EQ(dns.servers[0].domains[0].domain, "domain0");
+    ASSERT_EQ(dns.servers[0].domains[1].domain, "domain1");
+}
+
+TEST(Dns, dhcp_options_ignored)
+{
+    OptionList config;
+    config.parse_from_config(
+        "dhcp-option DNS 1.1.1.1\n"
+        "dhcp-option DNS6 1::1\n"
+        "dhcp-option DOMAIN domain0\n"
+        "dhcp-option DOMAIN-SEARCH domain1\n"
+        "dhcp-option ADAPTER_DOMAIN_SUFFIX adsX\n"
+        "dns server 123 address 123::123\n"
+        "dhcp-option ADAPTER_DOMAIN_SUFFIX ads\n",
+        nullptr);
+    config.update_map();
+
+    DnsOptionsParser dns(config, true);
+
+    ASSERT_FALSE(dns.from_dhcp_options);
+    ASSERT_TRUE(dns.search_domains.empty());
+    ASSERT_EQ(dns.servers.size(), 1u);
+
+    ASSERT_TRUE(dns.servers[123].domains.empty());
+    ASSERT_TRUE(dns.servers[123].addresses.size() == 1u);
+    ASSERT_EQ(dns.servers[123].addresses[0].address, "123::123");
+    ASSERT_EQ(dns.servers[123].addresses[0].port, 0u);
 }
 
 TEST(Dns, ToStringMinValuesSet)
@@ -225,7 +309,7 @@ TEST(Dns, ToStringMinValuesSet)
     OptionList config;
     config.parse_from_config("dns server 10 address 1::1\n", nullptr);
     config.update_map();
-    DnsOptions dns(config);
+    DnsOptionsParser dns(config, false);
     ASSERT_EQ(dns.to_string(),
               "DNS Servers:\n"
               "  Priority: 10\n"
@@ -250,7 +334,7 @@ TEST(Dns, ToStringAllValuesSet)
         "dns server 20 dnssec yes\n",
         nullptr);
     config.update_map();
-    DnsOptions dns(config);
+    DnsOptionsParser dns(config, false);
     ASSERT_EQ(dns.to_string(),
               "DNS Servers:\n"
               "  Priority: 10\n"
@@ -284,7 +368,7 @@ TEST(Dns, JsonRoundtripMinValuesSet)
     OptionList config;
     config.parse_from_config("dns server 10 address 1::1\n", nullptr);
     config.update_map();
-    DnsOptions toJson(config);
+    DnsOptionsParser toJson(config, false);
     Json::Value json = toJson.to_json();
     Json::StreamWriterBuilder builder;
     builder["indentation"] = "  ";
@@ -330,7 +414,7 @@ TEST(Dns, JsonRoundtripAllValuesSet)
         "dns server 20 dnssec yes\n",
         nullptr);
     config.update_map();
-    DnsOptions toJson(config);
+    DnsOptionsParser toJson(config, false);
     Json::Value json = toJson.to_json();
     Json::StreamWriterBuilder builder;
     builder["indentation"] = "  ";

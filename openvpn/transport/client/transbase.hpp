@@ -26,6 +26,7 @@
 #include <openvpn/error/error.hpp>
 #include <openvpn/crypto/cryptodc.hpp>
 #include <openvpn/transport/protocol.hpp>
+#include <openvpn/common/options.hpp>
 
 namespace openvpn {
 struct TransportClientParent;

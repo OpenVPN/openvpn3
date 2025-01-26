@@ -95,7 +95,7 @@ class PushedOptionsFilter : public OptionList::FilterBase
         if (o.size() >= 3
             && o.ref(0) == "dns"
             && o.ref(1) == "server"
-            && DnsServer::parse_priority(o.ref(2)) < 0)
+            && DnsOptionsParser::parse_priority(o.ref(2)) < 0)
         {
             throw option_error(ERR_INVALID_CONFIG, o.escape(false));
         }

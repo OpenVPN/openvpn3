@@ -356,6 +356,7 @@ class ClientOptions : public RC<thread_unsafe_refcount>
                 tunconf.tun_prop.mtu = tun_mtu;
             tunconf.tun_prop.mtu_max = tun_mtu_max;
             tunconf.tun_prop.google_dns_fallback = config.clientconf.googleDnsFallback;
+            tunconf.tun_prop.dhcp_search_domains_as_split_domains = config.clientconf.dhcpSearchDomainsAsSplitDomains;
             tunconf.tun_prop.remote_list = remote_list;
             tunconf.stop = config.stop;
             tunconf.allow_local_dns_resolvers = config.clientconf.allowLocalDnsResolvers;
@@ -373,6 +374,7 @@ class ClientOptions : public RC<thread_unsafe_refcount>
                 tunconf.tun_prop.layer = layer;
                 tunconf.tun_prop.session_name = session_name;
                 tunconf.tun_prop.google_dns_fallback = config.clientconf.googleDnsFallback;
+                tunconf.tun_prop.dhcp_search_domains_as_split_domains = config.clientconf.dhcpSearchDomainsAsSplitDomains;
                 if (tun_mtu)
                     tunconf.tun_prop.mtu = tun_mtu;
                 tunconf.tun_prop.mtu_max = tun_mtu_max;
@@ -391,6 +393,7 @@ class ClientOptions : public RC<thread_unsafe_refcount>
                 tunconf->builder = config.builder;
                 tunconf->tun_prop.session_name = session_name;
                 tunconf->tun_prop.google_dns_fallback = config.clientconf.googleDnsFallback;
+                tunconf->tun_prop.dhcp_search_domains_as_split_domains = config.clientconf.dhcpSearchDomainsAsSplitDomains;
                 tunconf->tun_prop.allow_local_lan_access = config.clientconf.allowLocalLanAccess;
                 if (tun_mtu)
                     tunconf->tun_prop.mtu = tun_mtu;
@@ -433,6 +436,7 @@ class ClientOptions : public RC<thread_unsafe_refcount>
                     tunconf->tun_prop.mtu = tun_mtu;
                 tunconf->tun_prop.mtu_max = tun_mtu_max;
                 tunconf->tun_prop.google_dns_fallback = config.clientconf.googleDnsFallback;
+                tunconf->tun_prop.dhcp_search_domains_as_split_domains = config.clientconf.dhcpSearchDomainsAsSplitDomains;
                 tunconf->generate_tun_builder_capture_event = config.clientconf.generateTunBuilderCaptureEvent;
                 tunconf->tun_prop.remote_list = remote_list;
                 tunconf->frame = frame;
@@ -448,6 +452,7 @@ class ClientOptions : public RC<thread_unsafe_refcount>
                 tunconf->tun_prop.layer = layer;
                 tunconf->tun_prop.session_name = session_name;
                 tunconf->tun_prop.google_dns_fallback = config.clientconf.googleDnsFallback;
+                tunconf->tun_prop.dhcp_search_domains_as_split_domains = config.clientconf.dhcpSearchDomainsAsSplitDomains;
                 if (tun_mtu)
                     tunconf->tun_prop.mtu = tun_mtu;
                 tunconf->tun_prop.mtu_max = tun_mtu_max;
@@ -475,6 +480,7 @@ class ClientOptions : public RC<thread_unsafe_refcount>
                 tunconf->tun_prop.layer = layer;
                 tunconf->tun_prop.session_name = session_name;
                 tunconf->tun_prop.google_dns_fallback = config.clientconf.googleDnsFallback;
+                tunconf->tun_prop.dhcp_search_domains_as_split_domains = config.clientconf.dhcpSearchDomainsAsSplitDomains;
                 if (tun_mtu)
                     tunconf->tun_prop.mtu = tun_mtu;
                 tunconf->tun_prop.mtu_max = tun_mtu_max;
