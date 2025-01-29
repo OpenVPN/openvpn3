@@ -106,8 +106,9 @@ inline auto IPv4Address(const bool valid = true) -> Gen<std::string>
 /**
  * @brief Generates a random printable ASCII character code.
  * @details This function generates an integer value representing printable ASCII character,
- * ranging from 32 (space) to 126 (tilde).
+ * ranging from 32 (space) to 126 (tilde) without 37 (percent sign)
  * @return A generator producing printable ASCII character code.
+ * @warning It does not generate percent sign (%)
  *
  * Example usage:
  * @code
@@ -116,10 +117,13 @@ inline auto IPv4Address(const bool valid = true) -> Gen<std::string>
  */
 inline auto asciiPrintableCode() -> Gen<int>
 {
-    static constexpr int ASCII_range_start_code = 32; // ASCII code for space character
-    static constexpr int ASCII_range_end_code = 127;  // ASCII code for DEL (not included)
+    static constexpr int ASCII_range_start_code = 32;  // ASCII code for space character
+    static constexpr int ASCII_range_end_code = 127;   // ASCII code for DEL (not included)
+    static constexpr int ASCII_percent_sign_code = 37; // ASCII code for percent sign
 
-    return gen::inRange(ASCII_range_start_code, ASCII_range_end_code);
+    // Due to IPv6 Scoped Address Architecture (RFC 4007) anything after '%' is not part of IPv6 address but zone_id
+    // Therefore generating '% breaks assumption on validity of generated IPv6 addresses
+    return gen::distinctFrom(gen::inRange(ASCII_range_start_code, ASCII_range_end_code), ASCII_percent_sign_code);
 }
 
 /**
