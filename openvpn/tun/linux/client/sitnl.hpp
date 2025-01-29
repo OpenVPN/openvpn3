@@ -1217,7 +1217,7 @@ class SITNL
                  const unsigned char prefixlen,
                  const IPv4::Addr &broadcast)
     {
-        OPENVPN_LOG(__func__ << ": " << addr << "/" << prefixlen
+        OPENVPN_LOG(__func__ << ": " << addr << "/" << +prefixlen
                              << " brd " << broadcast
                              << " dev " << iface);
 
@@ -1232,7 +1232,7 @@ class SITNL
                  const IPv6::Addr &addr,
                  const unsigned char prefixlen)
     {
-        OPENVPN_LOG(__func__ << ": " << addr << "/" << prefixlen
+        OPENVPN_LOG(__func__ << ": " << addr << "/" << +prefixlen
                              << " dev " << iface);
 
         return sitnl_addr_add(iface,
@@ -1246,7 +1246,7 @@ class SITNL
                  const IPv4::Addr &addr,
                  const unsigned char prefixlen)
     {
-        OPENVPN_LOG(__func__ << ": " << addr << "/" << prefixlen
+        OPENVPN_LOG(__func__ << ": " << addr << "/" << +prefixlen
                              << " dev " << iface);
 
         return sitnl_addr_del(iface,
@@ -1259,7 +1259,7 @@ class SITNL
                  const IPv6::Addr &addr,
                  const unsigned char prefixlen)
     {
-        OPENVPN_LOG(__func__ << ": " << addr << "/" << prefixlen
+        OPENVPN_LOG(__func__ << ": " << addr << "/" << +prefixlen
                              << " dev " << iface);
 
         return sitnl_addr_del(iface,
