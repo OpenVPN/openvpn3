@@ -352,12 +352,14 @@ class Client : public ClientBase
         }
         else if (string::starts_with(acev.payload, "{\"dpc_request\"") && acev.payload.find("client_info") != std::string::npos)
         {
-            std::string fakeResponse{R"("dpc_response\": {
-                    "client_info" : {
-                            "os" :  {"type" : "FakeOS", "version" : "1.2.3.4" }
-                        }
-                    })"};
 
+            std::string fakeResponse{R"({"dpc_response": {
+                    "client_info" : {
+                            "os" :  {"type" : "Windows", "version" : "10.0.19045" }
+                        }
+                    }})"};
+
+            std::cout << "ACC DPC1: sending fake client info:" << fakeResponse << std::endl;
             send_app_control_channel_msg("dpc1", fakeResponse);
         }
         else if (string::starts_with(acev.payload, "{\"dpc_request\""))
