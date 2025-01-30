@@ -891,6 +891,7 @@ static auto create_client_proto_context(ClientSSLAPI::Config::Ptr cc, Frame::Ptr
 
 {
     const std::string tls_crypt_v2_client_key = read_text(TEST_KEYCERT_DIR "tls-crypt-v2-client.key");
+    const std::string tls_auth_key = read_text(TEST_KEYCERT_DIR "tls-auth.key");
 
     // client ProtoContext config
     typedef ProtoContext ClientProtoContext;
@@ -923,7 +924,7 @@ static auto create_client_proto_context(ClientSSLAPI::Config::Ptr cc, Frame::Ptr
     cp->tls_crypt_factory.reset(new CryptoTLSCryptFactory<ClientCryptoAPI>());
     cp->tls_key.parse(tls_auth_key);
     cp->set_tls_crypt_algs();
-    cp->tls_crypt_ = ProtoContext::Config::TLSCrypt::V1;
+    cp->tls_crypt_ = ProtoContext::ProtoConfig::TLSCrypt::V1;
 #endif
 #ifdef USE_TLS_CRYPT_V2
     cp->tls_crypt_factory.reset(new CryptoTLSCryptFactory<ClientCryptoAPI>());
@@ -1047,7 +1048,7 @@ int test(const int thread_num, bool use_tls_ekm, bool tls_version_mismatch)
         sp->tls_crypt_factory.reset(new CryptoTLSCryptFactory<ClientCryptoAPI>());
         sp->tls_key.parse(tls_auth_key);
         sp->set_tls_crypt_algs();
-        cp->tls_crypt_ = ClientProtoContext::Config::TLSCrypt::V1;
+        cp->tls_crypt_ = ProtoContext::ProtoConfig::TLSCrypt::V1;
 #endif
 #ifdef USE_TLS_CRYPT_V2
         sp->tls_crypt_factory.reset(new CryptoTLSCryptFactory<ClientCryptoAPI>());
