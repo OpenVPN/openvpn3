@@ -139,8 +139,11 @@ class Setup : public TunBuilderSetup::Base
         // populate add/remove lists with actions
         tun_config(conf->iface_name, pull, *add_cmds, *remove_cmds, os);
 
-        // execute the add actions
-        add_cmds->execute(os);
+        // execute the add actions and collect marks of failed actions
+        auto failed_actions = add_cmds->execute(os);
+
+        // since we should not undo failed actions, remove them
+        remove_cmds->remove_marked(failed_actions, os);
 
         // now that the add actions have succeeded,
         // enable the remove actions
@@ -217,6 +220,7 @@ class Setup : public TunBuilderSetup::Base
                     g += '%' + iface;
                 add->argv.push_back(g);
             }
+            add->mark = net.to_string();
             create = add;
 
             // for the destroy command, copy the add command but replace "add" with "delete"
@@ -263,6 +267,7 @@ class Setup : public TunBuilderSetup::Base
                 }
                 add->argv.push_back(gateway_str);
             }
+            add->mark = net.to_string();
             create = add;
 
             // for the destroy command, copy the add command but replace "add" with "delete"
