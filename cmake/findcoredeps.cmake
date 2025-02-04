@@ -28,13 +28,24 @@ else ()
 endif ()
 
 function(add_ssl_library target)
+    find_package(PkgConfig REQUIRED)
     if (${USE_MBEDTLS})
-        find_package(mbedTLS REQUIRED)
-        set(SSL_LIBRARY mbedTLS::mbedTLS)
+        # mbedtls3.6 for Fedora 41+
+        pkg_search_module(mbedTLS IMPORTED_TARGET mbedtls3.6 mbedtls)
+        if (mbedTLS_FOUND)
+            # Only added as Requires.Private, so we need to look them up ourselves
+            pkg_search_module(mbedCrypto REQUIRED IMPORTED_TARGET mbedcrypto3.6 mbedcrypto)
+            pkg_search_module(mbedX509 REQUIRED IMPORTED_TARGET mbedx5093.6 mbedx509)
+            set(SSL_LIBRARY PkgConfig::mbedTLS PkgConfig::mbedCrypto PkgConfig::mbedX509)
+        else ()
+            # mbedTLS 2.x doesn't have pkg-config files
+            find_package(mbedTLS REQUIRED)
+            set(SSL_LIBRARY mbedTLS::mbedTLS)
+        endif ()
         target_compile_definitions(${target} PRIVATE -DUSE_MBEDTLS)
     else ()
-        find_package(OpenSSL REQUIRED)
-        SET(SSL_LIBRARY OpenSSL::SSL)
+        pkg_search_module(OpenSSL REQUIRED IMPORTED_TARGET openssl)
+        SET(SSL_LIBRARY PkgConfig::OpenSSL)
         target_compile_definitions(${target} PRIVATE -DUSE_OPENSSL)
     endif ()
 

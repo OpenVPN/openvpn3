@@ -28,7 +28,8 @@
                     "value": "ON",
                     "type": "BOOL"
                 },
-                "VCPKG_MANIFEST_DIR": "${sourceDir}/deps/vcpkg_manifests/windows"
+                "VCPKG_MANIFEST_DIR": "${sourceDir}/deps/vcpkg_manifests/windows",
+                "VCPKG_HOST_TRIPLET": "x64-windows"
             },
             "vendor": {
                 "microsoft.com/VisualStudioSettings/CMake/1.0": {
