@@ -25,6 +25,7 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/rc.hpp>
 #include <openvpn/common/string.hpp>
+#include <openvpn/common/wstring.hpp>
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/arraysize.hpp>
 #include <openvpn/error/excode.hpp>
@@ -609,7 +610,8 @@ class Setup : public SetupBase
             {
                 // apply DNS settings from --dns options
                 std::vector<std::string> addresses;
-                std::vector<std::string> domains;
+                std::vector<std::string> split_domains;
+                std::vector<std::wstring> wide_search_domains;
                 std::string search_domains;
                 bool dnssec = false;
 
@@ -635,12 +637,13 @@ class Setup : public SetupBase
                     // DNS server split domain(s)
                     for (const auto &dom : server.domains)
                     {
-                        domains.push_back("." + dom.domain);
+                        split_domains.push_back("." + dom.domain);
                     }
 
                     std::string delimiter;
                     for (const auto &domain : pull.dns_options.search_domains)
                     {
+                        wide_search_domains.emplace_back(wstring::from_utf8(domain.to_string()));
                         search_domains.append(delimiter + domain.to_string());
                         delimiter = ",";
                     }
@@ -656,9 +659,9 @@ class Setup : public SetupBase
                 }
 
                 // To keep local resolvers working, only split rules must be created
-                if (!allow_local_dns_resolvers || !domains.empty())
+                if (!allow_local_dns_resolvers || !split_domains.empty())
                 {
-                    create.add(new NRPT::ActionCreate(pid, domains, addresses, dnssec));
+                    create.add(new NRPT::ActionCreate(pid, split_domains, addresses, wide_search_domains, dnssec));
                     destroy.add(new NRPT::ActionDelete(pid));
                 }
 
@@ -775,7 +778,12 @@ class Setup : public SetupBase
                     // To keep local resolvers working, only split rules must be created
                     if (!allow_local_dns_resolvers || !split_domains.empty())
                     {
-                        create.add(new NRPT::ActionCreate(pid, split_domains, dserv, false));
+                        std::vector<std::wstring> wide_search_domains;
+                        for (const auto &domain : pull.dns_options.search_domains)
+                        {
+                            wide_search_domains.emplace_back(wstring::from_utf8(domain.to_string()));
+                        }
+                        create.add(new NRPT::ActionCreate(pid, split_domains, dserv, wide_search_domains, false));
                         destroy.add(new NRPT::ActionDelete(pid));
 
                         // Apply changes to DNS settings
