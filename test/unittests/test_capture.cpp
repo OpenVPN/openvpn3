@@ -328,62 +328,69 @@ RC_GTEST_PROP(RerouteGW, FromInvalidJsonThrows, (bool ipv4, bool ipv6, rc::Redir
 
 RC_GTEST_PROP(RouteBased, EmptyStringRepresentationReturnsUnsetPrefixLength, (rc::RouteBased route_based))
 {
-    std::visit([](auto &&route_base_variant)
-               { RC_ASSERT(route_base_variant.to_string() == "/0"); },
-               route_based);
+    std::visit(
+        [](auto &&route_base_variant)
+        { RC_ASSERT(route_base_variant.to_string() == "/0"); },
+        route_based);
 }
 
 RC_GTEST_PROP(RouteBased, StringRepresentationReturnsSetOptions, (rc::RouteBased route_based, const std::string &address, unsigned char prefix_length, int metric, const std::string &gateway, bool ipv6, bool net30))
 {
-    std::visit([&address, prefix_length, metric, &gateway, ipv6, net30](auto &&route_base_variant)
-               {
-        route_base_variant.address = address;
-        route_base_variant.prefix_length = prefix_length;
-        route_base_variant.metric = metric;
-        route_base_variant.gateway = gateway;
-        route_base_variant.ipv6 = ipv6;
-        route_base_variant.net30 = net30;
-        std::string output;
-        output += address + "/" + std::to_string(prefix_length);
-        if (!gateway.empty())
-            output += " -> " + gateway;
-        if (metric >= 0)
-            output += " [METRIC=" + std::to_string(metric) + "]";
-        if (ipv6)
-            output += " [IPv6]";
-        if (net30)
-            output += " [net30]";
-        RC_ASSERT(route_base_variant.to_string() == output); },
-               route_based);
+    std::visit(
+        [&address, prefix_length, metric, &gateway, ipv6, net30](auto &&route_base_variant)
+        {
+            route_base_variant.address = address;
+            route_base_variant.prefix_length = prefix_length;
+            route_base_variant.metric = metric;
+            route_base_variant.gateway = gateway;
+            route_base_variant.ipv6 = ipv6;
+            route_base_variant.net30 = net30;
+            std::string output;
+            output += address + "/" + std::to_string(prefix_length);
+            if (!gateway.empty())
+                output += " -> " + gateway;
+            if (metric >= 0)
+                output += " [METRIC=" + std::to_string(metric) + "]";
+            if (ipv6)
+                output += " [IPv6]";
+            if (net30)
+                output += " [net30]";
+            RC_ASSERT(route_base_variant.to_string() == output);
+        },
+        route_based);
 }
 
 
 RC_GTEST_PROP(RouteBased, EmptyJsonRoundTripHaveSameStringRepresentation, (rc::RouteBased route_based, const std::string &title))
 {
-    std::visit([&title](auto &&route_base_variant)
-               {
-        const auto route_based_as_json = route_base_variant.to_json();
-        using T = std::decay_t<decltype(route_base_variant)>;
-        T from_json;
-        from_json.from_json(route_based_as_json, title);
-        RC_ASSERT(route_base_variant.to_string() == from_json.to_string()); },
-               route_based);
+    std::visit(
+        [&title](auto &&route_base_variant)
+        {
+            const auto route_based_as_json = route_base_variant.to_json();
+            using T = std::decay_t<decltype(route_base_variant)>;
+            T from_json;
+            from_json.from_json(route_based_as_json, title);
+            RC_ASSERT(route_base_variant.to_string() == from_json.to_string());
+        },
+        route_based);
 }
 
 RC_GTEST_PROP(RouteBased, JsonRoundTripHaveSameStringRepresentation, (rc::RouteBased route_based, const std::string &address, unsigned char prefix_length, int metric, const std::string &gateway, bool ipv6, bool net30, const std::string &title))
 {
-    std::visit([&address, prefix_length, metric, &gateway, ipv6, net30, &title](auto &&route_base_variant)
-               {
-        route_base_variant.address = address;
-        route_base_variant.prefix_length = prefix_length;
-        route_base_variant.metric = metric;
-        route_base_variant.gateway = gateway;
-        route_base_variant.ipv6 = ipv6;
-        route_base_variant.net30 = net30;
-        const auto route_based_as_json = route_base_variant.to_json();
-        using T = std::decay_t<decltype(route_base_variant)>;
-        T from_json;
-        from_json.from_json(route_based_as_json, title);
-        RC_ASSERT(route_base_variant.to_string() == from_json.to_string()); },
-               route_based);
+    std::visit(
+        [&address, prefix_length, metric, &gateway, ipv6, net30, &title](auto &&route_base_variant)
+        {
+            route_base_variant.address = address;
+            route_base_variant.prefix_length = prefix_length;
+            route_base_variant.metric = metric;
+            route_base_variant.gateway = gateway;
+            route_base_variant.ipv6 = ipv6;
+            route_base_variant.net30 = net30;
+            const auto route_based_as_json = route_base_variant.to_json();
+            using T = std::decay_t<decltype(route_base_variant)>;
+            T from_json;
+            from_json.from_json(route_based_as_json, title);
+            RC_ASSERT(route_base_variant.to_string() == from_json.to_string());
+        },
+        route_based);
 }
