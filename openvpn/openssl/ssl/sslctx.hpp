@@ -15,6 +15,8 @@
 #ifndef OPENVPN_OPENSSL_SSL_SSLCTX_H
 #define OPENVPN_OPENSSL_SSL_SSLCTX_H
 
+#include <map>
+#include <mutex>
 #include <string>
 #include <cstring>
 #include <cstdint>
@@ -125,6 +127,72 @@ class OpenSSLContext : public SSLFactoryAPI
     {
         friend class OpenSSLContext;
 
+        // These can be OR-ed to provide different OpenSSL library configurations.
+        static constexpr unsigned short LIB_CTX_NO_PROVIDERS = 0;
+        static constexpr unsigned short LIB_CTX_LEGACY_PROVIDER = (1 << 0);
+
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+        /* OpenSSL library context, used to load non-default providers etc,
+         * made mutable so const function can use/initialise the context.
+         *
+         * First field in this class so it gets destructed last*/
+        using TlsLibCtxType = std::remove_pointer<SSLLib::Ctx>::type;
+        using TlsLibCtxUPtr = std::unique_ptr<TlsLibCtxType, decltype(&::OSSL_LIB_CTX_free)>;
+        using SSLProviderUPtr = std::unique_ptr<OSSL_PROVIDER, decltype(&::OSSL_PROVIDER_unload)>;
+
+        /**
+          @brief RAII wrapper for OSSL_LIB_CTX and associated providers.
+          @class OpenSSLContext::Config::LibContext
+          @note This is useful for limiting the number of simultaneously-active OpenSSL
+                library contexts. We want to keep only one such context per provider
+                configuration.
+          @see  OpenSSLContext::Config::initialise_lib_context()
+          @see  OpenSSLContext::Config::ctx()
+        */
+        class LibContext
+        {
+          public:
+            /**
+              @brief Constructor. Create a new object based on provider configuration settings.
+              @param config Bit set enumerating active providers.
+              @see   OpenSSLContext::Config::LIB_CTX_NO_PROVIDERS
+              @see   OpenSSLContext::Config::LIB_CTX_LEGACY_PROVIDER
+            */
+            LibContext(unsigned short config)
+                : ctx_{OSSL_LIB_CTX_new(), &::OSSL_LIB_CTX_free}
+            {
+                if (!ctx_)
+                    throw OpenSSLException("OpenSSLContext: OSSL_LIB_CTX_new failed");
+
+                if (config & LIB_CTX_LEGACY_PROVIDER)
+                {
+                    SSLProviderUPtr legacy_provider{OSSL_PROVIDER_load(ctx_.get(), "legacy"), &::OSSL_PROVIDER_unload};
+
+                    if (!legacy_provider)
+                        throw OpenSSLException("OpenSSLContext: loading legacy provider failed");
+
+                    SSLProviderUPtr default_provider{OSSL_PROVIDER_load(ctx_.get(), "default"), &::OSSL_PROVIDER_unload};
+
+                    if (!default_provider)
+                        throw OpenSSLException("OpenSSLContext: loading default provider failed");
+
+                    providers_.emplace_back(std::move(legacy_provider));
+                    providers_.emplace_back(std::move(default_provider));
+                }
+            }
+
+            //! Return the underlying OSSL_LIB_CTX.
+            SSLLib::Ctx ctx() const
+            {
+                return ctx_.get();
+            }
+
+          private:
+            TlsLibCtxUPtr ctx_;
+            std::vector<SSLProviderUPtr> providers_;
+        };
+#endif
+
       public:
         typedef RCPtr<Config> Ptr;
 
@@ -174,11 +242,10 @@ class OpenSSLContext : public SSLFactoryAPI
 
         void enable_legacy_algorithms(const bool v) override
         {
-            if (lib_ctx)
-                throw OpenSSLException("Library context already initialised, "
-                                       "cannot enable/disable legacy algorithms");
-
-            load_legacy_provider = v;
+            if (v)
+                lib_ctx_provider_config |= LIB_CTX_LEGACY_PROVIDER;
+            else
+                lib_ctx_provider_config &= ~LIB_CTX_LEGACY_PROVIDER;
         }
 
         // server side
@@ -612,33 +679,39 @@ class OpenSSLContext : public SSLFactoryAPI
       private:
         SSLLib::Ctx ctx() const
         {
-            initalise_lib_context();
-            return lib_ctx.get();
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+            initialise_lib_context();
+            return lib_ctx->ctx();
+#else
+            return nullptr;
+#endif
         }
 
-        void initalise_lib_context() const
+        //! For OpenSSL 3.x, set up a library context if one is not already set up.
+        void initialise_lib_context() const
         {
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L
-            /* Already initialised */
+            std::lock_guard guard{lib_ctx_mutex};
+
             if (lib_ctx)
                 return;
 
-            lib_ctx.reset(OSSL_LIB_CTX_new());
-            if (!lib_ctx)
-            {
-                throw OpenSSLException("OpenSSLContext: OSSL_LIB_CTX_new failed");
-            }
-            if (load_legacy_provider)
-            {
-                legacy_provider.reset(OSSL_PROVIDER_load(lib_ctx.get(), "legacy"));
+            auto it = lib_ctx_map.find(lib_ctx_provider_config);
 
-                if (!legacy_provider)
-                    throw OpenSSLException("OpenSSLContext: loading legacy provider failed");
+            if (it != lib_ctx_map.end())
+            {
+                auto cached_ctx = it->second.lock();
 
-                default_provider.reset(OSSL_PROVIDER_load(lib_ctx.get(), "default"));
-                if (!default_provider)
-                    throw OpenSSLException("OpenSSLContext: loading default provider failed");
+                if (cached_ctx)
+                {
+                    lib_ctx = cached_ctx;
+                    return;
+                }
             }
+
+            // There's either no cached library context, or the cached context expired.
+            lib_ctx = std::make_shared<LibContext>(lib_ctx_provider_config);
+            lib_ctx_map[lib_ctx_provider_config] = lib_ctx;
 #endif
         }
 
@@ -658,13 +731,23 @@ class OpenSSLContext : public SSLFactoryAPI
 #endif
         }
 
-
-        /* OpenSSL library context, used to load non-default providers etc,
-         * made mutable so const function can use/initialise the context.
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+        /* The C++ standard says:
          *
-         * First field in this class so it gets destructed last*/
-        using SSLCtxType = std::remove_pointer<SSLLib::Ctx>::type;
-        mutable std::unique_ptr<SSLCtxType, decltype(&::OSSL_LIB_CTX_free)> lib_ctx{nullptr, &::OSSL_LIB_CTX_free};
+         * 26.2.6 Associative containers [associative.reqmts]
+         *
+         * The insert and emplace members shall not affect the validity of iterators
+         * and references to the container, and the erase members shall invalidate
+         * only iterators and references to the erased elements.
+         *
+         * So we should be safe to return pointers / references to existing
+         * values.
+         */
+        static inline std::map<unsigned short, std::weak_ptr<LibContext>> lib_ctx_map;
+        mutable std::shared_ptr<LibContext> lib_ctx;
+        static inline std::mutex lib_ctx_mutex;
+#endif
+        unsigned short lib_ctx_provider_config{LIB_CTX_NO_PROVIDERS};
 
         Mode mode;
         CertCRLList ca;                   // from OpenVPN "ca" and "crl-verify" option
@@ -695,14 +778,6 @@ class OpenSSLContext : public SSLFactoryAPI
         X509Track::ConfigSet x509_track_config;
         bool local_cert_enabled = true;
         bool client_session_tickets = false;
-        bool load_legacy_provider = false;
-
-
-        /* References to the Providers we loaded, so we can unload them */
-#if OPENSSL_VERSION_NUMBER >= 0x30000000L
-        mutable std::unique_ptr<OSSL_PROVIDER, decltype(&::OSSL_PROVIDER_unload)> legacy_provider{nullptr, &::OSSL_PROVIDER_unload};
-        mutable std::unique_ptr<OSSL_PROVIDER, decltype(&::OSSL_PROVIDER_unload)> default_provider{nullptr, &::OSSL_PROVIDER_unload};
-#endif
     };
 
     // Represents an actual SSL session.
