@@ -580,3 +580,101 @@ RC_GTEST_PROP(ProxyAutoConfigURL, FromInvalidJsonDoesNotChangeOriginalObject, (c
     from_json.from_json(invalid_json, title);
     RC_ASSERT(from_json.url == domain);
 }
+
+//  ===============================================================================================
+//  ProxyHostPort tests
+//  ===============================================================================================
+
+TEST(ProxyHostPort, EmptyIsNotDefined)
+{
+    const TunBuilderCapture::ProxyHostPort proxy_host_port;
+    ASSERT_FALSE(proxy_host_port.defined());
+}
+
+RC_GTEST_PROP(ProxyHostPort, NonEmptyIsDefined, ())
+{
+    const auto host = *rc::gen::nonEmpty<std::string>();
+    TunBuilderCapture::ProxyHostPort proxy_host_port;
+    proxy_host_port.host = host;
+    RC_ASSERT(proxy_host_port.defined());
+}
+
+TEST(ProxyHostPort, EmptyStringRepresentationReturnsDefaultPort)
+{
+    const TunBuilderCapture::ProxyHostPort proxy_host_port;
+    ASSERT_EQ(proxy_host_port.to_string(), std::string{" "} + std::to_string(proxy_host_port.port));
+}
+
+RC_GTEST_PROP(ProxyHostPort, StringRepresentationReturnsHostPort, (const std::string &host, const int port))
+{
+    TunBuilderCapture::ProxyHostPort proxy_host_port;
+    proxy_host_port.host = host;
+    proxy_host_port.port = port;
+    RC_ASSERT(proxy_host_port.to_string() == host + std::string{" "} + std::to_string(port));
+}
+
+RC_GTEST_PROP(ProxyHostPort, EmptyValidates, (const std::string &title))
+{
+    const TunBuilderCapture::ProxyHostPort proxy_host_port;
+    proxy_host_port.validate(title);
+}
+
+RC_GTEST_PROP(ProxyHostPort, EmptyJsonRoundTripHaveSameStringRepresentation, (const std::string &title))
+{
+    const TunBuilderCapture::ProxyHostPort proxy_host_port;
+    const auto proxy_host_port_as_json = proxy_host_port.to_json();
+    TunBuilderCapture::ProxyHostPort from_json;
+    from_json.from_json(proxy_host_port_as_json, title);
+    RC_ASSERT(proxy_host_port.to_string() == from_json.to_string());
+}
+
+RC_GTEST_PROP(ProxyHostPort, EmptyJsonRoundTripHaveSameDefinedStatus, (const std::string &title))
+{
+    const TunBuilderCapture::ProxyHostPort proxy_host_port;
+    const auto proxy_host_port_as_json = proxy_host_port.to_json();
+    TunBuilderCapture::ProxyHostPort from_json;
+    from_json.from_json(proxy_host_port_as_json, title);
+    RC_ASSERT(proxy_host_port.defined() == from_json.defined());
+}
+
+RC_GTEST_PROP(ProxyHostPort, EmptyJsonRoundTripValidates, (const std::string &title))
+{
+    const TunBuilderCapture::ProxyHostPort proxy_host_port;
+    proxy_host_port.validate(title);
+    const auto proxy_host_port_as_json = proxy_host_port.to_json();
+    TunBuilderCapture::ProxyHostPort from_json;
+    from_json.from_json(proxy_host_port_as_json, title);
+    from_json.validate(title);
+}
+
+RC_GTEST_PROP(ProxyHostPort, JsonRoundTripHaveSameStringRepresentation, (const std::string &host, const int port, const std::string &title))
+{
+    TunBuilderCapture::ProxyHostPort proxy_host_port;
+    proxy_host_port.host = host;
+    proxy_host_port.port = port;
+    const auto proxy_host_port_as_json = proxy_host_port.to_json();
+    TunBuilderCapture::ProxyHostPort from_json;
+    from_json.from_json(proxy_host_port_as_json, title);
+    RC_ASSERT(proxy_host_port.to_string() == from_json.to_string());
+}
+
+RC_GTEST_PROP(ProxyHostPort, JsonRoundTripHaveSameDefinedStatus, (const std::string &host, const std::string &title))
+{
+    TunBuilderCapture::ProxyHostPort proxy_host_port;
+    proxy_host_port.host = host;
+    const auto proxy_host_port_as_json = proxy_host_port.to_json();
+    TunBuilderCapture::ProxyHostPort from_json;
+    from_json.from_json(proxy_host_port_as_json, title);
+    RC_ASSERT(proxy_host_port.defined() == from_json.defined());
+}
+
+RC_GTEST_PROP(ProxyHostPort, FromInvalidJsonDoesNotChangeOriginalObject, (const std::string &host, const int port, const std::string &title))
+{
+    TunBuilderCapture::ProxyHostPort from_json;
+    from_json.host = host;
+    from_json.port = port;
+    const Json::Value invalid_json;
+    from_json.from_json(invalid_json, title);
+    RC_ASSERT(from_json.host == host);
+    RC_ASSERT(from_json.port == port);
+}
