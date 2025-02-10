@@ -394,3 +394,95 @@ RC_GTEST_PROP(RouteBased, JsonRoundTripHaveSameStringRepresentation, (rc::RouteB
         },
         route_based);
 }
+
+//  ===============================================================================================
+//  ProxyBypass tests
+//  ===============================================================================================
+
+TEST(ProxyBypass, EmptyIsNotDefined)
+{
+    const TunBuilderCapture::ProxyBypass proxy_bypass;
+    ASSERT_FALSE(proxy_bypass.defined());
+}
+
+RC_GTEST_PROP(ProxyBypass, NonEmptyIsDefined, ())
+{
+    const auto bypass_host = *rc::gen::nonEmpty<std::string>();
+    TunBuilderCapture::ProxyBypass proxy_bypass;
+    proxy_bypass.bypass_host = bypass_host;
+    RC_ASSERT(proxy_bypass.defined());
+}
+
+TEST(ProxyBypass, EmptyStringRepresentation)
+{
+    const TunBuilderCapture::ProxyBypass proxy_bypass;
+    ASSERT_TRUE(proxy_bypass.to_string().empty());
+}
+
+RC_GTEST_PROP(ProxyBypass, StringRepresentationReturnBypassHost, (const std::string &bypass_host))
+{
+    TunBuilderCapture::ProxyBypass proxy_bypass;
+    proxy_bypass.bypass_host = bypass_host;
+    RC_ASSERT(proxy_bypass.to_string() == bypass_host);
+}
+
+RC_GTEST_PROP(ProxyBypass, EmptyValidates, (const std::string &title))
+{
+    const TunBuilderCapture::ProxyBypass proxy_bypass;
+    proxy_bypass.validate(title);
+}
+
+RC_GTEST_PROP(ProxyBypass, EmptyJsonRoundTripHaveSameStringRepresentation, (const std::string &title))
+{
+    const TunBuilderCapture::ProxyBypass proxy_bypass;
+    const auto proxy_bypass_as_json = proxy_bypass.to_json();
+    TunBuilderCapture::ProxyBypass from_json;
+    from_json.from_json(proxy_bypass_as_json, title);
+    RC_ASSERT(proxy_bypass.to_string() == from_json.to_string());
+}
+
+RC_GTEST_PROP(ProxyBypass, EmptyJsonRoundTripHaveSameDefinedStatus, (const std::string &title))
+{
+    const TunBuilderCapture::ProxyBypass proxy_bypass;
+    const auto proxy_bypass_as_json = proxy_bypass.to_json();
+    TunBuilderCapture::ProxyBypass from_json;
+    from_json.from_json(proxy_bypass_as_json, title);
+    RC_ASSERT(proxy_bypass.defined() == from_json.defined());
+}
+
+RC_GTEST_PROP(ProxyBypass, EmptyJsonRoundTripValidates, (const std::string &title))
+{
+    const TunBuilderCapture::ProxyBypass proxy_bypass;
+    proxy_bypass.validate(title);
+    const auto proxy_bypass_as_json = proxy_bypass.to_json();
+    TunBuilderCapture::ProxyBypass from_json;
+    from_json.from_json(proxy_bypass_as_json, title);
+    from_json.validate(title);
+}
+
+RC_GTEST_PROP(ProxyBypass, JsonRoundTripHaveSameStringRepresentation, (const std::string &bypass_host, const std::string &title))
+{
+    TunBuilderCapture::ProxyBypass proxy_bypass;
+    proxy_bypass.bypass_host = bypass_host;
+    const auto proxy_bypass_as_json = proxy_bypass.to_json();
+    TunBuilderCapture::ProxyBypass from_json;
+    from_json.from_json(proxy_bypass_as_json, title);
+    RC_ASSERT(proxy_bypass.to_string() == from_json.to_string());
+}
+
+RC_GTEST_PROP(ProxyBypass, JsonRoundTripHaveSameDefinedStatus, (const std::string &bypass_host, const std::string &title))
+{
+    TunBuilderCapture::ProxyBypass proxy_bypass;
+    proxy_bypass.bypass_host = bypass_host;
+    const auto proxy_bypass_as_json = proxy_bypass.to_json();
+    TunBuilderCapture::ProxyBypass from_json;
+    from_json.from_json(proxy_bypass_as_json, title);
+    RC_ASSERT(proxy_bypass.defined() == from_json.defined());
+}
+
+RC_GTEST_PROP(ProxyBypass, FromInvalidJsonThrows, (const std::string &title))
+{
+    TunBuilderCapture::ProxyBypass from_json;
+    const Json::Value invalid_json;
+    RC_ASSERT_THROWS_AS(from_json.from_json(invalid_json, title), json::json_parse);
+}
