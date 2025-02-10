@@ -678,3 +678,98 @@ RC_GTEST_PROP(ProxyHostPort, FromInvalidJsonDoesNotChangeOriginalObject, (const 
     RC_ASSERT(from_json.host == host);
     RC_ASSERT(from_json.port == port);
 }
+
+//  ===============================================================================================
+//  WINSServer tests
+//  ===============================================================================================
+
+TEST(WINSServer, EmptyStringRepresentation)
+{
+    const TunBuilderCapture::WINSServer wins_server;
+    ASSERT_TRUE(wins_server.to_string().empty());
+}
+
+RC_GTEST_PROP(WINSServer, StringRepresentationReturnsAddress, (const std::string &address))
+{
+    TunBuilderCapture::WINSServer wins_server;
+    wins_server.address = address;
+    RC_ASSERT(wins_server.to_string() == address);
+}
+
+RC_GTEST_PROP(WINSServer, EmptyThrowsOnValidation, (const std::string &title))
+{
+    const TunBuilderCapture::WINSServer wins_server;
+    RC_ASSERT_THROWS_AS(wins_server.validate(title), openvpn::IP::ip_exception);
+}
+
+RC_GTEST_PROP(WINSServer, ValidatesAddress, (const std::string &title))
+{
+    TunBuilderCapture::WINSServer wins_server;
+    wins_server.address = *rc::IPv4Address().as("Valid IPv4 address");
+    wins_server.validate(title);
+}
+
+RC_GTEST_PROP(WINSServer, ThrowsValidatingInvalidAddress, (const std::string &title))
+{
+    TunBuilderCapture::WINSServer wins_server;
+    wins_server.address = *rc::IPv4Address(false).as("Invalid IPv4 address");
+    RC_ASSERT_THROWS_AS(wins_server.validate(title), openvpn::IP::ip_exception);
+}
+
+RC_GTEST_PROP(WINSServer, EmptyJsonRoundTripHaveSameStringRepresentation, (const std::string &title))
+{
+    const TunBuilderCapture::WINSServer wins_server;
+    const auto wins_server_as_json = wins_server.to_json();
+    TunBuilderCapture::WINSServer from_json;
+    from_json.from_json(wins_server_as_json, title);
+    RC_ASSERT(wins_server.to_string() == from_json.to_string());
+}
+
+RC_GTEST_PROP(WINSServer, EmptyJsonRoundTripThrowsOnValidation, (const std::string &title))
+{
+    const TunBuilderCapture::WINSServer wins_server;
+    RC_ASSERT_THROWS_AS(wins_server.validate(title), openvpn::IP::ip_exception);
+    const auto wins_server_as_json = wins_server.to_json();
+    TunBuilderCapture::WINSServer from_json;
+    from_json.from_json(wins_server_as_json, title);
+    RC_ASSERT_THROWS_AS(from_json.validate(title), openvpn::IP::ip_exception);
+}
+
+RC_GTEST_PROP(WINSServer, JsonRoundTripHaveSameStringRepresentation, (const std::string &address, const std::string &title))
+{
+    TunBuilderCapture::WINSServer wins_server;
+    wins_server.address = address;
+    const auto wins_server_as_json = wins_server.to_json();
+    TunBuilderCapture::WINSServer from_json;
+    from_json.from_json(wins_server_as_json, title);
+    RC_ASSERT(wins_server.to_string() == from_json.to_string());
+}
+
+RC_GTEST_PROP(WINSServer, JsonRoundTripValidatesAddress, (const std::string &title))
+{
+    TunBuilderCapture::WINSServer wins_server;
+    wins_server.address = *rc::IPv4Address().as("Valid IPv4 address");
+    wins_server.validate(title);
+    const auto wins_server_as_json = wins_server.to_json();
+    TunBuilderCapture::WINSServer from_json;
+    from_json.from_json(wins_server_as_json, title);
+    from_json.validate(title);
+}
+
+RC_GTEST_PROP(WINSServer, JsonRoundTripThrowsValidatingInvalidIP, (const std::string &title))
+{
+    TunBuilderCapture::WINSServer wins_server;
+    wins_server.address = *rc::IPv4Address(false).as("Invalid IPv4 address");
+    RC_ASSERT_THROWS_AS(wins_server.validate(title), openvpn::IP::ip_exception);
+    const auto wins_server_as_json = wins_server.to_json();
+    TunBuilderCapture::WINSServer from_json;
+    from_json.from_json(wins_server_as_json, title);
+    RC_ASSERT_THROWS_AS(from_json.validate(title), openvpn::IP::ip_exception);
+}
+
+RC_GTEST_PROP(WINSServer, FromInvalidJsonThrows, (const std::string &title))
+{
+    TunBuilderCapture::WINSServer from_json;
+    const Json::Value invalid_json;
+    RC_ASSERT_THROWS_AS(from_json.from_json(invalid_json, title), json::json_parse);
+}
