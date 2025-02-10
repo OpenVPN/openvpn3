@@ -486,3 +486,97 @@ RC_GTEST_PROP(ProxyBypass, FromInvalidJsonThrows, (const std::string &title))
     const Json::Value invalid_json;
     RC_ASSERT_THROWS_AS(from_json.from_json(invalid_json, title), json::json_parse);
 }
+
+//  ===============================================================================================
+//  ProxyAutoConfigURL tests
+//  ===============================================================================================
+
+TEST(ProxyAutoConfigURL, EmptyIsNotDefined)
+{
+    const TunBuilderCapture::ProxyAutoConfigURL proxy_autoconfig_url;
+    ASSERT_FALSE(proxy_autoconfig_url.defined());
+}
+
+RC_GTEST_PROP(ProxyAutoConfigURL, NonEmptyIsDefined, ())
+{
+    const auto url = *rc::gen::nonEmpty<std::string>();
+    TunBuilderCapture::ProxyAutoConfigURL proxy_autoconfig_url;
+    proxy_autoconfig_url.url = url;
+    RC_ASSERT(proxy_autoconfig_url.defined());
+}
+
+TEST(ProxyAutoConfigURL, EmptyStringRepresentation)
+{
+    const TunBuilderCapture::ProxyAutoConfigURL proxy_autoconfig_url;
+    ASSERT_TRUE(proxy_autoconfig_url.to_string().empty());
+}
+
+RC_GTEST_PROP(ProxyAutoConfigURL, StringRepresentationReturnsURL, (const std::string &url))
+{
+    TunBuilderCapture::ProxyAutoConfigURL proxy_autoconfig_url;
+    proxy_autoconfig_url.url = url;
+    RC_ASSERT(proxy_autoconfig_url.to_string() == url);
+}
+
+RC_GTEST_PROP(ProxyAutoConfigURL, EmptyValidates, (const std::string &title))
+{
+    const TunBuilderCapture::ProxyAutoConfigURL proxy_autoconfig_url;
+    proxy_autoconfig_url.validate(title);
+}
+
+RC_GTEST_PROP(ProxyAutoConfigURL, EmptyJsonRoundTripHaveSameStringRepresentation, (const std::string &title))
+{
+    const TunBuilderCapture::ProxyAutoConfigURL proxy_autoconfig_url;
+    const auto proxy_autoconfig_url_as_json = proxy_autoconfig_url.to_json();
+    TunBuilderCapture::ProxyAutoConfigURL from_json;
+    from_json.from_json(proxy_autoconfig_url_as_json, title);
+    RC_ASSERT(proxy_autoconfig_url.to_string() == from_json.to_string());
+}
+
+RC_GTEST_PROP(ProxyAutoConfigURL, EmptyJsonRoundTripHaveSameDefinedStatus, (const std::string &title))
+{
+    const TunBuilderCapture::ProxyAutoConfigURL proxy_autoconfig_url;
+    const auto proxy_autoconfig_url_as_json = proxy_autoconfig_url.to_json();
+    TunBuilderCapture::ProxyAutoConfigURL from_json;
+    from_json.from_json(proxy_autoconfig_url_as_json, title);
+    RC_ASSERT(proxy_autoconfig_url.defined() == from_json.defined());
+}
+
+RC_GTEST_PROP(ProxyAutoConfigURL, EmptyJsonRoundTripValidates, (const std::string &title))
+{
+    const TunBuilderCapture::ProxyAutoConfigURL proxy_autoconfig_url;
+    proxy_autoconfig_url.validate(title);
+    const auto proxy_autoconfig_url_as_json = proxy_autoconfig_url.to_json();
+    TunBuilderCapture::ProxyAutoConfigURL from_json;
+    from_json.from_json(proxy_autoconfig_url_as_json, title);
+    from_json.validate(title);
+}
+
+RC_GTEST_PROP(ProxyAutoConfigURL, JsonRoundTripHaveSameStringRepresentation, (const std::string &url, const std::string &title))
+{
+    TunBuilderCapture::ProxyAutoConfigURL proxy_autoconfig_url;
+    proxy_autoconfig_url.url = url;
+    const auto proxy_autoconfig_url_as_json = proxy_autoconfig_url.to_json();
+    TunBuilderCapture::ProxyAutoConfigURL from_json;
+    from_json.from_json(proxy_autoconfig_url_as_json, title);
+    RC_ASSERT(proxy_autoconfig_url.to_string() == from_json.to_string());
+}
+
+RC_GTEST_PROP(ProxyAutoConfigURL, JsonRoundTripHaveSameDefinedStatus, (const std::string &url, const std::string &title))
+{
+    TunBuilderCapture::ProxyAutoConfigURL proxy_autoconfig_url;
+    proxy_autoconfig_url.url = url;
+    const auto proxy_autoconfig_url_as_json = proxy_autoconfig_url.to_json();
+    TunBuilderCapture::ProxyAutoConfigURL from_json;
+    from_json.from_json(proxy_autoconfig_url_as_json, title);
+    RC_ASSERT(proxy_autoconfig_url.defined() == from_json.defined());
+}
+
+RC_GTEST_PROP(ProxyAutoConfigURL, FromInvalidJsonDoesNotChangeOriginalObject, (const std::string &domain, const std::string &title))
+{
+    TunBuilderCapture::ProxyAutoConfigURL from_json;
+    from_json.url = domain;
+    const Json::Value invalid_json;
+    from_json.from_json(invalid_json, title);
+    RC_ASSERT(from_json.url == domain);
+}
