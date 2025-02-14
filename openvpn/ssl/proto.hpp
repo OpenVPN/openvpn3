@@ -534,7 +534,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
                     const Option *o = opt.get_ptr(relay_prefix("tls-auth"));
                     if (o)
                     {
-                        if (tls_crypt_context)
+                        if (!server && tls_crypt_context)
                             throw proto_option_error(ERR_INVALID_OPTION_CRYPTO, "tls-auth and tls-crypt are mutually exclusive");
 
                         tls_auth_key.parse(o->get(1, 0));
@@ -552,7 +552,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
                     const Option *o = opt.get_ptr(relay_prefix("tls-crypt"));
                     if (o)
                     {
-                        if (tls_auth_context)
+                        if (!server && tls_auth_context)
                             throw proto_option_error(ERR_INVALID_OPTION_CRYPTO, "tls-auth and tls-crypt are mutually exclusive");
                         if (tls_crypt_context)
                             throw proto_option_error(ERR_INVALID_OPTION_CRYPTO, "tls-crypt and tls-crypt-v2 are mutually exclusive");
@@ -569,7 +569,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
                     const Option *o = opt.get_ptr(relay_prefix("tls-crypt-v2"));
                     if (o)
                     {
-                        if (tls_auth_context)
+                        if (!server && tls_auth_context)
                             throw proto_option_error(ERR_INVALID_OPTION_CRYPTO, "tls-auth and tls-crypt-v2 are mutually exclusive");
                         if (tls_crypt_context)
                             throw proto_option_error(ERR_INVALID_OPTION_CRYPTO, "tls-crypt and tls-crypt-v2 are mutually exclusive");
@@ -3474,6 +3474,24 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
         {
             try
             {
+                if (proto.is_server()
+                    && proto.tls_wrap_mode != TLS_CRYPT_V2
+                    && proto.config->tls_crypt_v2_enabled()
+                    && pkt.opcode == CONTROL_HARD_RESET_CLIENT_V3)
+                {
+                    // setup key to be used to unwrap WKc upon client connection.
+                    // tls-crypt session key setup is postponed to reception of WKc
+                    // from client
+                    proto.reset_tls_crypt_server(*proto.config);
+
+                    proto.tls_wrap_mode = TLS_CRYPT_V2;
+                    proto.hmac_size = proto.config->tls_crypt_context->digest_size();
+
+                    // init tls_crypt packet ID
+                    proto.ta_pid_send.init(EARLY_NEG_START);
+                    proto.ta_pid_recv.init("SSL-CC", 0, proto.stats);
+                }
+
                 switch (proto.tls_wrap_mode)
                 {
                 case TLS_AUTH:
@@ -3748,11 +3766,28 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
 
         TLSCryptPreValidate(const ProtoConfig &c, const bool server)
         {
-            if (!c.tls_crypt_enabled())
+            const bool tls_crypt_v2_enabled = c.tls_crypt_v2_enabled();
+
+            if (!c.tls_crypt_enabled() && !tls_crypt_v2_enabled)
                 throw tls_crypt_pre_validate();
 
             // save hard reset op we expect to receive from peer
-            reset_op = server ? CONTROL_HARD_RESET_CLIENT_V2 : CONTROL_HARD_RESET_SERVER_V2;
+            reset_op = CONTROL_HARD_RESET_SERVER_V2;
+
+            if (server)
+            {
+                // We can't pre-validate because we haven't extracted the server key from
+                // the server key ID that's present in the client key yet.
+                if (tls_crypt_v2_enabled && c.tls_crypt_v2_serverkey_id)
+                {
+                    disabled = true;
+                    return;
+                }
+
+                reset_op = tls_crypt_v2_enabled
+                               ? CONTROL_HARD_RESET_CLIENT_V3
+                               : CONTROL_HARD_RESET_CLIENT_V2;
+            }
 
             tls_crypt_recv = c.tls_crypt_context->new_obj_recv();
 
@@ -3768,6 +3803,9 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
 
         bool validate(const BufferAllocated &net_buf)
         {
+            if (disabled)
+                return true;
+
             try
             {
                 if (!net_buf.size())
@@ -3813,23 +3851,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
         TLSCryptInstance::Ptr tls_crypt_recv;
         Frame::Ptr frame;
         BufferAllocated work;
-    };
-
-    class TLSCryptV2PreValidate : public TLSCryptPreValidate
-    {
-      public:
-        OPENVPN_SIMPLE_EXCEPTION(tls_crypt_v2_pre_validate);
-
-        TLSCryptV2PreValidate(const ProtoConfig &c, const bool server)
-            : TLSCryptPreValidate(c, server)
-        {
-            if (!c.tls_crypt_v2_enabled())
-                throw tls_crypt_v2_pre_validate();
-
-            // in case of server peer, we expect the new v3 packet type
-            if (server)
-                reset_op = CONTROL_HARD_RESET_CLIENT_V3;
-        }
+        bool disabled = false;
     };
 
     OPENVPN_SIMPLE_EXCEPTION(select_key_context_error);
@@ -3849,33 +3871,40 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
 
     void reset_tls_wrap_mode(const ProtoConfig &c)
     {
-        // tls-auth setup
-        if (c.tls_crypt_v2_enabled())
+        // Prefer TLS auth as the default if both TLS crypt V2 and TLS auth
+        // are enabled.
+        if (c.tls_crypt_v2_enabled() && !c.tls_auth_enabled())
         {
             tls_wrap_mode = TLS_CRYPT_V2;
 
             // get HMAC size from Digest object
             hmac_size = c.tls_crypt_context->digest_size();
+
+            return;
         }
-        else if (c.tls_crypt_enabled())
+
+        if (c.tls_crypt_enabled() && !c.tls_auth_enabled())
         {
             tls_wrap_mode = TLS_CRYPT;
 
             // get HMAC size from Digest object
             hmac_size = c.tls_crypt_context->digest_size();
+
+            return;
         }
-        else if (c.tls_auth_enabled())
+
+        if (c.tls_auth_enabled())
         {
             tls_wrap_mode = TLS_AUTH;
 
             // get HMAC size from Digest object
             hmac_size = c.tls_auth_context->size();
+
+            return;
         }
-        else
-        {
-            tls_wrap_mode = TLS_PLAIN;
-            hmac_size = 0;
-        }
+
+        tls_wrap_mode = TLS_PLAIN;
+        hmac_size = 0;
     }
 
     uint32_t get_tls_warnings() const
@@ -4485,6 +4514,8 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
         TLS_CRYPT,
         TLS_CRYPT_V2
     };
+
+    static constexpr PacketIDControl::id_t EARLY_NEG_START = 0x0f000000;
 
     void reset_all()
     {

@@ -55,7 +55,7 @@ class PsidCookieImpl : public PsidCookie
 
     PsidCookieImpl(ServerProto::Factory *psfp)
         : pcfg_(*psfp->proto_context_config),
-          not_tls_auth_mode_(!pcfg_.tls_auth_enabled()),
+          not_tls_auth_mode_(!pcfg_.tls_auth_enabled() || pcfg_.tls_crypt_enabled() || pcfg_.tls_crypt_v2_enabled()),
           now_(pcfg_.now), handwindow_(pcfg_.handshake_window)
     {
         if (not_tls_auth_mode_)

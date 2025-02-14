@@ -60,25 +60,27 @@ class ServerProto
                 const ProtoConfig &c)
             : io_context(io_context_arg)
         {
-            if (c.tls_crypt_enabled())
-                preval.reset(new ProtoContext::TLSCryptPreValidate(c, true));
-            else if (c.tls_auth_enabled())
-                preval.reset(new ProtoContext::TLSAuthPreValidate(c, true));
+            if (c.tls_crypt_enabled() || c.tls_crypt_v2_enabled())
+                tls_crypt_preval.reset(new ProtoContext::TLSCryptPreValidate(c, true));
+
+            if (c.tls_auth_enabled())
+                tls_auth_preval.reset(new ProtoContext::TLSAuthPreValidate(c, true));
         }
 
         TransportClientInstance::Recv::Ptr new_client_instance() override;
 
         bool validate_initial_packet(const BufferAllocated &net_buf) override
         {
-            if (preval)
-            {
-                const bool ret = preval->validate(net_buf);
-                if (!ret)
-                    stats->error(Error::TLS_AUTH_FAIL);
-                return ret;
-            }
-            else
+            if (!tls_auth_preval && !tls_crypt_preval)
                 return true;
+
+            const bool ret = (tls_auth_preval && tls_auth_preval->validate(net_buf))
+                             || (tls_crypt_preval && tls_crypt_preval->validate(net_buf));
+
+            if (!ret)
+                stats->error(Error::TLS_AUTH_FAIL);
+
+            return ret;
         }
 
         ProtoConfig::Ptr clone_proto_config() const
@@ -95,7 +97,8 @@ class ServerProto
         SessionStats::Ptr stats;
 
       private:
-        ProtoContext::TLSWrapPreValidate::Ptr preval;
+        ProtoContext::TLSWrapPreValidate::Ptr tls_auth_preval;
+        ProtoContext::TLSWrapPreValidate::Ptr tls_crypt_preval;
     };
 
     // This is the main server-side client instance object

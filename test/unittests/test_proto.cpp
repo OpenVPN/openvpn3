@@ -971,7 +971,11 @@ static auto create_client_proto_context(ClientSSLAPI::Config::Ptr cc, Frame::Ptr
 }
 
 // execute the unit test in one thread
-int test(const int thread_num, bool use_tls_ekm, bool tls_version_mismatch, const std::string &tls_crypt_v2_key_fn = "")
+int test(const int thread_num,
+         bool use_tls_ekm,
+         bool tls_version_mismatch,
+         const std::string &tls_crypt_v2_key_fn = "",
+         bool use_tls_auth_with_tls_crypt_v2 = false)
 {
     try
     {
@@ -1069,6 +1073,14 @@ int test(const int thread_num, bool use_tls_ekm, bool tls_version_mismatch, cons
         sp->tls_crypt_ = ProtoContext::ProtoConfig::TLSCrypt::V2;
         sp->tls_crypt_v2_serverkey_id = !tls_crypt_v2_key_fn.empty();
         sp->tls_crypt_v2_serverkey_dir = TEST_KEYCERT_DIR;
+
+        if (use_tls_auth_with_tls_crypt_v2)
+        {
+            sp->tls_auth_factory.reset(new CryptoOvpnHMACFactory<ServerCryptoAPI>());
+            sp->tls_auth_key.parse(tls_auth_key);
+            sp->set_tls_auth_digest(CryptoAlgs::lookup(PROTO_DIGEST));
+            sp->key_direction = 1;
+        }
 #endif
 #if defined(HANDSHAKE_WINDOW)
         sp->handshake_window = Time::Duration::seconds(HANDSHAKE_WINDOW);
@@ -1271,6 +1283,12 @@ TEST_F(ProtoUnitTest, base_single_thread_tls_crypt_v2_with_missing_embedded_serv
 {
     int ret = test(1, false, false, "tls-crypt-v2-client-with-missing-serverkey.key");
     EXPECT_NE(ret, 0);
+}
+
+TEST_F(ProtoUnitTest, base_single_thread_tls_crypt_v2_with_tls_auth_also_active)
+{
+    int ret = test(1, false, false, "tls-crypt-v2-client-with-serverkey.key", true);
+    EXPECT_EQ(ret, 0);
 }
 #endif
 
