@@ -394,8 +394,11 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
             Dynamic = (1 << 2)
         };
 
-        //! leave this undefined to disable tls_auth/crypt
-        OpenVPNStaticKey tls_key;
+        //! leave this undefined to disable tls_auth
+        OpenVPNStaticKey tls_auth_key;
+
+        //! leave this undefined to disable tls-crypt/tls-crypt-v2
+        OpenVPNStaticKey tls_crypt_key;
 
         //! needed to distinguish between tls-crypt and tls-crypt-v2 server mode
         unsigned tls_crypt_ = TLSCrypt::None;
@@ -534,7 +537,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
                         if (tls_crypt_context)
                             throw proto_option_error(ERR_INVALID_OPTION_CRYPTO, "tls-auth and tls-crypt are mutually exclusive");
 
-                        tls_key.parse(o->get(1, 0));
+                        tls_auth_key.parse(o->get(1, 0));
 
                         const Option *tad = opt.get_ptr(relay_prefix("tls-auth-digest"));
                         if (tad)
@@ -555,7 +558,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
                             throw proto_option_error(ERR_INVALID_OPTION_CRYPTO, "tls-crypt and tls-crypt-v2 are mutually exclusive");
 
                         tls_crypt_ = TLSCrypt::V1;
-                        tls_key.parse(o->get(1, 0));
+                        tls_crypt_key.parse(o->get(1, 0));
 
                         set_tls_crypt_algs();
                     }
@@ -581,7 +584,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
                             // in client mode expect the key to be a PEM encoded tls-crypt-v2 client key (key + WKc)
                             TLSCryptV2ClientKey tls_crypt_v2_key(tls_crypt_context);
                             tls_crypt_v2_key.parse(keyfile);
-                            tls_crypt_v2_key.extract_key(tls_key);
+                            tls_crypt_v2_key.extract_key(tls_crypt_key);
                             tls_crypt_v2_key.extract_wkc(wkc);
                         }
                         else
@@ -591,7 +594,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
                                 // in server mode this is a PEM encoded tls-crypt-v2 server key
                                 TLSCryptV2ServerKey tls_crypt_v2_key;
                                 tls_crypt_v2_key.parse(keyfile);
-                                tls_crypt_v2_key.extract_key(tls_key);
+                                tls_crypt_v2_key.extract_key(tls_crypt_key);
                             }
                         }
                         tls_crypt_ = TLSCrypt::V2;
@@ -1013,17 +1016,17 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
 
         bool tls_auth_enabled() const
         {
-            return tls_key.defined() && tls_auth_context;
+            return tls_auth_key.defined() && tls_auth_context;
         }
 
         bool tls_crypt_enabled() const
         {
-            return tls_key.defined() && (tls_crypt_ & TLSCrypt::V1);
+            return tls_crypt_key.defined() && (tls_crypt_ & TLSCrypt::V1);
         }
 
         bool tls_crypt_v2_enabled() const
         {
-            return (tls_key.defined() || tls_crypt_v2_serverkey_id) && (tls_crypt_ & TLSCrypt::V2);
+            return (tls_crypt_key.defined() || tls_crypt_v2_serverkey_id) && (tls_crypt_ & TLSCrypt::V2);
         }
 
         bool dynamic_tls_crypt_enabled() const
@@ -3396,13 +3399,13 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
 
                 TLSCryptV2ServerKey tls_crypt_v2_key;
                 tls_crypt_v2_key.parse(serverkey);
-                tls_crypt_v2_key.extract_key(proto.config->tls_key);
+                tls_crypt_v2_key.extract_key(proto.config->tls_crypt_key);
 
                 // the server key is composed by one key set only, therefore direction and
                 // mode should not be specified when slicing
                 proto.tls_crypt_server->init(proto.config->ssl_factory->libctx(),
-                                             proto.config->tls_key.slice(OpenVPNStaticKey::HMAC),
-                                             proto.config->tls_key.slice(OpenVPNStaticKey::CIPHER));
+                                             proto.config->tls_crypt_key.slice(OpenVPNStaticKey::HMAC),
+                                             proto.config->tls_crypt_key.slice(OpenVPNStaticKey::CIPHER));
 
                 k_id = htonl(k_id);
                 plaintext.write(&k_id, sizeof(k_id));
@@ -3700,12 +3703,12 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
                 const unsigned int key_dir = c.key_direction
                                                  ? OpenVPNStaticKey::INVERSE
                                                  : OpenVPNStaticKey::NORMAL;
-                ta_hmac_recv->init(c.tls_key.slice(OpenVPNStaticKey::HMAC | OpenVPNStaticKey::DECRYPT | key_dir));
+                ta_hmac_recv->init(c.tls_auth_key.slice(OpenVPNStaticKey::HMAC | OpenVPNStaticKey::DECRYPT | key_dir));
             }
             else
             {
                 // key-direction bidirectional mode
-                ta_hmac_recv->init(c.tls_key.slice(OpenVPNStaticKey::HMAC));
+                ta_hmac_recv->init(c.tls_auth_key.slice(OpenVPNStaticKey::HMAC));
             }
         }
 
@@ -3756,8 +3759,8 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
             // static direction assignment - not user configurable
             const unsigned int key_dir = server ? OpenVPNStaticKey::NORMAL : OpenVPNStaticKey::INVERSE;
             tls_crypt_recv->init(c.ssl_factory->libctx(),
-                                 c.tls_key.slice(OpenVPNStaticKey::HMAC | OpenVPNStaticKey::DECRYPT | key_dir),
-                                 c.tls_key.slice(OpenVPNStaticKey::CIPHER | OpenVPNStaticKey::DECRYPT | key_dir));
+                                 c.tls_crypt_key.slice(OpenVPNStaticKey::HMAC | OpenVPNStaticKey::DECRYPT | key_dir),
+                                 c.tls_crypt_key.slice(OpenVPNStaticKey::CIPHER | OpenVPNStaticKey::DECRYPT | key_dir));
 
             // needed to create the decrypt buffer during validation
             frame = c.frame;
@@ -3910,8 +3913,10 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
         OpenVPNStaticKey dyn_key;
         key_ctx->export_key_material(dyn_key, "EXPORTER-OpenVPN-dynamic-tls-crypt");
 
-        if (c.tls_auth_enabled() || c.tls_crypt_enabled() || c.tls_crypt_v2_enabled())
-            dyn_key.XOR(c.tls_key);
+        if (c.tls_auth_enabled())
+            dyn_key.XOR(c.tls_auth_key);
+        else if (c.tls_crypt_enabled() || c.tls_crypt_v2_enabled())
+            dyn_key.XOR(c.tls_crypt_key);
 
         tls_wrap_mode = TLS_CRYPT;
 
@@ -3938,8 +3943,8 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
             // the server key is composed by one key set only, therefore direction and
             // mode should not be specified when slicing
             tls_crypt_server->init(c.ssl_factory->libctx(),
-                                   c.tls_key.slice(OpenVPNStaticKey::HMAC),
-                                   c.tls_key.slice(OpenVPNStaticKey::CIPHER));
+                                   c.tls_crypt_key.slice(OpenVPNStaticKey::HMAC),
+                                   c.tls_crypt_key.slice(OpenVPNStaticKey::CIPHER));
         }
 
         tls_crypt_metadata = c.tls_crypt_metadata_factory->new_obj();
@@ -3977,7 +3982,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
         switch (tls_wrap_mode)
         {
         case TLS_CRYPT:
-            reset_tls_crypt(c, c.tls_key);
+            reset_tls_crypt(c, c.tls_crypt_key);
             // init tls_crypt packet ID
             ta_pid_send.init();
             ta_pid_recv.init("SSL-CC", 0, stats);
@@ -3989,7 +3994,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
                 // from client
                 reset_tls_crypt_server(c);
             else
-                reset_tls_crypt(c, c.tls_key);
+                reset_tls_crypt(c, c.tls_crypt_key);
             /** tls-auth/tls-crypt packet id. We start with a different id here
              * to indicate EARLY_NEG_START/CONTROL_WKC_V1 support */
             // init tls_crypt packet ID
@@ -4006,14 +4011,14 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
             {
                 // key-direction is 0 or 1
                 key_dir = c.key_direction ? OpenVPNStaticKey::INVERSE : OpenVPNStaticKey::NORMAL;
-                ta_hmac_send->init(c.tls_key.slice(OpenVPNStaticKey::HMAC | OpenVPNStaticKey::ENCRYPT | key_dir));
-                ta_hmac_recv->init(c.tls_key.slice(OpenVPNStaticKey::HMAC | OpenVPNStaticKey::DECRYPT | key_dir));
+                ta_hmac_send->init(c.tls_auth_key.slice(OpenVPNStaticKey::HMAC | OpenVPNStaticKey::ENCRYPT | key_dir));
+                ta_hmac_recv->init(c.tls_auth_key.slice(OpenVPNStaticKey::HMAC | OpenVPNStaticKey::DECRYPT | key_dir));
             }
             else
             {
                 // key-direction bidirectional mode
-                ta_hmac_send->init(c.tls_key.slice(OpenVPNStaticKey::HMAC));
-                ta_hmac_recv->init(c.tls_key.slice(OpenVPNStaticKey::HMAC));
+                ta_hmac_send->init(c.tls_auth_key.slice(OpenVPNStaticKey::HMAC));
+                ta_hmac_recv->init(c.tls_auth_key.slice(OpenVPNStaticKey::HMAC));
             }
 
             /**

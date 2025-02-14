@@ -69,16 +69,16 @@ class PsidCookieImpl : public PsidCookie
         {
             // key-direction is 0 or 1
             const unsigned int key_dir = pcfg_.key_direction ? OpenVPNStaticKey::INVERSE : OpenVPNStaticKey::NORMAL;
-            ta_hmac_send_->init(pcfg_.tls_key.slice(OpenVPNStaticKey::HMAC
-                                                    | OpenVPNStaticKey::ENCRYPT | key_dir));
-            ta_hmac_recv_->init(pcfg_.tls_key.slice(OpenVPNStaticKey::HMAC
-                                                    | OpenVPNStaticKey::DECRYPT | key_dir));
+            ta_hmac_send_->init(pcfg_.tls_auth_key.slice(OpenVPNStaticKey::HMAC
+                                                         | OpenVPNStaticKey::ENCRYPT | key_dir));
+            ta_hmac_recv_->init(pcfg_.tls_auth_key.slice(OpenVPNStaticKey::HMAC
+                                                         | OpenVPNStaticKey::DECRYPT | key_dir));
         }
         else
         {
             // key-direction bidirectional mode
-            ta_hmac_send_->init(pcfg_.tls_key.slice(OpenVPNStaticKey::HMAC));
-            ta_hmac_recv_->init(pcfg_.tls_key.slice(OpenVPNStaticKey::HMAC));
+            ta_hmac_send_->init(pcfg_.tls_auth_key.slice(OpenVPNStaticKey::HMAC));
+            ta_hmac_recv_->init(pcfg_.tls_auth_key.slice(OpenVPNStaticKey::HMAC));
         }
 
         // initialize psid HMAC context with digest type and key
