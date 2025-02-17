@@ -1008,10 +1008,10 @@ class MbedTLSContext : public SSLFactoryAPI
                 if (c.ssl_debug_level)
                     mbedtls_ssl_conf_dbg(sslconf, dbg_callback, ctx);
 
-                    /* OpenVPN 2.x disables cbc_record_splitting by default, therefore
-                     * we have to do the same here to keep compatibility.
-                     * If not disabled, this setting will trigger bad behaviours on
-                     * TLS1.0 and possibly on other setups */
+                /* OpenVPN 2.x disables cbc_record_splitting by default, therefore
+                 * we have to do the same here to keep compatibility.
+                 * If not disabled, this setting will trigger bad behaviours on
+                 * TLS1.0 and possibly on other setups */
 #if defined(MBEDTLS_SSL_CBC_RECORD_SPLITTING)
                 mbedtls_ssl_conf_cbc_record_splitting(sslconf,
                                                       MBEDTLS_SSL_CBC_RECORD_SPLITTING_DISABLED);
@@ -1359,10 +1359,10 @@ class MbedTLSContext : public SSLFactoryAPI
         if (self->config->flags & SSLConst::LOG_VERIFY_STATUS)
             OVPN_LOG_INFO(status_string(cert, depth, flags));
 
-            // notify if connection is happening with an insecurely signed cert.
+        // notify if connection is happening with an insecurely signed cert.
 
-            // mbed TLS 3.0 does not allow the weaker signatures by default and also does not give a
-            // proper accessor to these fields anymore
+        // mbed TLS 3.0 does not allow the weaker signatures by default and also does not give a
+        // proper accessor to these fields anymore
 #if MBEDTLS_VERSION_NUMBER < 0x03000000
         if (cert->sig_md == MBEDTLS_MD_MD5)
         {
