@@ -1881,4 +1881,39 @@ inline const ConstBufferType<T> &const_buffer_ref(const BufferType<T> &src)
     return src;
 }
 
+//  ===============================================================================================
+//  Buffer related utilities - consider moving to a separate file
+//  ===============================================================================================
+
+/**
+    @brief Aligns buffer.data() to the required value and returns a pointer to the aligned object.
+    @tparam AlignT Type to align for
+    @param buf The buffer instance holding the possibly misaligned structure
+    @return AlignT* Pointer to now-aligned data in the buffer
+    @note This is only available on a buffer that owns the data.
+*/
+template <typename AlignT, typename T>
+inline AlignT *align_as(BufferAllocatedType<T> &buf) // TODO: Could be implemented noexcept
+{
+    /* The standard requires that alignof(T) is a power of 2, and that any allocation will be
+       aligned to at least alignof(std::max_align_t), so I assume offset zero in a buffer is
+       aligned and therefore there is no need to check for alignment of the buffer itself.
+
+       This means a suitable address exists in the first alignof(std::max_align_t) so we never have
+       to increase the offset at all. This is a simplification that might not hold in all cases,
+       but it is a reasonable assumption for now. Given that, we can just align the buffer by
+       masking out the lower bits of the current data address (computation of align_ptr below)
+       and then realign the buffer to that address if needed. This will preserve as much of the
+       headroom as possible.
+    */
+    auto data_ptr = reinterpret_cast<uintptr_t>(buf.c_data());         // Current data address in integral form
+    auto align_ptr = data_ptr & ~(alignof(AlignT) - 1);                // 'Previous' aligned address
+    auto raw_data_ptr = reinterpret_cast<uintptr_t>(buf.c_data_raw()); // Start of allocated buffer
+
+    if (align_ptr != data_ptr && align_ptr >= raw_data_ptr)
+        buf.realign(align_ptr - raw_data_ptr);
+
+    return reinterpret_cast<AlignT *>(buf.data()); // unsigned char is type accessible by all types
+}
+
 } // namespace openvpn
