@@ -104,13 +104,13 @@ struct TunClientFactory : public virtual RC<thread_unsafe_refcount>
 
     /**
      * Return whether this tun implementation will support data v3 features
-     * (AEAD tag at the end and 64 bit packet counters).
+     * (AEAD tag at the end and combined 16 bit epoch id + 48 bit packet counters).
      *
      * This is more a property of the data encryption layer than of the tun device
      * but since all of our DCO encryptions are setup with the tun setup, we also
      * make it the responsibility of the tun client to signal v3 data layer support.
      */
-    virtual bool supports_proto_v3() = 0;
+    virtual bool supports_epoch_data() = 0;
 
     // Called on TunClient close, after TunClient::stop has been called.
     // disconnected ->

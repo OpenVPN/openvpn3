@@ -297,7 +297,7 @@ class ServerProto
         {
         }
 
-        bool supports_proto_v3() override
+        bool supports_epoch_data() override
         {
             /* TODO: currently all server implementations do not implement this feature in their data channel */
             return false;

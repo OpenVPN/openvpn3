@@ -1388,9 +1388,9 @@ class Session : ProtoContextCallbackInterface,
             notify_callback->client_proto_renegotiated();
     }
 
-    bool supports_proto_v3() override
+    bool supports_epoch_data() override
     {
-        return tun_factory->supports_proto_v3();
+        return tun_factory->supports_epoch_data();
     }
 
     void housekeeping_callback(const openvpn_io::error_code &e)
