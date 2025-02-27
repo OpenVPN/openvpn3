@@ -302,7 +302,7 @@ class OvpnDcoWinClient : public Client,
 
     void queue_read_()
     {
-        buf_.reset(0, 2048, 0);
+        buf_.reset(0, 2048, BufAllocFlags::NO_FLAGS);
 
         get_handle()->async_read_some(
             buf_.mutable_buffer_clamp(),

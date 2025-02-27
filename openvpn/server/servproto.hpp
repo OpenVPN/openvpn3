@@ -406,7 +406,7 @@ class ServerProto
 
             if (proto_context.primary_defined())
             {
-                auto buf = BufferAllocatedRc::Create(64, 0);
+                auto buf = BufferAllocatedRc::Create(64, BufAllocFlags::NO_FLAGS);
                 buf_append_string(*buf, "RELAY");
                 buf->null_terminate();
                 proto_context.control_send(std::move(buf));

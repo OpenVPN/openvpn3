@@ -317,7 +317,7 @@ class PsidCookieImpl : public PsidCookie
         hmac_ctx_.update(cli_psid_buf.c_data(), SID_SIZE);
 
         // finalize the hmac and package it as the server's ProtoSessionID
-        BufferAllocated hmac_result(SSLLib::CryptoAPI::HMACContext::MAX_HMAC_SIZE, 0);
+        BufferAllocated hmac_result(SSLLib::CryptoAPI::HMACContext::MAX_HMAC_SIZE, BufAllocFlags::NO_FLAGS);
         ProtoSessionID srv_psid;
         hmac_ctx_.final(hmac_result.write_alloc(hmac_ctx_.size()));
         srv_psid.read(hmac_result);

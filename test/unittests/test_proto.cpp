@@ -374,7 +374,7 @@ class TestProto : public ProtoContextCallbackInterface
     {
         proto_context.start();
         const size_t msglen = std::strlen(msg) + 1;
-        BufferAllocated app_buf((unsigned char *)msg, msglen, 0);
+        BufferAllocated app_buf((unsigned char *)msg, msglen, BufAllocFlags::NO_FLAGS);
         copy_progress(app_buf);
         control_send(std::move(app_buf));
         proto_context.flush(true);
@@ -384,7 +384,7 @@ class TestProto : public ProtoContextCallbackInterface
     {
         proto_context.start();
         const size_t msglen = std::strlen(msg) + 1;
-        templ = BufferAllocatedRc::Create((unsigned char *)msg, msglen, 0);
+        templ = BufferAllocatedRc::Create((unsigned char *)msg, msglen, BufAllocFlags::NO_FLAGS);
         proto_context.flush(true);
     }
 
@@ -505,7 +505,7 @@ class TestProto : public ProtoContextCallbackInterface
         if (disable_xmit_)
             return;
         net_bytes_ += net_buf.size();
-        net_out.push_back(BufferAllocatedRc::Create(net_buf, 0));
+        net_out.push_back(BufferAllocatedRc::Create(net_buf, BufAllocFlags::NO_FLAGS));
     }
 
     void control_recv(BufferPtr &&app_bp) override
@@ -980,7 +980,7 @@ int test(const int thread_num,
     try
     {
         // frame
-        Frame::Ptr frame(new Frame(Frame::Context(128, 378, 128, 0, 16, 0)));
+        Frame::Ptr frame(new Frame(Frame::Context(128, 378, 128, 0, 16, BufAllocFlags::NO_FLAGS)));
 
         // RNG
         ClientRandomAPI::Ptr prng_cli(new ClientRandomAPI());
@@ -1469,7 +1469,7 @@ TEST(proto, client_proto_check_cc_msg)
 {
     asio::io_context io_context;
     ClientRandomAPI::Ptr rng_cli(new ClientRandomAPI());
-    Frame::Ptr frame(new Frame(Frame::Context(128, 378, 128, 0, 16, 0)));
+    Frame::Ptr frame(new Frame(Frame::Context(128, 378, 128, 0, 16, BufAllocFlags::NO_FLAGS)));
     MySessionStats::Ptr cli_stats(new MySessionStats);
     Time time;
 

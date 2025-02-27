@@ -1332,7 +1332,7 @@ static SSLLib::SSLAPI::Config::Ptr setup_certcheck_ssl_config(const std::string 
                                                               const std::optional<const std::string> &ca)
 {
     SSLLib::SSLAPI::Config::Ptr config = new SSLLib::SSLAPI::Config;
-    config->set_frame(new Frame(Frame::Context(128, 4096, 4096 - 128, 0, 16, 0)));
+    config->set_frame(new Frame(Frame::Context(128, 4096, 4096 - 128, 0, 16, BufAllocFlags::NO_FLAGS)));
     config->set_mode(Mode(Mode::CLIENT));
     config->load_cert(client_cert, extra_certs);
     unsigned int flags = SSLConst::LOG_VERIFY_STATUS;

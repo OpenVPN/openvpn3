@@ -54,6 +54,7 @@
 #include <openvpn/common/rc.hpp>
 #include <openvpn/buffer/bufclamp.hpp>
 #include <openvpn/common/make_rc.hpp>
+#include <openvpn/common/intrinsic_type.hpp>
 
 #ifdef OPENVPN_BUFFER_ABORT
 #define OPENVPN_BUFFER_THROW(exc) \
@@ -200,6 +201,12 @@ class BufferAllocatedType;
 
 template <typename T>
 class BufferType;
+
+// Allocation and security for the buffer
+struct BufferFlags : IntrinsicType<BufferFlags, unsigned int>
+{
+    using IntrinsicType<BufferFlags, unsigned int>::IntrinsicType;
+};
 
 //  ===============================================================================================
 //  class ConstBufferType
@@ -697,7 +704,7 @@ class ConstBufferType
      * @param min_capacity The minimum capacity of the buffer.
      * @param flags Flags to control the behavior of the reset operation.
      */
-    void reset(const size_t min_capacity, const unsigned int flags);
+    void reset(const size_t min_capacity, const BufferFlags flags);
 
     /**
      * @brief Reset the buffer with the specified headroom, minimum capacity, and flags.
@@ -705,7 +712,7 @@ class ConstBufferType
      * @param min_capacity The minimum capacity of the buffer.
      * @param flags Flags to control the behavior of the reset operation.
      */
-    void reset(const size_t headroom, const size_t min_capacity, const unsigned int flags);
+    void reset(const size_t headroom, const size_t min_capacity, const BufferFlags flags);
 
     /**
      * @brief Append data from another buffer to this buffer.
@@ -735,7 +742,7 @@ class ConstBufferType
      * @param min_capacity The minimum capacity required for the buffer.
      * @param flags Flags to control the behavior of the reset operation.
      */
-    virtual void reset_impl(const size_t min_capacity, const unsigned int flags);
+    virtual void reset_impl(const size_t min_capacity, const BufferFlags flags);
 
     /**
      * @brief Derived classes can implement buffer growing semantics by overloading this method.
@@ -862,17 +869,14 @@ class BufferType : public ConstBufferType<T>
 //  class BufferAllocatedType
 //  ===============================================================================================
 
-// Allocation and security for the buffer
-struct BufAllocFlags
-{
-    enum
-    {
-        CONSTRUCT_ZERO = (1 << 0), ///< if enabled, constructors/init will zero allocated space
-        DESTRUCT_ZERO = (1 << 1),  ///< if enabled, destructor will zero data before deletion
-        GROW = (1 << 2),           ///< if enabled, buffer will grow (otherwise buffer_full exception will be thrown)
-        ARRAY = (1 << 3),          ///< if enabled, use as array
-    };
-};
+// Flag constants
+namespace BufAllocFlags {
+constexpr BufferFlags NO_FLAGS(0u);            ///< no flags set
+constexpr BufferFlags CONSTRUCT_ZERO(1u << 0); ///< if enabled, constructors/init will zero allocated space
+constexpr BufferFlags DESTRUCT_ZERO(1u << 1);  ///< if enabled, destructor will zero data before deletion
+constexpr BufferFlags GROW(1u << 2);           ///< if enabled, buffer will grow (otherwise buffer_full exception will be thrown)
+constexpr BufferFlags ARRAY(1u << 3);          ///< if enabled, use as array
+} // namespace BufAllocFlags
 
 template <typename T>
 class BufferAllocatedType : public BufferType<T>
@@ -904,7 +908,8 @@ class BufferAllocatedType : public BufferType<T>
      * @param capacity The initial capacity of the buffer.
      * @param flags The flags to set for the buffer.
      */
-    BufferAllocatedType(const size_t capacity, const unsigned int flags);
+    explicit BufferAllocatedType(const size_t capacity,
+                                 const BufferFlags flags = BufAllocFlags::NO_FLAGS);
 
     /**
      * @brief Constructs a BufferAllocatedType with the specified data, size, and flags.
@@ -912,7 +917,7 @@ class BufferAllocatedType : public BufferType<T>
      * @param size The size of the data to be copied.
      * @param flags The flags to set for the buffer.
      */
-    BufferAllocatedType(const T *data, const size_t size, const unsigned int flags);
+    explicit BufferAllocatedType(const T *data, const size_t size, const BufferFlags flags);
 
     /**
      * @brief Copy constructor.
@@ -927,7 +932,8 @@ class BufferAllocatedType : public BufferType<T>
      * @param flags The flags to set for the new BufferAllocatedType object.
      */
     template <typename T_>
-    BufferAllocatedType(const BufferType<T_> &other, const unsigned int flags);
+    BufferAllocatedType(const BufferType<T_> &other,
+                        const BufferFlags flags = BufAllocFlags::NO_FLAGS);
 
     /**
      * @brief Assignment operator.
@@ -940,7 +946,7 @@ class BufferAllocatedType : public BufferType<T>
      * @param capacity The initial capacity of the buffer.
      * @param flags The flags to set for the buffer.
      */
-    void init(const size_t capacity, const unsigned int flags);
+    void init(const size_t capacity, const BufferFlags flags = BufAllocFlags::NO_FLAGS);
 
     /**
      * @brief Initializes the buffer with the specified data, size, and flags.
@@ -948,7 +954,7 @@ class BufferAllocatedType : public BufferType<T>
      * @param size The size of the data to be copied.
      * @param flags The flags to set for the buffer.
      */
-    void init(const T *data, const size_t size, const unsigned int flags);
+    void init(const T *data, const size_t size, const BufferFlags flags);
 
     /**
      * @brief Reallocates the buffer to the specified new capacity.
@@ -970,7 +976,7 @@ class BufferAllocatedType : public BufferType<T>
      * @param min_capacity The minimum capacity for the buffer.
      * @param flags The flags to set for the buffer.
      */
-    void reset(const size_t min_capacity, const unsigned int flags);
+    void reset(const size_t min_capacity, const BufferFlags flags = BufAllocFlags::NO_FLAGS);
 
     /**
      * @brief Resets the buffer with the specified headroom, minimum capacity, and flags.
@@ -978,7 +984,9 @@ class BufferAllocatedType : public BufferType<T>
      * @param min_capacity The minimum capacity for the buffer.
      * @param flags The flags to set for the buffer.
      */
-    void reset(const size_t headroom, const size_t min_capacity, const unsigned int flags);
+    void reset(const size_t headroom,
+               const size_t min_capacity,
+               const BufferFlags flags = BufAllocFlags::NO_FLAGS);
 
     /**
      * @brief Moves the contents of another BufferAllocatedType object into this object.
@@ -1020,16 +1028,24 @@ class BufferAllocatedType : public BufferType<T>
     void clear();
 
     /**
+        @brief Test if the buffer has the specified flags.
+        @param flags Flags required for true result
+        @return true if all specified flags are set.
+    */
+    bool test_flags(const BufferFlags flags) const noexcept;
+
+    /**
      * @brief Sets the specified flags for the buffer.
      * @param flags The flags to set.
      */
-    void or_flags(const unsigned int flags);
+    void add_flags(const BufferFlags flags);
 
     /**
      * @brief Clears the specified flags for the buffer.
      * @param flags The flags to clear.
+     * @note Clears the corresponding flags by inverting and performing an &= operation
      */
-    void and_flags(const unsigned int flags);
+    void clear_flags(const BufferFlags flags);
 
     /**
      * @brief Destructor.
@@ -1046,14 +1062,14 @@ class BufferAllocatedType : public BufferType<T>
     BufferAllocatedType(const size_t offset,
                         const size_t size,
                         const size_t capacity,
-                        const unsigned int flags);
+                        const BufferFlags flags);
 
     /**
      * @brief Resets the buffer implementation with the specified minimum capacity and flags.
      * @param min_capacity The minimum capacity for the buffer.
      * @param flags The flags to set for the buffer.
      */
-    void reset_impl(const size_t min_capacity, const unsigned int flags) override;
+    void reset_impl(const size_t min_capacity, const BufferFlags flags) override;
 
     /**
      * @brief Resizes the buffer to the specified new capacity.
@@ -1074,7 +1090,7 @@ class BufferAllocatedType : public BufferType<T>
     void free_data();
 
   private:
-    unsigned int flags_;
+    BufferFlags flags_;
 };
 
 //  ===============================================================================================
@@ -1589,14 +1605,16 @@ T *ConstBufferType<T>::prepend_alloc(const size_t request_size)
 }
 
 template <typename T>
-void ConstBufferType<T>::reset(const size_t min_capacity, const unsigned int flags)
+void ConstBufferType<T>::reset(const size_t min_capacity, const BufferFlags flags)
 {
     if (min_capacity > capacity_)
         reset_impl(min_capacity, flags);
 }
 
 template <typename T>
-void ConstBufferType<T>::reset(const size_t headroom, const size_t min_capacity, const unsigned int flags)
+void ConstBufferType<T>::reset(const size_t headroom,
+                               const size_t min_capacity,
+                               const BufferFlags flags)
 {
     reset(min_capacity, flags);
     init_headroom(headroom);
@@ -1610,7 +1628,7 @@ void ConstBufferType<T>::append(const B &other)
 }
 
 template <typename T>
-void ConstBufferType<T>::reset_impl(const size_t min_capacity, const unsigned int flags)
+void ConstBufferType<T>::reset_impl(const size_t min_capacity, const BufferFlags flags)
 {
     OPENVPN_BUFFER_THROW(buffer_no_reset_impl);
 }
@@ -1646,7 +1664,10 @@ ConstBufferType<T>::ConstBufferType(const U *data, const size_t offset, const si
 //  ===============================================================================================
 
 template <typename T>
-BufferAllocatedType<T>::BufferAllocatedType(const size_t offset, const size_t size, const size_t capacity, const unsigned int flags)
+BufferAllocatedType<T>::BufferAllocatedType(const size_t offset,
+                                            const size_t size,
+                                            const size_t capacity,
+                                            const BufferFlags flags)
     : BufferType<T>(capacity ? new T[capacity] : nullptr, offset, size, capacity), flags_(flags)
 {
     if (flags & BufAllocFlags::CONSTRUCT_ZERO)
@@ -1655,18 +1676,24 @@ BufferAllocatedType<T>::BufferAllocatedType(const size_t offset, const size_t si
 
 template <typename T>
 BufferAllocatedType<T>::BufferAllocatedType()
-    : BufferAllocatedType(0, 0, 0, 0)
+    : BufferAllocatedType(0, 0, 0, BufAllocFlags::NO_FLAGS)
 {
     static_assert(std::is_nothrow_move_constructible_v<BufferAllocatedType>,
                   "class BufferAllocatedType not noexcept move constructable");
 }
 
 template <typename T>
-BufferAllocatedType<T>::BufferAllocatedType(const size_t capacity, const unsigned int flags)
-    : BufferAllocatedType(0, flags & BufAllocFlags::ARRAY ? capacity : 0, capacity, flags){};
+BufferAllocatedType<T>::BufferAllocatedType(const size_t capacity,
+                                            const BufferFlags flags)
+    : BufferAllocatedType(0,
+                          (flags & BufAllocFlags::ARRAY ? capacity : 0),
+                          capacity,
+                          flags){};
 
 template <typename T>
-BufferAllocatedType<T>::BufferAllocatedType(const T *data, const size_t size, const unsigned int flags)
+BufferAllocatedType<T>::BufferAllocatedType(const T *data,
+                                            const size_t size,
+                                            const BufferFlags flags)
     : BufferAllocatedType(0, size, size, flags)
 {
     if (size && data)
@@ -1683,7 +1710,8 @@ BufferAllocatedType<T>::BufferAllocatedType(const BufferAllocatedType &other)
 
 template <typename T>
 template <typename T_>
-BufferAllocatedType<T>::BufferAllocatedType(const BufferType<T_> &other, const unsigned int flags)
+BufferAllocatedType<T>::BufferAllocatedType(const BufferType<T_> &other,
+                                            const BufferFlags flags)
     : BufferAllocatedType(other.offset(), other.size(), other.capacity(), flags)
 {
     static_assert(sizeof(T) == sizeof(T_), "size inconsistency");
@@ -1696,7 +1724,10 @@ void BufferAllocatedType<T>::operator=(const BufferAllocatedType &other)
 {
     if (this != &other)
     {
-        auto tempBuffer = BufferAllocatedType(other.offset(), other.size(), other.capacity(), other.flags_);
+        auto tempBuffer = BufferAllocatedType(other.offset(),
+                                              other.size(),
+                                              other.capacity(),
+                                              other.flags_);
         if (other.size())
             std::memcpy(tempBuffer.data(), other.c_data(), tempBuffer.size() * sizeof(T));
         swap(tempBuffer);
@@ -1704,14 +1735,14 @@ void BufferAllocatedType<T>::operator=(const BufferAllocatedType &other)
 }
 
 template <typename T>
-void BufferAllocatedType<T>::init(const size_t capacity, const unsigned int flags)
+void BufferAllocatedType<T>::init(const size_t capacity, const BufferFlags flags)
 {
     auto tempBuffer = BufferAllocatedType(capacity, flags);
     swap(tempBuffer);
 }
 
 template <typename T>
-void BufferAllocatedType<T>::init(const T *data, const size_t size, const unsigned int flags)
+void BufferAllocatedType<T>::init(const T *data, const size_t size, const BufferFlags flags)
 {
     auto tempBuffer = BufferAllocatedType(data, size, flags);
     swap(tempBuffer);
@@ -1738,14 +1769,16 @@ BufferAllocatedType<T> &BufferAllocatedType<T>::realign(const size_t headroom)
 }
 
 template <typename T>
-void BufferAllocatedType<T>::reset(const size_t min_capacity, const unsigned int flags)
+void BufferAllocatedType<T>::reset(const size_t min_capacity, const BufferFlags flags)
 {
     if (min_capacity > capacity())
         init(min_capacity, flags);
 }
 
 template <typename T>
-void BufferAllocatedType<T>::reset(const size_t headroom, const size_t min_capacity, const unsigned int flags)
+void BufferAllocatedType<T>::reset(const size_t headroom,
+                                   const size_t min_capacity,
+                                   const BufferFlags flags)
 {
     reset(min_capacity, flags);
     init_headroom(headroom);
@@ -1789,20 +1822,26 @@ BufferAllocatedType<T> &BufferAllocatedType<T>::operator=(BufferAllocatedType &&
 template <typename T>
 void BufferAllocatedType<T>::clear()
 {
-    auto tempBuffer = BufferAllocatedType(0, 0, 0, 0);
+    auto tempBuffer = BufferAllocatedType(0, 0, 0, BufAllocFlags::NO_FLAGS);
     swap(tempBuffer);
 }
 
 template <typename T>
-void BufferAllocatedType<T>::or_flags(const unsigned int flags)
+bool BufferAllocatedType<T>::test_flags(const BufferFlags flags) const noexcept
+{
+    return flags_ & flags;
+}
+
+template <typename T>
+void BufferAllocatedType<T>::add_flags(const BufferFlags flags)
 {
     flags_ |= flags;
 }
 
 template <typename T>
-void BufferAllocatedType<T>::and_flags(const unsigned int flags)
+void BufferAllocatedType<T>::clear_flags(const BufferFlags flags)
 {
-    flags_ &= flags;
+    flags_ &= ~flags;
 }
 
 template <typename T>
@@ -1813,7 +1852,7 @@ BufferAllocatedType<T>::~BufferAllocatedType()
 }
 
 template <typename T>
-void BufferAllocatedType<T>::reset_impl(const size_t min_capacity, const unsigned int flags)
+void BufferAllocatedType<T>::reset_impl(const size_t min_capacity, const BufferFlags flags)
 {
     init(min_capacity, flags);
 }
@@ -1864,6 +1903,13 @@ using BufferPtr = RCPtr<BufferAllocatedRc>;
 
 using BufferAllocatedTS = RcEnable<BufferAllocated, RC<thread_safe_refcount>>;
 using BufferPtrTS = RCPtr<BufferAllocatedTS>;
+
+// ===============================================================================================
+// Deduction guide - needed to deduce converting ctor
+// ===============================================================================================
+
+template <typename T_>
+BufferAllocatedType(const BufferType<T_> &, BufferFlags) -> BufferAllocatedType<unsigned char>;
 
 //  ===============================================================================================
 //  cast BufferType<T> to ConstBufferType<T>
