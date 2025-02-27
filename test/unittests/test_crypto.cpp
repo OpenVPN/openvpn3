@@ -237,7 +237,7 @@ TEST(crypto, testEpochIterateKey)
 
     const unsigned char op32[]{7, 0, 0, 23};
 
-    openvpn::BufferAllocated work{2048, 0};
+    openvpn::BufferAllocated work{2048};
 
     /* reserve some headroom */
     work.realign(128);

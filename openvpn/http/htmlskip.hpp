@@ -40,7 +40,7 @@ class HTMLSkip
 
     HTMLSkip()
         : state(INITIAL),
-          residual(64, BufAllocFlags::NO_FLAGS),
+          residual(64),
           bytes(0)
     {
     }
@@ -227,7 +227,7 @@ class HTMLSkip
         }
         else
         {
-            BufferAllocated newbuf(residual.size() + buf.size(), BufAllocFlags::NO_FLAGS);
+            BufferAllocated newbuf(residual.size() + buf.size());
             newbuf.write(residual.c_data(), residual.size());
             newbuf.write(buf.c_data(), buf.size());
             buf.move(newbuf);

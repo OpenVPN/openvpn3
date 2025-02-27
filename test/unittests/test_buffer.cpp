@@ -40,7 +40,7 @@ TEST(buffer, buffer_alignas)
     constexpr std::size_t test_lim = std::numeric_limits<std::size_t>::digits;
     for (auto i = std::size_t(0); i < test_lim; ++i)
     {
-        BufferAllocated buf(test_lim * 2, 0);
+        BufferAllocated buf(test_lim * 2);
         realign_test<align_test>(buf, i);
     }
 }
@@ -580,7 +580,7 @@ TEST(buffer, append_after_move_safe)
     buf_append_string(buf, "hello world");
 
     BufferAllocated buf2(std::move(buf));
-    auto buf3 = BufferAllocated(32, BufAllocFlags::NO_FLAGS);
+    auto buf3 = BufferAllocated(32);
     buf_append_string(buf3, "hello again");
     buf = buf3;
 

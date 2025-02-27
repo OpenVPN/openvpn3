@@ -104,7 +104,7 @@ inline BufferPtr read_binary_linear(const std::string &filename,
     std::streamsize total_size = 0;
     while (true)
     {
-        auto b = BufferAllocatedRc::Create(block_size, BufAllocFlags::NO_FLAGS);
+        auto b = BufferAllocatedRc::Create(block_size);
         ifs.read((char *)b->data(), b->remaining());
         const std::streamsize size = ifs.gcount();
         if (size)

@@ -151,7 +151,7 @@ inline BufferPtr read_binary_unix(const std::string &fn,
         throw file_unix_error(fn + " : file too large [" + std::to_string(length) + '/' + std::to_string(max_size) + ']');
 
     // allocate buffer
-    auto bp = BufferAllocatedRc::Create(size_t(length), BufAllocFlags::NO_FLAGS);
+    auto bp = BufferAllocatedRc::Create(size_t(length));
 
     // read file content into buffer
     while (buf_read(fd(), *bp, fn))

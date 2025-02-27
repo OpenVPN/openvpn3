@@ -208,7 +208,7 @@ class Client : public TransportClient, AsyncResolvableTCP
     {
         if (impl)
         {
-            BufferAllocated buf(cbuf, BufAllocFlags::NO_FLAGS);
+            BufferAllocated buf(cbuf);
             return impl->send(buf);
         }
         else

@@ -1593,7 +1593,7 @@ class MbedTLSContext : public SSLFactoryAPI
                 }
 
                 /* concatenate digest prefix with hash */
-                BufferAllocated from_buf(digest_prefix_len + hashlen, BufAllocFlags::NO_FLAGS);
+                BufferAllocated from_buf(digest_prefix_len + hashlen);
                 if (digest_prefix_len)
                     from_buf.write(digest_prefix, digest_prefix_len);
                 from_buf.write(hash, hashlen);

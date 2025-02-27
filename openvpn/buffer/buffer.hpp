@@ -741,6 +741,7 @@ class ConstBufferType
      * @brief Called when the reset method needs to expand the buffer size.
      * @param min_capacity The minimum capacity required for the buffer.
      * @param flags Flags to control the behavior of the reset operation.
+     * @todo Look into this odd one-off virtual dispatch + leakage of the flags parameter.
      */
     virtual void reset_impl(const size_t min_capacity, const BufferFlags flags);
 

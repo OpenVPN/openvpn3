@@ -1596,7 +1596,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
     void write_control_string(const S &str)
     {
         const size_t len = str.length();
-        auto bp = BufferAllocatedRc::Create(len + 1, BufAllocFlags::NO_FLAGS);
+        auto bp = BufferAllocatedRc::Create(len + 1);
         write_control_string(str, *bp);
         control_send(std::move(bp));
     }

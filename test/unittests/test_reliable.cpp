@@ -45,7 +45,7 @@ TEST(reliable, ack)
     ack.push_back(0x99);
     ack.push_back(0x100);
 
-    BufferAllocated buf(256, BufAllocFlags::NO_FLAGS);
+    BufferAllocated buf(256);
     buf.init_headroom(128);
     ack.prepend(buf, false);
     actual << render_hex_generic(buf) << std::endl;
@@ -55,7 +55,7 @@ TEST(reliable, ack)
 
     std::ostringstream actual2;
 
-    BufferAllocated buf2(256, BufAllocFlags::NO_FLAGS);
+    BufferAllocated buf2(256);
     buf2.init_headroom(128);
     ack.prepend(buf2, true);
     actual2 << render_hex_generic(buf2) << std::endl;
@@ -74,7 +74,7 @@ TEST(reliable, ack_dup)
 
     std::string expected{"0400000004000000030000000200000001\n"};
 
-    BufferAllocated buf(256, BufAllocFlags::NO_FLAGS);
+    BufferAllocated buf(256);
     buf.init_headroom(128);
     ack.prepend(buf, false);
     actual << render_hex_generic(buf) << std::endl;
@@ -87,7 +87,7 @@ TEST(reliable, ack_dup)
     actual.str("");
     std::string expected2{"0400000002000000040000000600000003\n"};
 
-    BufferAllocated buf2(256, BufAllocFlags::NO_FLAGS);
+    BufferAllocated buf2(256);
     buf2.init_headroom(128);
 
     ack.prepend(buf2, false);
@@ -112,7 +112,7 @@ TEST(reliable, simple_packet)
     std::ostringstream actual;
     ReliableAck ack{};
 
-    BufferAllocated buf(256, BufAllocFlags::NO_FLAGS);
+    BufferAllocated buf(256);
     buf.init_headroom(128);
 
     ack.push_back(0);
