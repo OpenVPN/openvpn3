@@ -30,7 +30,7 @@ class SessionStats : public RC<thread_safe_refcount>
     typedef RCPtr<SessionStats> Ptr;
     using inc_callback_t = std::function<void(const count_t value)>;
 
-    enum Stats
+    enum Stats : unsigned int
     {
         // operating stats
         BYTES_IN = 0,    // network bytes in
@@ -101,6 +101,7 @@ class SessionStats : public RC<thread_safe_refcount>
             "TUN_PACKETS_OUT",
         };
 
+        static_assert(N_STATS == array_size(names), "stats names array inconsistency");
         if (type < N_STATS)
             return names[type];
         else
