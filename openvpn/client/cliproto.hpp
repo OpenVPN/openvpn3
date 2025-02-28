@@ -1193,6 +1193,7 @@ class Session : ProtoContextCallbackInterface,
         {
             ev->vpn_mtu = "(default)";
         }
+        ev->vpn_interface_index = tun->vpn_interface_index();
 
         try
         {

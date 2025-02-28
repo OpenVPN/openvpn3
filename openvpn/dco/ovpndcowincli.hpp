@@ -108,6 +108,8 @@ class OvpnDcoWinClient : public Client,
                 OPENVPN_LOG("TunPersist: saving tun context:" << std::endl
                                                               << tun_persist->options());
 
+            state->vpn_interface_index = tun_setup_->vpn_interface_index();
+
             handle_.release();
 
             // enable tun_setup destructor
@@ -151,6 +153,17 @@ class OvpnDcoWinClient : public Client,
     std::string tun_name() const override
     {
         return "ovpn-dco-win";
+    }
+
+    std::uint32_t vpn_interface_index() const override
+    {
+        if (tun_setup_ && tun_setup_->vpn_interface_index() != INVALID_ADAPTER_INDEX)
+            return tun_setup_->vpn_interface_index();
+
+        if (tun_persist && tun_persist->state().state)
+            return tun_persist->state().state->vpn_interface_index;
+
+        return INVALID_ADAPTER_INDEX;
     }
 
     void set_service_fail_handler()

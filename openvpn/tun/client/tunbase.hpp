@@ -26,6 +26,8 @@
 
 namespace openvpn {
 
+constexpr std::uint32_t INVALID_ADAPTER_INDEX = static_cast<std::uint32_t>(-1);
+
 // Base class for objects that implement a client tun interface.
 struct TunClient : public virtual RC<thread_unsafe_refcount>
 {
@@ -66,6 +68,11 @@ struct TunClient : public virtual RC<thread_unsafe_refcount>
      * @param cli transport client, passed to tun_start() call
      */
     virtual void apply_push_update(const OptionList &opt, TransportClient &cli) {};
+
+    virtual std::uint32_t vpn_interface_index() const
+    {
+        return INVALID_ADAPTER_INDEX;
+    }
 };
 
 // Base class for parent of tun interface object, used to

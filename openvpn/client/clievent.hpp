@@ -486,6 +486,7 @@ struct Connected : public Base
     std::string vpn_mtu;
     std::string client_ip;
     std::string tun_name;
+    std::uint32_t vpn_interface_index = static_cast<uint32_t>(-1);
 
     std::string render() const override
     {

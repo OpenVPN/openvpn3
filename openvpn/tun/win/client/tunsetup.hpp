@@ -241,7 +241,7 @@ class Setup : public SetupBase
 
         delete_route_timer.cancel();
 
-        vpn_interface_index_ = DWORD(-1);
+        vpn_interface_index_ = INVALID_ADAPTER_INDEX;
     }
 
     virtual ~Setup()
@@ -250,7 +250,7 @@ class Setup : public SetupBase
         destroy(os);
     }
 
-    DWORD vpn_interface_index() const
+    DWORD vpn_interface_index() const override
     {
         return vpn_interface_index_;
     }
@@ -926,7 +926,7 @@ class Setup : public SetupBase
     std::unique_ptr<std::thread> l2_thread;
     std::unique_ptr<L2State> l2_state;
 
-    DWORD vpn_interface_index_ = DWORD(-1);
+    DWORD vpn_interface_index_ = INVALID_ADAPTER_INDEX;
     ActionList::Ptr remove_cmds;
 
     AsioTimer delete_route_timer;
