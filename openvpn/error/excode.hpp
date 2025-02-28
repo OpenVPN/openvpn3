@@ -74,15 +74,15 @@ class ExceptionCode : public std::exception
     virtual ~ExceptionCode() noexcept = default;
 
   private:
-    static unsigned int mkcode(const Error::Type code, const bool fatal)
+    static size_t mkcode(const Error::Type code, const bool fatal)
     {
-        unsigned int ret = code;
+        size_t ret = code;
         if (fatal)
             ret |= FATAL_FLAG;
         return ret;
     }
 
-    unsigned int code_;
+    size_t code_;
 };
 
 class ErrorCode : public ExceptionCode
