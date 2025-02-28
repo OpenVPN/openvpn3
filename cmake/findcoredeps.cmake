@@ -170,7 +170,7 @@ function(add_corelibrary_dependencies target)
         endif()
         if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
             # display all warnings
-            target_compile_options(${target} PRIVATE -ferror-limit=0 -Wno-enum-enum-conversion)
+            target_compile_options(${target} PRIVATE -ferror-limit=0)
         endif()
     endif()
 endfunction()
