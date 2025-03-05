@@ -1197,12 +1197,17 @@ int test(const int thread_num,
     return 0;
 }
 
-int test_retry(const int thread_num, const int n_retries, bool use_tls_ekm)
+int test_retry(const int thread_num,
+               const int n_retries,
+               bool use_tls_ekm,
+               bool tls_version_mismatch = false,
+               const std::string &tls_crypt_v2_key_fn = "",
+               bool use_tls_auth_with_tls_crypt_v2 = false)
 {
     int ret = 1;
     for (int i = 0; i < n_retries; ++i)
     {
-        ret = test(thread_num, use_tls_ekm, false);
+        ret = test(thread_num, use_tls_ekm, tls_version_mismatch, tls_crypt_v2_key_fn, use_tls_auth_with_tls_crypt_v2);
         if (!ret)
             return 0;
         std::cout << "Retry " << (i + 1) << '/' << n_retries << std::endl;
@@ -1275,7 +1280,7 @@ TEST_F(ProtoUnitTest, base_single_thread_tls_version_mismatch)
 #ifdef USE_TLS_CRYPT_V2
 TEST_F(ProtoUnitTest, base_single_thread_tls_crypt_v2_with_embedded_serverkey)
 {
-    int ret = test(1, false, false, "tls-crypt-v2-client-with-serverkey.key");
+    int ret = test_retry(1, N_RETRIES, false, false, "tls-crypt-v2-client-with-serverkey.key");
     EXPECT_EQ(ret, 0);
 }
 
@@ -1287,7 +1292,7 @@ TEST_F(ProtoUnitTest, base_single_thread_tls_crypt_v2_with_missing_embedded_serv
 
 TEST_F(ProtoUnitTest, base_single_thread_tls_crypt_v2_with_tls_auth_also_active)
 {
-    int ret = test(1, false, false, "tls-crypt-v2-client-with-serverkey.key", true);
+    int ret = test_retry(1, N_RETRIES, false, false, "tls-crypt-v2-client-with-serverkey.key", true);
     EXPECT_EQ(ret, 0);
 }
 #endif
