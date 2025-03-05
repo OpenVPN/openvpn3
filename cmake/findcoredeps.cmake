@@ -152,6 +152,7 @@ function(add_corelibrary_dependencies target)
             target_compile_options(${target} PRIVATE /WX)
         else ()
             target_compile_options(${target} PRIVATE -Werror)
+            target_link_options(${target} PRIVATE -Werror)
         endif ()
     endif ()
 
