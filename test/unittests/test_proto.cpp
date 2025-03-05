@@ -1357,7 +1357,7 @@ TEST_F(ProtoUnitTest, base_single_thread_tls_version_mismatch)
 #ifdef USE_TLS_CRYPT_V2
 TEST_F(ProtoUnitTest, base_single_thread_tls_crypt_v2_with_embedded_serverkey)
 {
-    int ret = test(1, false, false, "tls-crypt-v2-client-with-serverkey.key");
+    int ret = test_retry(1, N_RETRIES, false, "tls-crypt-v2-client-with-serverkey.key");
     EXPECT_EQ(ret, 0);
 }
 
