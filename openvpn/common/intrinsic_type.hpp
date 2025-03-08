@@ -54,13 +54,14 @@ struct IntrinsicType
     }
 
     /**
-     * @brief Equality comparison operator
-     * @param arg The object to compare with
-     * @return true if the objects are equal, false otherwise
-     */
-    constexpr bool operator==(const BaseT arg) noexcept
+        @brief Equality operator - class friend
+        @param lhs Left argument
+        @param rhs Right argument
+        @return true if the underlying are equal otehrwise false
+    */
+    friend constexpr bool operator==(const BaseT lhs, const BaseT rhs) noexcept
     {
-        return mValue == arg.mValue;
+        return lhs.mValue == rhs.mValue;
     }
 
     /**
