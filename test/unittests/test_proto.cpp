@@ -344,7 +344,7 @@ class TestProto : public ProtoContextCallbackInterface
     {
     }
 
-    bool supports_proto_v3() override
+    bool supports_epoch_data() override
     {
         return true;
     }

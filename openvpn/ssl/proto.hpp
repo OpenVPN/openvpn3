@@ -194,9 +194,9 @@ class ProtoContextCallbackInterface
     }
 
     /** the protocol context needs to know if the parent and its tun/transport layer are able to
-     * support 64bit and AEAD tag at the end in order to properly handshake this protocol feature
+     * support epoch key data format to properly handshake this protocol feature
      */
-    virtual bool supports_proto_v3() = 0;
+    virtual bool supports_epoch_data() = 0;
 
     //! Called when KeyContext transitions to ACTIVE state
     virtual void active(bool primary) = 0;
@@ -2882,7 +2882,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
                     write_empty_string(*buf); // username
                     write_empty_string(*buf); // password
                 }
-                const std::string peer_info = proto.config->peer_info_string(proto.proto_callback->supports_proto_v3());
+                const std::string peer_info = proto.config->peer_info_string(proto.proto_callback->supports_epoch_data());
                 write_auth_string(peer_info, *buf);
             }
             app_send_validate(std::move(buf));
