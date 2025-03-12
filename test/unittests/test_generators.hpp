@@ -330,15 +330,32 @@ inline auto IPv6Address(const bool valid = true) -> Gen<std::string>
                                     std::move(eighth_hextet)});
     };
 
-    return gen::apply(convert_hextets_to_compressed_address,
-                      IPv6HextetValue(hextet_validity[0]),
-                      IPv6HextetValue(hextet_validity[1]),
-                      IPv6HextetValue(hextet_validity[2]),
-                      IPv6HextetValue(hextet_validity[3]),
-                      IPv6HextetValue(hextet_validity[4]),
-                      IPv6HextetValue(hextet_validity[5]),
-                      IPv6HextetValue(hextet_validity[6]),
-                      IPv6HextetValue(hextet_validity[7]));
+    if (valid)
+    {
+        return gen::apply(convert_hextets_to_compressed_address,
+                          IPv6HextetValue(hextet_validity[0]),
+                          IPv6HextetValue(hextet_validity[1]),
+                          IPv6HextetValue(hextet_validity[2]),
+                          IPv6HextetValue(hextet_validity[3]),
+                          IPv6HextetValue(hextet_validity[4]),
+                          IPv6HextetValue(hextet_validity[5]),
+                          IPv6HextetValue(hextet_validity[6]),
+                          IPv6HextetValue(hextet_validity[7]));
+    }
+    return gen::map(gen::tuple(
+                        IPv6HextetValue(hextet_validity[0]),
+                        IPv6HextetValue(hextet_validity[1]),
+                        IPv6HextetValue(hextet_validity[2]),
+                        IPv6HextetValue(hextet_validity[3]),
+                        IPv6HextetValue(hextet_validity[4]),
+                        IPv6HextetValue(hextet_validity[5]),
+                        IPv6HextetValue(hextet_validity[6]),
+                        IPv6HextetValue(hextet_validity[7])),
+                    [](const auto &hextets)
+                    {
+                        const auto [first_hextet, second_hextet, third_hextet, fourth_hextet, fifth_hextet, sixth_hextet, seventh_hextet, eighth_hextet] = hextets;
+                        return first_hextet + ":" + second_hextet + ":" + third_hextet + ":" + fourth_hextet + ":" + fifth_hextet + ":" + sixth_hextet + ":" + seventh_hextet + ":" + eighth_hextet;
+                    });
 }
 
 using RedirectGatewayFlagsValues = openvpn::RedirectGatewayFlags::Flags;
