@@ -4003,7 +4003,6 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
         upcoming_key_id = 0;
 
         unsigned int key_dir;
-        const PacketIDControl::id_t EARLY_NEG_START = 0x0f000000;
 
         // tls-auth initialization
         reset_tls_wrap_mode(c);
