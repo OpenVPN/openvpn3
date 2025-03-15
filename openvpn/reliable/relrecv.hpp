@@ -34,9 +34,9 @@ class ReliableRecvTemplate
         friend class ReliableRecvTemplate;
     };
 
-    ReliableRecvTemplate()
-    {
-    }
+    //! Default do-nothing constructor.
+    ReliableRecvTemplate() = default;
+
     ReliableRecvTemplate(const id_t span, id_t start_at = 0)
     {
         init(span, start_at);

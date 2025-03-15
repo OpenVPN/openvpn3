@@ -33,9 +33,9 @@ class StaticKey
     typedef BufferAllocated key_t;
 
   public:
-    StaticKey()
-    {
-    }
+    //! Default do-nothing constructor.
+    StaticKey() = default;
+
     StaticKey(const unsigned char *key_data, const size_t key_size)
         : key_data_(key_data, key_size, BufAllocFlags::DESTRUCT_ZERO)
     {
