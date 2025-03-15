@@ -3162,7 +3162,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
                     // was packet accepted by reliable receive object?
                     if (rflags & ReliableRecv::IN_WINDOW)
                     {
-                        // remember tls_auth packet ID so that it can't be replaye
+                        // remember tls_auth packet ID so that it can't be replayed
                         proto.ta_pid_recv.test_add(pid, t, true);
                         return true;
                     }
