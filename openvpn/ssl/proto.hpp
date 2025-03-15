@@ -3515,7 +3515,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
                     return decapsulate_tls_plain(pkt);
                 }
             }
-            catch (BufferException &)
+            catch (const BufferException &)
             {
                 proto.stats->error(Error::BUFFER_ERROR);
                 if (proto.is_tcp())
@@ -3746,7 +3746,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
                                                    ta_hmac_recv->output_size(),
                                                    PacketIDControl::size());
             }
-            catch (BufferException &)
+            catch (const BufferException &)
             {
             }
 
@@ -3837,7 +3837,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
                                                 work.data(),
                                                 work.size());
             }
-            catch (BufferException &)
+            catch (const BufferException &)
             {
             }
             return false;
