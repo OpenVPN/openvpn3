@@ -212,6 +212,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
   protected:
 #endif
     static constexpr size_t APP_MSG_MAX = 65536;
+    static constexpr int OPCODE_SIZE = 1;
 
     enum
     {
@@ -399,6 +400,9 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
 
         //! leave this undefined to disable tls-crypt/tls-crypt-v2
         OpenVPNStaticKey tls_crypt_key;
+
+        //! For TLS crypt V2, this (if defined()) is the wrapped WKc client key.
+        OpenVPNStaticKey wrapped_tls_crypt_key;
 
         //! needed to distinguish between tls-crypt and tls-crypt-v2 server mode
         unsigned tls_crypt_ = TLSCrypt::None;
@@ -2359,15 +2363,24 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
 
         /**
          * @brief  Extract and process the TLS crypt WKc information.
-         * @param  recv             Buffer containing the raw packet.
-         * @return true on success.
+         * @param  recv                Buffer containing the raw packet.
+         * @param  proto_config        Config object holding the settings needed for processing.
+         *                             This function may write to proto_config.tls_crypt_key, so
+         *                             we can't use a const reference here.
+         * @param  tls_crypt_server    Server context used only to process incoming WKc's.
+         * @param  tls_crypt_metadata  If not nullptr, the function will also check the validity
+         *                             of the WKc metadata.
+         * @return Error::SUCCESS on success.
          */
-        bool unwrap_tls_crypt_wkc(Buffer &recv)
+        static Error::Type unwrap_tls_crypt_wkc(Buffer &recv,
+                                                ProtoConfig &proto_config,
+                                                TLSCryptInstance &tls_crypt_server,
+                                                TLSCryptMetadata::Ptr tls_crypt_metadata = nullptr)
         {
             // the ``WKc`` is located at the end of the packet, after the tls-crypt
             // payload.
             //
-            // K_id is optional, and controlled by proto.config->tls_crypt_v2_serverkey_id.
+            // K_id is optional, and controlled by proto_config.tls_crypt_v2_serverkey_id.
             // If it is missing, we will use a single server key for all clients.
             //
             // Format is as follows:
@@ -2379,8 +2392,8 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
 
             const unsigned char *orig_data = recv.data();
             const size_t orig_size = recv.size();
-            const size_t hmac_size = proto.config->tls_crypt_context->digest_size();
-            const size_t tls_frame_size = 1 + ProtoSessionID::SIZE
+            const size_t hmac_size = proto_config.tls_crypt_context->digest_size();
+            const size_t tls_frame_size = OPCODE_SIZE + ProtoSessionID::SIZE
                                           + PacketIDControl::size()
                                           + hmac_size
                                           // the following is the tls-crypt payload
@@ -2389,7 +2402,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
 
             // check that at least the authentication tag ``T`` is present
             if (orig_size < (tls_frame_size + hmac_size))
-                return false;
+                return Error::CC_ERROR;
 
             // the ``WKc`` is just appended after the standard tls-crypt frame
             const unsigned char *wkc_raw = orig_data + tls_frame_size;
@@ -2401,9 +2414,9 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
             wkc_len = ntohs(wkc_len);
 
             uint32_t k_id = 0;
-            const size_t serverkey_id_size = proto.config->tls_crypt_v2_serverkey_id ? sizeof(k_id) : 0;
+            const size_t serverkey_id_size = proto_config.tls_crypt_v2_serverkey_id ? sizeof(k_id) : 0;
 
-            if (proto.config->tls_crypt_v2_serverkey_id)
+            if (proto_config.tls_crypt_v2_serverkey_id)
             {
                 std::memcpy(&k_id, wkc_raw + wkc_raw_size - serverkey_id_size, sizeof(k_id));
                 k_id = ntohl(k_id);
@@ -2411,7 +2424,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
 
             // length sanity check (the size of the ``len`` field is included in the value)
             if ((wkc_len - sizeof(uint16_t)) != wkc_raw_size)
-                return false;
+                return Error::CC_ERROR;
 
             BufferAllocated plaintext(wkc_len, BufAllocFlags::CONSTRUCT_ZERO);
             // plaintext will be used to compute the Auth Tag, therefore start by prepending
@@ -2419,92 +2432,70 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
             wkc_len = htons(wkc_len);
             plaintext.write(&wkc_len, sizeof(wkc_len));
 
-            if (proto.config->tls_crypt_v2_serverkey_id)
+            if (proto_config.tls_crypt_v2_serverkey_id)
             {
                 std::stringstream ss;
                 ss << std::hex << std::setfill('0') << std::uppercase << std::setw(8) << k_id;
 
                 const std::string serverkey_fn = ss.str() + ".key";
-                const std::string serverkey_path = proto.config->tls_crypt_v2_serverkey_dir + "/"
+                const std::string serverkey_path = proto_config.tls_crypt_v2_serverkey_dir + "/"
                                                    + serverkey_fn.substr(0, 2) + "/" + serverkey_fn;
 
                 // If the key is missing, an exception will be thrown here, for example:
                 // "cannot open for read: <KEYS_DIR>/06/063FE634.key"
                 const std::string serverkey = read_text(serverkey_path);
 
-                OVPN_LOG_VERBOSE(proto.debug_prefix() << " Using TLS-crypt-V2 server key " << serverkey_path);
+                OVPN_LOG_VERBOSE("Using TLS-crypt-V2 server key " << serverkey_path);
 
                 TLSCryptV2ServerKey tls_crypt_v2_key;
                 tls_crypt_v2_key.parse(serverkey);
-                tls_crypt_v2_key.extract_key(proto.config->tls_crypt_key);
+                tls_crypt_v2_key.extract_key(proto_config.tls_crypt_key);
 
                 // the server key is composed by one key set only, therefore direction and
                 // mode should not be specified when slicing
-                proto.tls_crypt_server->init(proto.config->ssl_factory->libctx(),
-                                             proto.config->tls_crypt_key.slice(OpenVPNStaticKey::HMAC),
-                                             proto.config->tls_crypt_key.slice(OpenVPNStaticKey::CIPHER));
+                tls_crypt_server.init(proto_config.ssl_factory->libctx(),
+                                      proto_config.tls_crypt_key.slice(OpenVPNStaticKey::HMAC),
+                                      proto_config.tls_crypt_key.slice(OpenVPNStaticKey::CIPHER));
 
                 k_id = htonl(k_id);
                 plaintext.write(&k_id, sizeof(k_id));
             }
 
-            const size_t decrypt_bytes = proto.tls_crypt_server->decrypt(wkc_raw,
-                                                                         plaintext.data() + 2 + serverkey_id_size,
-                                                                         plaintext.max_size() - 2 - serverkey_id_size,
-                                                                         wkc_raw + hmac_size,
-                                                                         wkc_raw_size - hmac_size - serverkey_id_size);
+            const size_t decrypt_bytes = tls_crypt_server.decrypt(wkc_raw,
+                                                                  plaintext.data() + 2 + serverkey_id_size,
+                                                                  plaintext.max_size() - 2 - serverkey_id_size,
+                                                                  wkc_raw + hmac_size,
+                                                                  wkc_raw_size - hmac_size - serverkey_id_size);
             plaintext.inc_size(decrypt_bytes);
             // decrypted data must at least contain a full 2048bits client key
             // (metadata is optional)
             if (plaintext.size() < OpenVPNStaticKey::KEY_SIZE)
-            {
-                proto.stats->error(Error::DECRYPT_ERROR);
-                if (proto.is_tcp())
-                    invalidate(Error::DECRYPT_ERROR);
-                return false;
-            }
+                return Error::DECRYPT_ERROR;
 
-            if (!proto.tls_crypt_server->hmac_cmp(wkc_raw,
-                                                  0,
-                                                  plaintext.c_data(),
-                                                  plaintext.size()))
-            {
-                proto.stats->error(Error::HMAC_ERROR);
-                if (proto.is_tcp())
-                    invalidate(Error::HMAC_ERROR);
-                return false;
-            }
+            if (!tls_crypt_server.hmac_cmp(wkc_raw, 0, plaintext.c_data(), plaintext.size()))
+                return Error::HMAC_ERROR;
 
             // we can now remove the WKc length (and the server key ID, if present)
             // from the plaintext, as they are not really part of the key material
             plaintext.advance(sizeof(wkc_len));
 
-            if (proto.config->tls_crypt_v2_serverkey_id)
+            if (proto_config.tls_crypt_v2_serverkey_id)
                 plaintext.advance(sizeof(k_id));
 
-            // WKc has been authenticated: it contains the client key followed
-            // by the optional metadata. Let's initialize the tls-crypt context
-            // with the client key
-
-            OpenVPNStaticKey client_key;
-            plaintext.read(client_key.raw_alloc(), OpenVPNStaticKey::KEY_SIZE);
-            proto.reset_tls_crypt(*proto.config, client_key);
+            plaintext.read(proto_config.wrapped_tls_crypt_key.raw_alloc(), OpenVPNStaticKey::KEY_SIZE);
 
             // verify metadata
             int metadata_type = -1;
             if (!plaintext.empty())
                 metadata_type = plaintext.pop_front();
 
-            if (!proto.tls_crypt_metadata->verify(metadata_type, plaintext))
-            {
-                proto.stats->error(Error::TLS_CRYPT_META_FAIL);
-                return false;
-            }
+            if (tls_crypt_metadata && !tls_crypt_metadata->verify(metadata_type, plaintext))
+                return Error::TLS_CRYPT_META_FAIL;
 
             // virtually remove the WKc from the packet
             recv.set_size(tls_frame_size);
 
-            return true;
+            return Error::SUCCESS;
         }
 
       private:
@@ -2524,7 +2515,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
                 recv.advance(proto.hmac_size);
                 if (!proto.ta_hmac_recv->ovpn_hmac_cmp(orig_data,
                                                        orig_size,
-                                                       1 + ProtoSessionID::SIZE,
+                                                       OPCODE_SIZE + ProtoSessionID::SIZE,
                                                        proto.hmac_size,
                                                        PacketIDControl::size()))
                 {
@@ -2570,7 +2561,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
 
             recv.advance(proto.hmac_size);
 
-            const size_t head_size = 1 + ProtoSessionID::SIZE + PacketIDControl::size();
+            const size_t head_size = OPCODE_SIZE + ProtoSessionID::SIZE + PacketIDControl::size();
             const size_t data_offset = head_size + proto.hmac_size;
             if (orig_size < data_offset)
                 return false;
@@ -3165,7 +3156,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
             // write hmac
             proto.ta_hmac_send->ovpn_hmac_gen(buf.data(),
                                               buf.size(),
-                                              1 + ProtoSessionID::SIZE,
+                                              OPCODE_SIZE + ProtoSessionID::SIZE,
                                               proto.hmac_size,
                                               PacketIDControl::size());
         }
@@ -3353,7 +3344,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
                 recv.advance(proto.hmac_size);
                 if (!proto.ta_hmac_recv->ovpn_hmac_cmp(orig_data,
                                                        orig_size,
-                                                       1 + ProtoSessionID::SIZE,
+                                                       OPCODE_SIZE + ProtoSessionID::SIZE,
                                                        proto.hmac_size,
                                                        PacketIDControl::size()))
                 {
@@ -3501,10 +3492,31 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
                         // unwrap WKc and extract Kc (client key) from packet.
                         // This way we can initialize the tls-crypt per-client contexts
                         // (this happens on the server side only)
-                        if (!unwrap_tls_crypt_wkc(*pkt.buf))
+                        const Error::Type unwrap_wkc_result = unwrap_tls_crypt_wkc(*pkt.buf,
+                                                                                   *proto.config,
+                                                                                   *proto.tls_crypt_server,
+                                                                                   proto.tls_crypt_metadata);
+                        switch (unwrap_wkc_result)
                         {
+                        case Error::DECRYPT_ERROR:
+                        case Error::HMAC_ERROR:
+                            proto.stats->error(unwrap_wkc_result);
+                            if (proto.is_tcp())
+                                invalidate(unwrap_wkc_result);
+                            return false;
+                        case Error::TLS_CRYPT_META_FAIL:
+                            proto.stats->error(unwrap_wkc_result);
+                            return false;
+                        case Error::SUCCESS:
+                            break;
+                        default:
                             return false;
                         }
+
+                        // WKc has been authenticated: it contains the client key followed
+                        // by the optional metadata. Let's initialize the tls-crypt context
+                        // with the client key
+                        proto.reset_tls_crypt(*proto.config, proto.config->wrapped_tls_crypt_key);
                     }
                     // now that the tls-crypt contexts have been initialized it is
                     // possible to proceed with the standard tls-crypt decapsulation
@@ -3742,7 +3754,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
 
                 return ta_hmac_recv->ovpn_hmac_cmp(net_buf.c_data(),
                                                    net_buf.size(),
-                                                   1 + ProtoSessionID::SIZE,
+                                                   OPCODE_SIZE + ProtoSessionID::SIZE,
                                                    ta_hmac_recv->output_size(),
                                                    PacketIDControl::size());
             }
