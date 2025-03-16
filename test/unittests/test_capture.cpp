@@ -360,6 +360,77 @@ RC_GTEST_PROP(RouteBased, StringRepresentationReturnsSetOptions, (rc::RouteBased
         route_based);
 }
 
+RC_GTEST_PROP(RouteBased, EmptyThrowsOnValidation, (rc::RouteBased route_based, const std::string &title))
+{
+    std::visit(
+        [&title](auto &&route_base_variant)
+        {
+            using T = std::decay_t<decltype(route_base_variant)>;
+            if constexpr (std::is_same_v<T, TunBuilderCapture::RouteBase>)
+            {
+                RC_DISCARD("RouteBase does not have public validate method");
+            }
+            else
+            {
+                RC_ASSERT_THROWS_AS(route_base_variant.validate(title), openvpn::IP::ip_exception);
+            }
+        },
+        route_based);
+}
+
+RC_GTEST_PROP(RouteBased, Validates, (rc::RouteBased route_based, bool ipv6, bool net30, const std::string &title))
+{
+    // TODO: move to generator
+    std::visit(
+        [ipv6, net30, &title](auto &&route_base_variant)
+        {
+            using T = std::decay_t<decltype(route_base_variant)>;
+            if constexpr (std::is_same_v<T, TunBuilderCapture::RouteBase>)
+            {
+                RC_DISCARD("RouteBase does not have public validate method");
+            }
+            else
+            {
+                // Performs canonicalization so Route is valid
+                // TODO: separate path for RouteAddress that can be not canonical
+                if (ipv6)
+                {
+                    route_base_variant.ipv6 = true;
+                    auto ipv6_route = route_from_string(*rc::IPv6Address(), title, IP::Addr::V6);
+                    ipv6_route.force_canonical();
+                    route_base_variant.address = ipv6_route.to_string_optional_prefix_len();
+                    route_base_variant.prefix_length = IPv6::Addr::SIZE;
+                }
+                else
+                {
+                    route_base_variant.ipv6 = false;
+                    route_base_variant.address = *rc::IPv4Address().as("Valid IPv4 address");
+                    auto [prefix_min, prefix_max] = rc::calculateIPPrefixRange(route_base_variant.address);
+                    if (net30 && prefix_min <= 30 && prefix_max >= 30)
+                    {
+                        route_base_variant.net30 = true;
+                        route_base_variant.prefix_length = 30;
+                    }
+                    else
+                    {
+                        route_base_variant.net30 = false;
+                        route_base_variant.prefix_length = *rc::gen::inRange(static_cast<char>(prefix_min), static_cast<char>(prefix_max + 1)).as("Valid prefix length");
+                    }
+                }
+                if (auto maybe_metric = *rc::gen::maybe(rc::gen::arbitrary<int>().as("Metric value")).as("Maybe metric"))
+                {
+                    route_base_variant.metric = *maybe_metric;
+                }
+                if (auto maybe_gateway = ipv6 ? *rc::gen::maybe(rc::IPv6Address().as("Valid IPv6 gateway")) : *rc::gen::maybe(rc::IPv4Address().as("Valid IPv4 gateway")))
+                {
+                    route_base_variant.gateway = *maybe_gateway;
+                }
+                route_base_variant.validate(title);
+            }
+        },
+        route_based);
+}
+
 
 RC_GTEST_PROP(RouteBased, EmptyJsonRoundTripHaveSameStringRepresentation, (rc::RouteBased route_based, const std::string &title))
 {
@@ -391,6 +462,18 @@ RC_GTEST_PROP(RouteBased, JsonRoundTripHaveSameStringRepresentation, (rc::RouteB
             T from_json;
             from_json.from_json(route_based_as_json, title);
             RC_ASSERT(route_base_variant.to_string() == from_json.to_string());
+        },
+        route_based);
+}
+
+
+RC_GTEST_PROP(RouteBased, FromInvalidJsonThrows, (rc::RouteBased route_based, const std::string &title))
+{
+    std::visit(
+        [&title](auto &&route_base_variant)
+        {
+            const Json::Value invalid_json = {};
+            RC_ASSERT_THROWS_AS(route_base_variant.from_json(invalid_json, title), json::json_parse);
         },
         route_based);
 }
@@ -772,4 +855,243 @@ RC_GTEST_PROP(WINSServer, FromInvalidJsonThrows, (const std::string &title))
     TunBuilderCapture::WINSServer from_json;
     const Json::Value invalid_json;
     RC_ASSERT_THROWS_AS(from_json.from_json(invalid_json, title), json::json_parse);
+}
+
+//  ===============================================================================================
+//  TunBuilderCapture tests
+//  ===============================================================================================
+
+RC_GTEST_PROP(TunBuilderCapture, SetsRemoteAddress, (const std::string &address, const bool ipv6))
+{
+    TunBuilderCapture::Ptr tbc(new TunBuilderCapture);
+    RC_ASSERT(tbc->tun_builder_set_remote_address(address, ipv6));
+    RC_ASSERT(tbc->remote_address.address == address);
+    RC_ASSERT(tbc->remote_address.ipv6 == ipv6);
+}
+
+RC_GTEST_PROP(TunBuilderCapture, AddsAddress, (const std::string &address, const unsigned char prefix_length, const std::string &gateway, const bool ipv6, const bool net30))
+{
+    const TunBuilderCapture::Ptr tbc(new TunBuilderCapture);
+    RC_ASSERT(tbc->tun_builder_add_address(address, prefix_length, gateway, ipv6, net30));
+    const auto ip_version = ipv6 ? IP::Addr::V6 : IP::Addr::V4;
+    const TunBuilderCapture::RouteAddress *vpn_address = tbc->vpn_ip(ip_version);
+    RC_ASSERT(vpn_address->address == address);
+    RC_ASSERT(vpn_address->prefix_length == prefix_length);
+    RC_ASSERT(vpn_address->gateway == gateway);
+    RC_ASSERT(vpn_address->net30 == net30);
+}
+
+RC_GTEST_PROP(TunBuilderCapture, SetsRerouteGW, (const bool ipv4, const bool ipv6, const unsigned int flags))
+{
+    const TunBuilderCapture::Ptr tbc(new TunBuilderCapture);
+    RC_ASSERT(tbc->tun_builder_reroute_gw(ipv4, ipv6, flags));
+    RC_ASSERT(tbc->reroute_gw.ipv4 == ipv4);
+    RC_ASSERT(tbc->reroute_gw.ipv6 == ipv6);
+    RC_ASSERT(tbc->reroute_gw.flags == flags);
+}
+
+RC_GTEST_PROP(TunBuilderCapture, SetsRouteMetricDefault, (const int metric))
+{
+    const TunBuilderCapture::Ptr tbc(new TunBuilderCapture);
+    RC_ASSERT(tbc->tun_builder_set_route_metric_default(metric));
+    RC_ASSERT(tbc->route_metric_default == metric);
+}
+
+RC_GTEST_PROP(TunBuilderCapture, AddsRoute, (const std::string &address, const unsigned char prefix_length, const bool ipv6))
+{
+    const TunBuilderCapture::Ptr tbc(new TunBuilderCapture);
+    const auto metric = *rc::gen::positive<int>().as("Valid route metric");
+    RC_ASSERT(tbc->tun_builder_add_route(address, prefix_length, metric, ipv6));
+    const auto &added_route = tbc->add_routes.back();
+    RC_ASSERT(added_route.address == address);
+    RC_ASSERT(added_route.prefix_length == prefix_length);
+    RC_ASSERT(added_route.metric == metric);
+    RC_ASSERT(added_route.ipv6 == ipv6);
+}
+
+RC_GTEST_PROP(TunBuilderCapture, ExcludesRoute, (const std::string &address, const unsigned char prefix_length, const int metric, const bool ipv6))
+{
+    const TunBuilderCapture::Ptr tbc(new TunBuilderCapture);
+    RC_ASSERT(tbc->tun_builder_exclude_route(address, prefix_length, metric, ipv6));
+    const auto &excluded_route = tbc->exclude_routes.back();
+    RC_ASSERT(excluded_route.address == address);
+    RC_ASSERT(excluded_route.prefix_length == prefix_length);
+    RC_ASSERT(excluded_route.metric == metric);
+    RC_ASSERT(excluded_route.ipv6 == ipv6);
+}
+
+RC_GTEST_PROP(TunBuilderCapture, SetsDNSOptions, (const std::string &address, const unsigned int port, const std::string &search_domain))
+{
+    DnsServer server = {};
+    server.addresses.push_back({address, port});
+    DnsOptions dns_options = {};
+    dns_options.servers[0] = std::move(server);
+    dns_options.search_domains = {{search_domain}};
+    const TunBuilderCapture::Ptr tbc(new TunBuilderCapture);
+    RC_ASSERT(tbc->tun_builder_set_dns_options(dns_options));
+    RC_ASSERT(tbc->dns_options.search_domains.back().domain == search_domain);
+    RC_ASSERT(tbc->dns_options.servers.at(0).addresses.back().address == address);
+}
+
+RC_GTEST_PROP(TunBuilderCapture, SetsLayer, ())
+{
+    const TunBuilderCapture::Ptr tbc(new TunBuilderCapture);
+    const auto layer = *rc::gen::element(3, 2, 0).as("Layer - 3, 2 or 0");
+    RC_ASSERT(tbc->tun_builder_set_layer(layer));
+    RC_ASSERT(tbc->layer.value() == layer);
+}
+
+RC_GTEST_PROP(TunBuilderCapture, SetsMTU, (const int mtu))
+{
+    const TunBuilderCapture::Ptr tbc(new TunBuilderCapture);
+    RC_ASSERT(tbc->tun_builder_set_mtu(mtu));
+    RC_ASSERT(tbc->mtu == mtu);
+}
+
+RC_GTEST_PROP(TunBuilderCapture, SetsSessionName, (const std::string &session_name))
+{
+    const TunBuilderCapture::Ptr tbc(new TunBuilderCapture);
+    RC_ASSERT(tbc->tun_builder_set_session_name(session_name));
+    RC_ASSERT(tbc->session_name == session_name);
+}
+
+RC_GTEST_PROP(TunBuilderCapture, AddsProxyBypass, (const std::string &bypass_host))
+{
+    const TunBuilderCapture::Ptr tbc(new TunBuilderCapture);
+    RC_ASSERT(tbc->tun_builder_add_proxy_bypass(bypass_host));
+    RC_ASSERT(tbc->proxy_bypass.back().bypass_host == bypass_host);
+}
+
+RC_GTEST_PROP(TunBuilderCapture, SetsProxyAutoConfigURL, (const std::string &url))
+{
+    const TunBuilderCapture::Ptr tbc(new TunBuilderCapture);
+    RC_ASSERT(tbc->tun_builder_set_proxy_auto_config_url(url));
+    RC_ASSERT(tbc->proxy_auto_config_url.url == url);
+}
+
+RC_GTEST_PROP(TunBuilderCapture, SetsProxyHTTP, (const std::string &host, const int port))
+{
+    const TunBuilderCapture::Ptr tbc(new TunBuilderCapture);
+    RC_ASSERT(tbc->tun_builder_set_proxy_http(host, port));
+    RC_ASSERT(tbc->http_proxy.host == host);
+    RC_ASSERT(tbc->http_proxy.port == port);
+}
+
+RC_GTEST_PROP(TunBuilderCapture, SetsProxyHTTPS, (const std::string &host, const int port))
+{
+    const TunBuilderCapture::Ptr tbc(new TunBuilderCapture);
+    RC_ASSERT(tbc->tun_builder_set_proxy_https(host, port));
+    RC_ASSERT(tbc->https_proxy.host == host);
+    RC_ASSERT(tbc->https_proxy.port == port);
+}
+
+RC_GTEST_PROP(TunBuilderCapture, AddsWINSServer, (const std::string &address))
+{
+    const TunBuilderCapture::Ptr tbc(new TunBuilderCapture);
+    RC_ASSERT(tbc->tun_builder_add_wins_server(address));
+    RC_ASSERT(tbc->wins_servers.back().address == address);
+}
+
+RC_GTEST_PROP(TunBuilderCapture, SetsAllowFamily, (const bool allow))
+{
+    const TunBuilderCapture::Ptr tbc(new TunBuilderCapture);
+    const auto allow_family = *rc::gen::element(AF_INET, AF_INET6).as("Allow family - AF_INET or AF_INET6");
+    RC_ASSERT(tbc->tun_builder_set_allow_family(allow_family, allow));
+    if (allow_family == AF_INET)
+    {
+        RC_ASSERT_FALSE(tbc->block_ipv4 == allow);
+    }
+    else
+    {
+        RC_ASSERT_FALSE(tbc->block_ipv6 == allow);
+    }
+}
+
+RC_GTEST_PROP(TunBuilderCapture, SetsAllowLocalDNS, (const bool allow))
+{
+    const TunBuilderCapture::Ptr tbc(new TunBuilderCapture);
+    RC_ASSERT(tbc->tun_builder_set_allow_local_dns(allow));
+    RC_ASSERT_FALSE(tbc->block_outside_dns == allow);
+}
+
+RC_GTEST_PROP(TunBuilderCapture, ResetsTunnelAddresses, (const std::string &address, const unsigned char prefix_length, const std::string &gateway, const bool ipv6, const bool net30))
+{
+    const TunBuilderCapture::Ptr tbc(new TunBuilderCapture);
+    RC_ASSERT(tbc->tun_builder_add_address(address, prefix_length, gateway, ipv6, net30));
+    RC_ASSERT(tbc->tun_builder_add_address(address, prefix_length, gateway, !ipv6, net30));
+    RC_ASSERT_FALSE(tbc->tunnel_addresses.empty());
+    RC_ASSERT(tbc->tunnel_address_index_ipv4 > -1);
+    RC_ASSERT(tbc->tunnel_address_index_ipv6 > -1);
+    tbc->reset_tunnel_addresses();
+    RC_ASSERT(tbc->tunnel_addresses.empty());
+    RC_ASSERT(tbc->tunnel_address_index_ipv4 == -1);
+    RC_ASSERT(tbc->tunnel_address_index_ipv6 == -1);
+}
+
+RC_GTEST_PROP(TunBuilderCapture, ResetsDNSOptions, (const std::string &address, const unsigned int port, const std::string &search_domain))
+{
+    DnsServer server = {};
+    server.addresses.push_back({address, port});
+    DnsOptions dns_options = {};
+    dns_options.servers[0] = std::move(server);
+    dns_options.search_domains = {{search_domain}};
+    const TunBuilderCapture::Ptr tbc(new TunBuilderCapture);
+    RC_ASSERT(tbc->tun_builder_set_dns_options(dns_options));
+    RC_ASSERT_FALSE(tbc->dns_options.to_string().empty());
+    tbc->reset_dns_options();
+    RC_ASSERT(tbc->dns_options.to_string().empty());
+}
+
+RC_GTEST_PROP(TunBuilderCapture, ReturnsVPNIPv4, (const std::string &address, const unsigned char prefix_length, const std::string &gateway, const bool net30))
+{
+    const TunBuilderCapture::Ptr tbc(new TunBuilderCapture);
+    RC_ASSERT(tbc->vpn_ipv4() == nullptr);
+    RC_ASSERT(tbc->tun_builder_add_address(address, prefix_length, gateway, false, net30));
+    const TunBuilderCapture::RouteAddress *vpn_address = tbc->vpn_ipv4();
+    RC_ASSERT(vpn_address->address == address);
+    RC_ASSERT(vpn_address->prefix_length == prefix_length);
+    RC_ASSERT(vpn_address->gateway == gateway);
+    RC_ASSERT(vpn_address->net30 == net30);
+}
+
+RC_GTEST_PROP(TunBuilderCapture, ReturnsVPNIPv6, (const std::string &address, const unsigned char prefix_length, const std::string &gateway, const bool net30))
+{
+    const TunBuilderCapture::Ptr tbc(new TunBuilderCapture);
+    RC_ASSERT(tbc->vpn_ipv6() == nullptr);
+    RC_ASSERT(tbc->tun_builder_add_address(address, prefix_length, gateway, true, net30));
+    const TunBuilderCapture::RouteAddress *vpn_address = tbc->vpn_ipv6();
+    RC_ASSERT(vpn_address->address == address);
+    RC_ASSERT(vpn_address->prefix_length == prefix_length);
+    RC_ASSERT(vpn_address->gateway == gateway);
+    RC_ASSERT(vpn_address->net30 == net30);
+}
+
+RC_GTEST_PROP(TunBuilderCapture, ReturnsVPNIP, (const std::string &address, const unsigned char prefix_length, const std::string &gateway, const bool ipv6, const bool net30))
+{
+    const TunBuilderCapture::Ptr tbc(new TunBuilderCapture);
+    RC_ASSERT(tbc->vpn_ip(IP::Addr::UNSPEC) == nullptr);
+    RC_ASSERT(tbc->tun_builder_add_address(address, prefix_length, gateway, ipv6, net30));
+    const auto ip_version = ipv6 ? IP::Addr::V6 : IP::Addr::V4;
+    const TunBuilderCapture::RouteAddress *vpn_address = tbc->vpn_ip(ip_version);
+    RC_ASSERT(vpn_address->address == address);
+    RC_ASSERT(vpn_address->prefix_length == prefix_length);
+    RC_ASSERT(vpn_address->gateway == gateway);
+    RC_ASSERT(vpn_address->net30 == net30);
+}
+
+RC_GTEST_PROP(TunBuilderCapture, StringRepresentation, (const std::string &address, const unsigned char prefix_length, const std::string &gateway, const bool ipv6, const bool net30))
+{
+    const TunBuilderCapture::Ptr tbc(new TunBuilderCapture);
+    std::ostringstream os = {};
+    os << "Session Name: " << tbc->session_name << '\n';
+    os << "Layer: " << tbc->layer.str() << '\n';
+    os << "Remote Address: " << tbc->remote_address.to_string() << '\n';
+    os << "Tunnel Addresses:\n";
+    os << "Reroute Gateway: " << tbc->reroute_gw.to_string() << '\n';
+    os << "Block IPv4: " << (tbc->block_ipv4 ? "yes" : "no") << '\n';
+    os << "Block IPv6: " << (tbc->block_ipv6 ? "yes" : "no") << '\n';
+    os << "Block local DNS: " << (tbc->block_outside_dns ? "yes" : "no") << '\n';
+    os << "Add Routes:\n";
+    os << "Exclude Routes:\n";
+    RC_ASSERT(tbc->to_string() == os.str());
 }
