@@ -28,6 +28,7 @@
 #include <openvpn/transport/server/transbase.hpp>
 #include <openvpn/server/servproto.hpp>
 
+#include <optional>
 
 namespace openvpn {
 
@@ -45,6 +46,7 @@ class PsidCookieImpl : public PsidCookie
 {
   public:
     static constexpr int SID_SIZE = ProtoSessionID::SIZE;
+    static constexpr int OPCODE_SIZE = 1;
 
     // must be called _before_ the server implementation starts threads; it guarantees
     // that all per thread instances get the same psid cookie hmac key
@@ -55,30 +57,29 @@ class PsidCookieImpl : public PsidCookie
 
     PsidCookieImpl(ServerProto::Factory *psfp)
         : pcfg_(*psfp->proto_context_config),
-          not_tls_auth_mode_(!pcfg_.tls_auth_enabled() || pcfg_.tls_crypt_enabled() || pcfg_.tls_crypt_v2_enabled()),
           now_(pcfg_.now), handwindow_(pcfg_.handshake_window)
     {
-        if (not_tls_auth_mode_)
-            return;
-
-        ta_hmac_recv_ = pcfg_.tls_auth_context->new_obj();
-        ta_hmac_send_ = pcfg_.tls_auth_context->new_obj();
-
-        // init tls_auth hmac (see ProtoContext.reset() case TLS_AUTH; also TLSAuthPreValidate ctor)
-        if (pcfg_.key_direction >= 0)
+        if (pcfg_.tls_auth_enabled())
         {
-            // key-direction is 0 or 1
-            const unsigned int key_dir = pcfg_.key_direction ? OpenVPNStaticKey::INVERSE : OpenVPNStaticKey::NORMAL;
-            ta_hmac_send_->init(pcfg_.tls_auth_key.slice(OpenVPNStaticKey::HMAC
-                                                         | OpenVPNStaticKey::ENCRYPT | key_dir));
-            ta_hmac_recv_->init(pcfg_.tls_auth_key.slice(OpenVPNStaticKey::HMAC
-                                                         | OpenVPNStaticKey::DECRYPT | key_dir));
-        }
-        else
-        {
-            // key-direction bidirectional mode
-            ta_hmac_send_->init(pcfg_.tls_auth_key.slice(OpenVPNStaticKey::HMAC));
-            ta_hmac_recv_->init(pcfg_.tls_auth_key.slice(OpenVPNStaticKey::HMAC));
+            ta_hmac_recv_ = pcfg_.tls_auth_context->new_obj();
+            ta_hmac_send_ = pcfg_.tls_auth_context->new_obj();
+
+            // init tls_auth hmac (see ProtoContext.reset() case TLS_AUTH; also TLSAuthPreValidate ctor)
+            if (pcfg_.key_direction >= 0)
+            {
+                // key-direction is 0 or 1
+                const unsigned int key_dir = pcfg_.key_direction ? OpenVPNStaticKey::INVERSE : OpenVPNStaticKey::NORMAL;
+                ta_hmac_send_->init(pcfg_.tls_auth_key.slice(OpenVPNStaticKey::HMAC
+                                                             | OpenVPNStaticKey::ENCRYPT | key_dir));
+                ta_hmac_recv_->init(pcfg_.tls_auth_key.slice(OpenVPNStaticKey::HMAC
+                                                             | OpenVPNStaticKey::DECRYPT | key_dir));
+            }
+            else
+            {
+                // key-direction bidirectional mode
+                ta_hmac_send_->init(pcfg_.tls_auth_key.slice(OpenVPNStaticKey::HMAC));
+                ta_hmac_recv_->init(pcfg_.tls_auth_key.slice(OpenVPNStaticKey::HMAC));
+            }
         }
 
         // initialize psid HMAC context with digest type and key
@@ -86,28 +87,29 @@ class PsidCookieImpl : public PsidCookie
         hmac_ctx_.init(digest_, key.data(), key.size());
     }
 
-    virtual ~PsidCookieImpl() = default;
-
-    Intercept intercept(ConstBuffer &pkt_buf, const PsidCookieAddrInfoBase &pcaib) override
+    Intercept intercept(Buffer &pkt_buf, const PsidCookieAddrInfoBase &pcaib) override
     {
-        // tls auth enabled is the only config we handle
-        if (not_tls_auth_mode_)
-        {                                       // test discovered in TLSAuthPreValidate
-            return Intercept::DECLINE_HANDLING; // let existing code handle these cases
-        }
+        if (!pcfg_.tls_auth_enabled() && !pcfg_.tls_crypt_v2_enabled())
+            return Intercept::DECLINE_HANDLING;
 
         if (!pkt_buf.size())
-        {
             return Intercept::EARLY_DROP; // packet validation fails, no opcode
-        }
+
         CookieHelper chelp(pkt_buf[0]);
+
+        const bool is_tls_crypt_v2 = (chelp.is_tls_crypt_v2() && pcfg_.tls_crypt_v2_enabled());
+
         if (chelp.is_clients_initial_reset())
         {
-            return process_clients_initial_reset(pkt_buf, pcaib);
+            return is_tls_crypt_v2
+                       ? process_clients_initial_reset_tls_crypt(pkt_buf, pcaib, chelp)
+                       : process_clients_initial_reset_tls_auth(pkt_buf, pcaib);
         }
         else if (chelp.is_clients_server_reset_ack())
         {
-            return process_clients_server_reset_ack(pkt_buf, pcaib);
+            return is_tls_crypt_v2
+                       ? process_clients_server_reset_ack_tls_crypt(pkt_buf, pcaib)
+                       : process_clients_server_reset_ack_tls_auth(pkt_buf, pcaib);
         }
 
         // JMD_TODO: log failure?  Logging DDoS?
@@ -131,11 +133,16 @@ class PsidCookieImpl : public PsidCookie
 #endif
     using CookieHelper = ProtoContext::PsidCookieHelper;
 
-    Intercept process_clients_initial_reset(ConstBuffer &pkt_buf, const PsidCookieAddrInfoBase &pcaib)
+    Intercept process_clients_initial_reset_tls_auth(ConstBuffer &pkt_buf, const PsidCookieAddrInfoBase &pcaib)
     {
         static const size_t hmac_size = ta_hmac_recv_->output_size();
+
         // ovpn_hmac_cmp checks for adequate pkt_buf.size()
-        bool pkt_hmac_valid = ta_hmac_recv_->ovpn_hmac_cmp(pkt_buf.c_data(), pkt_buf.size(), 1 + SID_SIZE, hmac_size, PacketIDControl::idsize);
+        bool pkt_hmac_valid = ta_hmac_recv_->ovpn_hmac_cmp(pkt_buf.c_data(),
+                                                           pkt_buf.size(),
+                                                           OPCODE_SIZE + SID_SIZE,
+                                                           hmac_size,
+                                                           PacketIDControl::idsize);
         if (!pkt_hmac_valid)
         {
             // JMD_TODO: log failure?  Logging DDoS?
@@ -145,8 +152,8 @@ class PsidCookieImpl : public PsidCookie
         // check for adequate packet size to complete this function
         static const size_t reqd_packet_size
             // clang-format off
-            // [op_field] [cli_psid] [HMAC]      [cli_auth_pktid]   [cli_pktid]
-            =  1 +        SID_SIZE + hmac_size + PacketIDControl::idsize + reliable::id_size;
+            // [op_field]    [cli_psid] [HMAC]      [cli_auth_pktid]          [cli_pktid]
+            =  OPCODE_SIZE + SID_SIZE + hmac_size + PacketIDControl::idsize + reliable::id_size;
         // clang-format on
         if (pkt_buf.size() < reqd_packet_size)
         {
@@ -195,7 +202,11 @@ class PsidCookieImpl : public PsidCookie
         const unsigned char op_field = CookieHelper::get_server_hard_reset_opfield();
         send_buf.push_front(op_field);
         // write hmac
-        ta_hmac_send_->ovpn_hmac_gen(send_buf.data(), send_buf.size(), 1 + SID_SIZE, ta_hmac_send_->output_size(), PacketIDControl::idsize);
+        ta_hmac_send_->ovpn_hmac_gen(send_buf.data(),
+                                     send_buf.size(),
+                                     OPCODE_SIZE + SID_SIZE,
+                                     ta_hmac_send_->output_size(),
+                                     PacketIDControl::idsize);
 
         // consumer's implementation to send the SERVER_HARD_RESET to the client
         bool send_ok = pctb_->psid_cookie_send_const(send_buf, pcaib);
@@ -207,11 +218,15 @@ class PsidCookieImpl : public PsidCookie
         return Intercept::DROP_1ST;
     }
 
-    Intercept process_clients_server_reset_ack(ConstBuffer &pkt_buf, const PsidCookieAddrInfoBase &pcaib)
+    Intercept process_clients_server_reset_ack_tls_auth(ConstBuffer &pkt_buf, const PsidCookieAddrInfoBase &pcaib)
     {
         static const size_t hmac_size = ta_hmac_recv_->output_size();
         // ovpn_hmac_cmp checks for adequate pkt_buf.size()
-        bool pkt_hmac_valid = ta_hmac_recv_->ovpn_hmac_cmp(pkt_buf.c_data(), pkt_buf.size(), 1 + SID_SIZE, hmac_size, PacketIDControl::idsize);
+        bool pkt_hmac_valid = ta_hmac_recv_->ovpn_hmac_cmp(pkt_buf.c_data(),
+                                                           pkt_buf.size(),
+                                                           OPCODE_SIZE + SID_SIZE,
+                                                           hmac_size,
+                                                           PacketIDControl::idsize);
         if (!pkt_hmac_valid)
         {
             // JMD_TODO: log failure?  Logging DDoS?
@@ -220,8 +235,8 @@ class PsidCookieImpl : public PsidCookie
 
         static const size_t reqd_packet_size
             // clang-format off
-            // [op_field] [cli_psid] [HMAC]      [cli_auth_pktid]   [acked] [srv_psid]
-            =  1 +        SID_SIZE + hmac_size + PacketIDControl::size() + 5 +     SID_SIZE;
+            // [op_field]    [cli_psid] [HMAC]      [cli_auth_pktid]         [acked] [srv_psid]
+            =  OPCODE_SIZE + SID_SIZE + hmac_size + PacketIDControl::size() + 5 +    SID_SIZE;
         // the fixed size, 5, of the [acked] field recognizes that the client's first
         // response will ack exactly one packet, the server's HARD_RESET
         // clang-format on
@@ -255,6 +270,135 @@ class PsidCookieImpl : public PsidCookie
         {
             return Intercept::HANDLE_2ND;
         }
+
+        return Intercept::DROP_2ND;
+    }
+
+    Intercept process_clients_initial_reset_tls_crypt(Buffer &pkt_buf,
+                                                      const PsidCookieAddrInfoBase &pcaib,
+                                                      const CookieHelper &ch)
+    {
+        static const size_t hmac_size = pcfg_.tls_crypt_context->digest_size();
+
+        ConstBuffer recv_buf_copy(pkt_buf.c_data() + 1, pkt_buf.size() - 1, true);
+
+        ProtoSessionID client_session_id(recv_buf_copy);
+        PacketIDControl replay_packet_id;
+        replay_packet_id.read(recv_buf_copy);
+
+        // This could be user-configurable so that we could just drop packets here if
+        // we don't want to allow clients that don't support re-sending the WKc.
+        if (!ch.supports_early_negotiation(replay_packet_id))
+            return Intercept::DECLINE_HANDLING;
+
+        auto pipes = init_tls_crypt_v2(pkt_buf);
+
+        if (!pipes)
+            return Intercept::DROP_1ST;
+
+        auto [send, recv] = *pipes;
+
+        // Create synthetic RESET packet payload.
+        BufferAllocated payload;
+        pcfg_.frame->prepare(Frame::WRITE_SSL_INIT, payload);
+
+        CookieHelper::prepend_TLV(payload);
+
+        PacketIDControl packet_id{0, 0};
+        packet_id.write(payload, true);
+
+        client_session_id.prepend(payload);
+
+        const reliable::id_t acked_packet_id = 0;
+        payload.prepend(&acked_packet_id, sizeof(acked_packet_id));
+        payload.push_front((unsigned char)1);
+
+        BufferAllocated work;
+        // in 'work' we store all the fields that are not supposed to be encrypted
+        pcfg_.frame->prepare(Frame::ENCRYPT_WORK, work);
+        // make space for HMAC
+        work.prepend_alloc(hmac_size);
+        // write tls-crypt packet ID
+        PacketIDControlSend svr_auth_pid;
+        svr_auth_pid.write_next(work, true, now_->seconds_since_epoch());
+        // write source PSID
+        const ProtoSessionID srv_psid = calculate_session_id_hmac(client_session_id, pcaib, 0);
+        srv_psid.prepend(work);
+        // write opcode
+        work.push_front(CookieHelper::get_server_hard_reset_opfield());
+
+        // compute HMAC using header fields (from 'work') and plaintext
+        // payload
+        send->hmac_gen(work.data(), TLSCryptContext::hmac_offset, payload.c_data(), payload.size());
+
+        const size_t data_offset = TLSCryptContext::hmac_offset + hmac_size;
+
+        // encrypt the content of 'payload' (packet payload) into 'work'
+        const size_t encrypt_bytes = send->encrypt(work.c_data() + TLSCryptContext::hmac_offset,
+                                                   work.data() + data_offset,
+                                                   work.max_size() - data_offset,
+                                                   payload.c_data(),
+                                                   payload.size());
+        work.inc_size(encrypt_bytes);
+
+        // consumer's implementation to send the SERVER_HARD_RESET to the client
+        bool send_ok = pctb_->psid_cookie_send_const(work, pcaib);
+        if (send_ok)
+            return Intercept::HANDLE_1ST;
+
+        return Intercept::DROP_1ST;
+    }
+
+    Intercept process_clients_server_reset_ack_tls_crypt(Buffer &pkt_buf, const PsidCookieAddrInfoBase &pcaib)
+    {
+        auto pipes = init_tls_crypt_v2(pkt_buf);
+
+        if (!pipes)
+            return Intercept::DROP_2ND;
+
+        auto [send, recv] = *pipes;
+
+        static const size_t hmac_size = pcfg_.tls_crypt_context->digest_size();
+
+        const size_t head_size = OPCODE_SIZE + ProtoSessionID::SIZE + PacketIDControl::size();
+        const unsigned char *orig_data = pkt_buf.c_data();
+
+        ConstBuffer recv_buf_copy(pkt_buf.c_data() + 1, pkt_buf.size() - 1, true);
+
+        ProtoSessionID client_session_id(recv_buf_copy);
+        recv_buf_copy.advance(PacketIDControl::size() + hmac_size);
+
+        BufferAllocated work;
+        pcfg_.frame->prepare(Frame::DECRYPT_WORK, work);
+
+        // Decrypt into `work`.
+        const size_t decrypt_bytes = recv->decrypt(orig_data + head_size,
+                                                   work.data(),
+                                                   work.max_size(),
+                                                   recv_buf_copy.c_data(),
+                                                   recv_buf_copy.size());
+        if (!decrypt_bytes)
+            return Intercept::DROP_2ND;
+
+        work.inc_size(decrypt_bytes);
+
+        // Verify HMAC.
+        if (!recv->hmac_cmp(orig_data, TLSCryptContext::hmac_offset, work.c_data(), work.size()))
+            return Intercept::DROP_2ND;
+
+        // We _should_ have one ACK (for the CONTROL_HARD_RESET_V2 previous message).
+        if (work[0] != 1)
+            return Intercept::DROP_2ND;
+
+        // Discard the opcode and the acked packet ID.
+        work.advance(OPCODE_SIZE + sizeof(uint32_t));
+
+        // Retrieve the peer session ID (this must match).
+        cookie_psid_.read(work);
+
+        // verify client's Psid Cookie
+        if (check_session_id_hmac(cookie_psid_, client_session_id, pcaib))
+            return Intercept::HANDLE_2ND;
 
         return Intercept::DROP_2ND;
     }
@@ -343,10 +487,43 @@ class PsidCookieImpl : public PsidCookie
         return false;
     }
 
+    /**
+     * @brief Set up a couple of TLSCryptInstance (send, recv) from a TLS crypt V2 packet's WKc
+     *
+     * @param  pkt_buf The packet holding the WKc at the end.
+     * @return A pair of {send, recv} objects set up with the symmetric key. std::nullopt on error.
+     */
+    std::optional<std::pair<TLSCryptInstance::Ptr, TLSCryptInstance::Ptr>> init_tls_crypt_v2(Buffer &pkt_buf)
+    {
+        TLSCryptInstance::Ptr send;
+        TLSCryptInstance::Ptr recv;
+
+        TLSCryptInstance::Ptr tls_crypt_server = pcfg_.tls_crypt_context->new_obj_recv();
+
+        if (ProtoContext::KeyContext::unwrap_tls_crypt_wkc(pkt_buf, pcfg_, *tls_crypt_server) != Error::SUCCESS)
+            return std::nullopt;
+
+        const unsigned int key_dir = pcfg_.ssl_factory->mode().is_server()
+                                         ? OpenVPNStaticKey::NORMAL
+                                         : OpenVPNStaticKey::INVERSE;
+
+        send = pcfg_.tls_crypt_context->new_obj_send();
+        recv = pcfg_.tls_crypt_context->new_obj_recv();
+
+        send->init(pcfg_.ssl_factory->libctx(),
+                   pcfg_.wrapped_tls_crypt_key.slice(OpenVPNStaticKey::HMAC | OpenVPNStaticKey::ENCRYPT | key_dir),
+                   pcfg_.wrapped_tls_crypt_key.slice(OpenVPNStaticKey::CIPHER | OpenVPNStaticKey::ENCRYPT | key_dir));
+
+        recv->init(pcfg_.ssl_factory->libctx(),
+                   pcfg_.wrapped_tls_crypt_key.slice(OpenVPNStaticKey::HMAC | OpenVPNStaticKey::DECRYPT | key_dir),
+                   pcfg_.wrapped_tls_crypt_key.slice(OpenVPNStaticKey::CIPHER | OpenVPNStaticKey::DECRYPT | key_dir));
+
+        return std::pair{send, recv};
+    }
+
     static constexpr CryptoAlgs::Type digest_ = CryptoAlgs::Type::SHA256;
 
-    const ProtoContext::ProtoConfig &pcfg_;
-    bool not_tls_auth_mode_;
+    ProtoContext::ProtoConfig &pcfg_;
     TimePtr now_;
     const Time::Duration &handwindow_;
 

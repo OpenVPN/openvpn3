@@ -1363,10 +1363,11 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
                             break;
                         }
                     case CONTROL_HARD_RESET_SERVER_V2:
+                        if (proto.is_server())
+                            return;
+                        [[fallthrough]];
                     case CONTROL_WKC_V1:
                         {
-                            if (proto.is_server())
-                                return;
                             flags |= CONTROL;
                             opcode = opc;
                             break;
@@ -1605,7 +1606,6 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
         control_send(std::move(bp));
     }
 
-  protected:
     // Packet structure for managing network packets, passed as a template
     // parameter to ProtoStackBase
     class Packet
@@ -2406,12 +2406,21 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
 
             // the ``WKc`` is just appended after the standard tls-crypt frame
             const unsigned char *wkc_raw = orig_data + tls_frame_size;
-            const size_t wkc_raw_size = orig_size - tls_frame_size - sizeof(uint16_t);
+            size_t wkc_raw_size = orig_size - tls_frame_size - sizeof(uint16_t);
             // retrieve the ``WKc`` len from the bottom of the packet and convert it to Host Order
             uint16_t wkc_len;
             // avoid unaligned access
             std::memcpy(&wkc_len, wkc_raw + wkc_raw_size, sizeof(wkc_len));
             wkc_len = ntohs(wkc_len);
+
+            // There's also a payload here, so the assumption that the difference in size
+            // from the TLS frame's end to the end of the packet constitutes the WKc no
+            // longer holds. We can only rely on wkc_len for P_CONTROL_WKC_V1 packets.
+            if (opcode_extract(orig_data[0]) != CONTROL_HARD_RESET_CLIENT_V3)
+            {
+                wkc_raw = orig_data + orig_size - wkc_len;
+                wkc_raw_size = wkc_len - sizeof(uint16_t);
+            }
 
             uint32_t k_id = 0;
             const size_t serverkey_id_size = proto_config.tls_crypt_v2_serverkey_id ? sizeof(k_id) : 0;
@@ -2429,8 +2438,8 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
             BufferAllocated plaintext(wkc_len, BufAllocFlags::CONSTRUCT_ZERO);
             // plaintext will be used to compute the Auth Tag, therefore start by prepending
             // the WKc length in network order
-            wkc_len = htons(wkc_len);
-            plaintext.write(&wkc_len, sizeof(wkc_len));
+            const uint16_t net_wkc_len = htons(wkc_len);
+            plaintext.write(&net_wkc_len, sizeof(net_wkc_len));
 
             if (proto_config.tls_crypt_v2_serverkey_id)
             {
@@ -2493,7 +2502,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
                 return Error::TLS_CRYPT_META_FAIL;
 
             // virtually remove the WKc from the packet
-            recv.set_size(tls_frame_size);
+            recv.set_size(orig_size - wkc_len);
 
             return Error::SUCCESS;
         }
@@ -3467,7 +3476,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
                 if (proto.is_server()
                     && proto.tls_wrap_mode != TLS_CRYPT_V2
                     && proto.config->tls_crypt_v2_enabled()
-                    && pkt.opcode == CONTROL_HARD_RESET_CLIENT_V3)
+                    && (pkt.opcode == CONTROL_HARD_RESET_CLIENT_V3 || pkt.opcode == CONTROL_WKC_V1))
                 {
                     // setup key to be used to unwrap WKc upon client connection.
                     // tls-crypt session key setup is postponed to reception of WKc
@@ -3492,6 +3501,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
                         // unwrap WKc and extract Kc (client key) from packet.
                         // This way we can initialize the tls-crypt per-client contexts
                         // (this happens on the server side only)
+                        OpenVPNStaticKey client_key;
                         const Error::Type unwrap_wkc_result = unwrap_tls_crypt_wkc(*pkt.buf,
                                                                                    *proto.config,
                                                                                    *proto.tls_crypt_server,
@@ -3611,7 +3621,6 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
         static BufferAllocated static_work;
     };
 
-  public:
     class PsidCookieHelper
     {
       public:
@@ -3622,12 +3631,37 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
 
         bool is_clients_initial_reset() const
         {
-            return key_id_ == 0 && op_code_ == CONTROL_HARD_RESET_CLIENT_V2;
+            return key_id_ == 0 && (op_code_ == CONTROL_HARD_RESET_CLIENT_V2 || op_code_ == CONTROL_HARD_RESET_CLIENT_V3);
+        }
+
+        //! Returns `true` if this is a TLS crypt V2 protocol packet.
+        bool is_tls_crypt_v2() const noexcept
+        {
+            return op_code_ == CONTROL_HARD_RESET_CLIENT_V3 || op_code_ == CONTROL_WKC_V1;
+        }
+
+        //! Returns `true` if the peer supports early negotiation (i.e. is able to reply with `CONTROL_WKC_V1`).
+        bool supports_early_negotiation(const PacketIDControl &pidc) const noexcept
+        {
+            return (pidc.id & EARLY_NEG_MASK) == EARLY_NEG_START;
         }
 
         bool is_clients_server_reset_ack() const
         {
-            return key_id_ == 0 && (op_code_ == CONTROL_V1 || op_code_ == ACK_V1);
+            return key_id_ == 0 && (op_code_ == CONTROL_V1 || op_code_ == ACK_V1 || op_code_ == CONTROL_WKC_V1);
+        }
+
+        //! Adds an {EARLY_NEG_FLAGS, 2, EARLY_NEG_FLAG_RESEND_WKC} TLV to a payload buffer (use with TLS crypt V2).
+        static void prepend_TLV(Buffer &payload)
+        {
+            // The only supported TLV payload for now.
+            const uint16_t type = htons(EARLY_NEG_FLAGS);
+            const uint16_t len = htons(sizeof(uint16_t));
+            const uint16_t flags = htons(EARLY_NEG_FLAG_RESEND_WKC);
+
+            payload.prepend(&flags, sizeof(flags));
+            payload.prepend(&len, sizeof(len));
+            payload.prepend(&type, sizeof(type));
         }
 
         static unsigned char get_server_hard_reset_opfield()
@@ -3971,20 +4005,29 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
 
     void reset_tls_crypt_server(const ProtoConfig &c)
     {
-        // tls-crypt session key is derived later from WKc received from the client
-        tls_crypt_send.reset();
-        tls_crypt_recv.reset();
-
-        // server context is used only to process incoming WKc's
-        tls_crypt_server = c.tls_crypt_context->new_obj_recv();
-
-        if (!c.tls_crypt_v2_serverkey_id)
+        // It is possible that the PSID/HMAC cookie logic has already set the TLS crypt V2
+        // keys up, during the processing of the second packet. If so, just use them.
+        if (c.tls_crypt_key.defined() && c.wrapped_tls_crypt_key.defined())
         {
-            // the server key is composed by one key set only, therefore direction and
-            // mode should not be specified when slicing
-            tls_crypt_server->init(c.ssl_factory->libctx(),
-                                   c.tls_crypt_key.slice(OpenVPNStaticKey::HMAC),
-                                   c.tls_crypt_key.slice(OpenVPNStaticKey::CIPHER));
+            reset_tls_crypt(c, c.wrapped_tls_crypt_key);
+        }
+        else
+        {
+            // tls-crypt session key is derived later from WKc received from the client
+            tls_crypt_send.reset();
+            tls_crypt_recv.reset();
+
+            // server context is used only to process incoming WKc's
+            tls_crypt_server = c.tls_crypt_context->new_obj_recv();
+
+            if (!c.tls_crypt_v2_serverkey_id)
+            {
+                // the server key is composed by one key set only, therefore direction and
+                // mode should not be specified when slicing
+                tls_crypt_server->init(c.ssl_factory->libctx(),
+                                       c.tls_crypt_key.slice(OpenVPNStaticKey::HMAC),
+                                       c.tls_crypt_key.slice(OpenVPNStaticKey::CIPHER));
+            }
         }
 
         tls_crypt_metadata = c.tls_crypt_metadata_factory->new_obj();
@@ -4526,6 +4569,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
     };
 
     static constexpr PacketIDControl::id_t EARLY_NEG_START = 0x0f000000;
+    static constexpr PacketIDControl::id_t EARLY_NEG_MASK = 0xff000000;
 
     void reset_all()
     {

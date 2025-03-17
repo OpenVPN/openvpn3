@@ -129,7 +129,6 @@ TEST_F(PsidCookieTest, check_setup)
 
     // spot check other aspects of successful pci_dut creation
     EXPECT_TRUE(pci_dut->pcfg_.tls_auth_key.defined());
-    EXPECT_FALSE(pci_dut->not_tls_auth_mode_);
 }
 
 TEST_F(PsidCookieTest, valid_time)

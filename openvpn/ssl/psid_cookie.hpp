@@ -116,7 +116,7 @@ class PsidCookie : public RC<thread_unsafe_refcount>
      *  that the server implementation derived from the PsidCookieAddrInfoBase class
      * @return Intercept  Status of the packet handling
      */
-    virtual Intercept intercept(ConstBuffer &pkt_buf, const PsidCookieAddrInfoBase &pcaib) = 0;
+    virtual Intercept intercept(Buffer &pkt_buf, const PsidCookieAddrInfoBase &pcaib) = 0;
 
     /**
      * @brief Get the cookie psid from client's 2nd packet
