@@ -704,7 +704,7 @@ class OpenSSLContext : public SSLFactoryAPI
 
                 if (cached_ctx)
                 {
-                    lib_ctx = cached_ctx;
+                    lib_ctx = std::move(cached_ctx);
                     return;
                 }
             }
