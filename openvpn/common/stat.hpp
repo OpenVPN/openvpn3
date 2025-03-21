@@ -19,22 +19,6 @@
 
 namespace openvpn {
 
-/**
- * Check if file exists AND is nonempty.
- *
- * @param filename File to check.
- * @return true if file exists AND is nonempty.
- */
-inline bool file_exists_nonempty(const std::string &filename)
-{
-    if (filename.empty())
-        return false;
-    struct stat s;
-    if (::stat(filename.c_str(), &s) != 0)
-        return false;
-    return s.st_size > 0;
-}
-
 // Return true if dirname is a directory
 inline bool is_directory(const std::string &pathname, const bool follow_symlinks = false)
 {
