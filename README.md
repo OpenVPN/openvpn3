@@ -12,7 +12,8 @@ the library and provides basic command line functionality.
 OpenVPN 3 is currently used in production as the core of the OpenVPN
 Connect clients for iOS, Android, Linux, Windows, and Mac OS X.
 
-NOTE: OpenVPN 3 does not currently implement server functionality.
+> [!NOTE]
+> OpenVPN 3 does not currently implement server functionality.
 
 OpenVPN 3 Client API
 --------------------
