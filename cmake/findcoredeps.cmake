@@ -168,6 +168,10 @@ function(add_corelibrary_dependencies target)
         if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
             # disable noisy warnings
             target_compile_options(${target} PRIVATE -Wno-maybe-uninitialized)
+            # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=105329
+            if (CMAKE_CXX_COMPILER_VERSION MATCHES "^12")
+                target_compile_options(${target} PRIVATE -Wno-restrict)
+            endif()
         endif()
         if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
             # display all warnings
