@@ -14,8 +14,6 @@ Connect clients for iOS, Android, Linux, Windows, and Mac OS X.
 
 NOTE: OpenVPN 3 does not currently implement server functionality.
 
-[TOC]
-
 OpenVPN 3 Client API
 --------------------
 
