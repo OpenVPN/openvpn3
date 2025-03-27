@@ -65,8 +65,22 @@ inline BufferPtr read_binary(const std::string &filename,
     std::ifstream ifs(filename.c_str(), std::ios::binary);
 #endif // OPENVPN_PLATFORM_WIN
 
-    if (!ifs)
+    if (ifs.fail() || !ifs.good())
         OPENVPN_THROW(open_file_error, "cannot open for read: " << filename);
+
+    if (filename.rfind("/dev/fd/", 0) == 0) {
+        std::string ret;
+        std::string line;
+        while (std::getline(ifs, line))
+        {
+            ret += line;
+            ret += '\n';
+        }
+        const size_t len = ret.length();
+        BufferPtr buf = BufferAllocatedRc::Create(len, 0);
+        buf->write((unsigned char *)ret.c_str(), len);
+        return buf;
+    }
 
     // get length of file
     ifs.seekg(0, std::ios::end);
