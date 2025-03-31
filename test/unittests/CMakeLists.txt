@@ -121,7 +121,7 @@ else ()
 endif ()
 
 if (${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
-    target_link_libraries(coreUnitTests cap)
+    add_libcap(coreUnitTests)
     target_sources(coreUnitTests PRIVATE test_sitnl.cpp)
 endif ()
 
