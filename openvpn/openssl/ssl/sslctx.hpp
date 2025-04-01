@@ -1070,22 +1070,28 @@ class OpenSSLContext : public SSLFactoryAPI
                 {
 #ifndef OPENSSL_NO_EC
                     if ((EVP_PKEY_id(pkey) == EVP_PKEY_EC))
-
                         print_ec_key_details(pkey, os);
-
                     else
 #endif
                     {
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
                         int pkeyId = EVP_PKEY_id(pkey);
                         const char *pkeySN = OBJ_nid2sn(pkeyId);
                         if (!pkeySN)
-                            pkeySN = "Unknown";
+                            pkeySN = "(error getting public key type)";
 
                         // Nicer names instead of rsaEncryption and dsaEncryption
                         if (pkeyId == EVP_PKEY_RSA)
                             pkeySN = "RSA";
                         else if (pkeyId == EVP_PKEY_DSA)
                             pkeySN = "DSA";
+#else  /* OpenSSL >= 3 */
+                        const char *pkeySN = EVP_PKEY_get0_type_name(pkey);
+                        if (!pkeySN)
+                        {
+                            pkeySN = "(error getting public key type)";
+                        }
+#endif /* if OPENSSL_VERSION_NUMBER < 0x30000000L */
 
                         os << ", " << EVP_PKEY_bits(pkey) << " bit " << pkeySN;
                     }
