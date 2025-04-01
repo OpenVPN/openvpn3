@@ -674,11 +674,11 @@ class Setup : public SetupBase
 
                 // Use WFP for DNS leak protection unless local traffic is blocked already.
                 // Block DNS on all interfaces except the TAP adapter.
-                if (use_wfp && pull.block_outside_dns && !block_local_traffic
-                    && !allow_local_dns_resolvers && !openvpn_app_path.empty())
+                if (use_wfp && pull.block_outside_dns && !block_local_traffic && !openvpn_app_path.empty())
                 {
-                    create.add(new WFP::ActionBlock(openvpn_app_path, tap.index, WFP::Block::Dns, wfp));
-                    destroy.add(new WFP::ActionUnblock(openvpn_app_path, tap.index, WFP::Block::Dns, wfp));
+                    WFP::Block block_type = (allow_local_dns_resolvers ? WFP::Block::DnsButAllowLocal : WFP::Block::Dns);
+                    create.add(new WFP::ActionBlock(openvpn_app_path, tap.index, block_type, wfp));
+                    destroy.add(new WFP::ActionUnblock(openvpn_app_path, tap.index, block_type, wfp));
                 }
             }
             else
@@ -805,11 +805,12 @@ class Setup : public SetupBase
 
                 // Use WFP for DNS leak protection unless local traffic is blocked already.
                 // Block DNS on all interfaces except the TAP adapter.
-                if (use_wfp && !split_dns && !block_local_traffic && !allow_local_dns_resolvers
+                if (use_wfp && !split_dns && !block_local_traffic
                     && !openvpn_app_path.empty() && (dns.ipv4() || dns.ipv6()))
                 {
-                    create.add(new WFP::ActionBlock(openvpn_app_path, tap.index, WFP::Block::Dns, wfp));
-                    destroy.add(new WFP::ActionUnblock(openvpn_app_path, tap.index, WFP::Block::Dns, wfp));
+                    WFP::Block block_type = (allow_local_dns_resolvers ? WFP::Block::DnsButAllowLocal : WFP::Block::Dns);
+                    create.add(new WFP::ActionBlock(openvpn_app_path, tap.index, block_type, wfp));
+                    destroy.add(new WFP::ActionUnblock(openvpn_app_path, tap.index, block_type, wfp));
                 }
 
                 // flush DNS cache
