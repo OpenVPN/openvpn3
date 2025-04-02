@@ -1,7 +1,7 @@
-From f54cab5d37d9ee604d42c9d1b056c7a6efc2bd4a Mon Sep 17 00:00:00 2001
+From 499bded8d999e86262deb930724e9d46209c7d65 Mon Sep 17 00:00:00 2001
 From: Frank Lichtenheld <frank@lichtenheld.com>
 Date: Mon, 20 Dec 2021 13:36:01 +0100
-Subject: [PATCH] reactive_socket_service_base: add constructor for
+Subject: [PATCH 6/6] reactive_socket_service_base: add constructor for
  basic_implementation_type
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
@@ -25,7 +25,7 @@ Signed-off-by: Frank Lichtenheld <frank@lichtenheld.com>
  2 files changed, 10 insertions(+), 1 deletion(-)
 
 diff --git a/asio/include/asio/detail/reactive_socket_service.hpp b/asio/include/asio/detail/reactive_socket_service.hpp
-index 185810e8..6023945b 100644
+index 6b7963eb7..d07ab3bc1 100644
 --- a/asio/include/asio/detail/reactive_socket_service.hpp
 +++ b/asio/include/asio/detail/reactive_socket_service.hpp
 @@ -65,7 +65,8 @@ public:
@@ -39,7 +39,7 @@ index 185810e8..6023945b 100644
      }
  
 diff --git a/asio/include/asio/detail/reactive_socket_service_base.hpp b/asio/include/asio/detail/reactive_socket_service_base.hpp
-index c67297fc..3b8d7f60 100644
+index ab1f5fcf0..c577c0e94 100644
 --- a/asio/include/asio/detail/reactive_socket_service_base.hpp
 +++ b/asio/include/asio/detail/reactive_socket_service_base.hpp
 @@ -54,6 +54,14 @@ public:
@@ -58,5 +58,5 @@ index c67297fc..3b8d7f60 100644
      socket_type socket_;
  
 -- 
-2.30.2
+2.34.1
 

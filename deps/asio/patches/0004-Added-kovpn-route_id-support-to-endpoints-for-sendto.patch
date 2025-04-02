@@ -1,20 +1,22 @@
-From df7759c141a31159d0ca4267b63f64dfd2a385b1 Mon Sep 17 00:00:00 2001
+From 4c6d776f582375c73bf38af5f6093b3f24f47942 Mon Sep 17 00:00:00 2001
 From: James Yonan <james@openvpn.net>
 Date: Wed, 27 Jun 2018 23:12:31 -0600
-Subject: Added kovpn route_id support to endpoints for sendto/recvfrom.
+Subject: [PATCH 4/6] Added kovpn route_id support to endpoints for
+ sendto/recvfrom.
 
 Signed-off-by: James Yonan <james@openvpn.net>
+Signed-off-by: Frank Lichtenheld <frank@lichtenheld.com>
 ---
- asio/include/asio/ip/basic_endpoint.hpp       | 12 ++++++
- asio/include/asio/ip/detail/endpoint.hpp      | 55 +++++++++++++++++++++++++++
- asio/include/asio/ip/detail/impl/endpoint.ipp | 12 ++++++
+ asio/include/asio/ip/basic_endpoint.hpp       | 12 ++++
+ asio/include/asio/ip/detail/endpoint.hpp      | 55 +++++++++++++++++++
+ asio/include/asio/ip/detail/impl/endpoint.ipp | 12 ++++
  3 files changed, 79 insertions(+)
 
 diff --git a/asio/include/asio/ip/basic_endpoint.hpp b/asio/include/asio/ip/basic_endpoint.hpp
-index 4418ee7..179a021 100644
+index 3dfb1248d..883405035 100644
 --- a/asio/include/asio/ip/basic_endpoint.hpp
 +++ b/asio/include/asio/ip/basic_endpoint.hpp
-@@ -185,6 +185,18 @@ public:
+@@ -187,6 +187,18 @@ public:
      impl_.address(addr);
    }
  
@@ -32,9 +34,9 @@ index 4418ee7..179a021 100644
 +
    /// Compare two endpoints for equality.
    friend bool operator==(const basic_endpoint<InternetProtocol>& e1,
-       const basic_endpoint<InternetProtocol>& e2) ASIO_NOEXCEPT
+       const basic_endpoint<InternetProtocol>& e2) noexcept
 diff --git a/asio/include/asio/ip/detail/endpoint.hpp b/asio/include/asio/ip/detail/endpoint.hpp
-index 9acefe5..7ba5983 100644
+index 2c4e3cd43..ee93ae2f3 100644
 --- a/asio/include/asio/ip/detail/endpoint.hpp
 +++ b/asio/include/asio/ip/detail/endpoint.hpp
 @@ -24,6 +24,11 @@
@@ -49,7 +51,7 @@ index 9acefe5..7ba5983 100644
  namespace asio {
  namespace ip {
  namespace detail {
-@@ -116,6 +121,47 @@ public:
+@@ -118,6 +123,47 @@ public:
    ASIO_DECL std::string to_string() const;
  #endif // !defined(ASIO_NO_IOSTREAM)
  
@@ -97,7 +99,7 @@ index 9acefe5..7ba5983 100644
  private:
    // The underlying IP socket address.
    union data_union
-@@ -123,6 +169,15 @@ private:
+@@ -125,6 +171,15 @@ private:
      asio::detail::socket_addr_type base;
      asio::detail::sockaddr_in4_type v4;
      asio::detail::sockaddr_in6_type v6;
@@ -114,10 +116,10 @@ index 9acefe5..7ba5983 100644
  };
  
 diff --git a/asio/include/asio/ip/detail/impl/endpoint.ipp b/asio/include/asio/ip/detail/impl/endpoint.ipp
-index 304bdf3..a72fefc 100644
+index ef61208e2..5563bc243 100644
 --- a/asio/include/asio/ip/detail/impl/endpoint.ipp
 +++ b/asio/include/asio/ip/detail/impl/endpoint.ipp
-@@ -37,6 +37,10 @@ endpoint::endpoint()
+@@ -37,6 +37,10 @@ endpoint::endpoint() noexcept
    data_.v4.sin_family = ASIO_OS_DEF(AF_INET);
    data_.v4.sin_port = 0;
    data_.v4.sin_addr.s_addr = ASIO_OS_DEF(INADDR_ANY);
@@ -127,8 +129,8 @@ index 304bdf3..a72fefc 100644
 +#endif
  }
  
- endpoint::endpoint(int family, unsigned short port_num) ASIO_NOEXCEPT
-@@ -49,6 +53,10 @@ endpoint::endpoint(int family, unsigned short port_num)
+ endpoint::endpoint(int family, unsigned short port_num) noexcept
+@@ -49,6 +53,10 @@ endpoint::endpoint(int family, unsigned short port_num) noexcept
      data_.v4.sin_port =
        asio::detail::socket_ops::host_to_network_short(port_num);
      data_.v4.sin_addr.s_addr = ASIO_OS_DEF(INADDR_ANY);
@@ -151,5 +153,5 @@ index 304bdf3..a72fefc 100644
    else
    {
 -- 
-2.7.4
+2.34.1
 

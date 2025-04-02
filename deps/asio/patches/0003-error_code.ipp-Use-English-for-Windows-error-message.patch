@@ -1,18 +1,19 @@
-From af733fe9ce8345e06947dcf8b395d4736b1cb98c Mon Sep 17 00:00:00 2001
+From fdbbdc4ff0dee43aa4a878d11daea2870499a1b5 Mon Sep 17 00:00:00 2001
 From: Lev Stipakov <lev@openvpn.net>
 Date: Mon, 29 Apr 2019 10:26:13 +0300
-Subject: [PATCH] error_code.ipp: Use English for Windows error messages
+Subject: [PATCH 3/6] error_code.ipp: Use English for Windows error messages
 
 FormatMessageA doesn't work well with non-ASCII chars
 so make it return error message in English.
 
 Signed-off-by: Lev Stipakov <lev@openvpn.net>
+Signed-off-by: Frank Lichtenheld <frank@lichtenheld.com>
 ---
  asio/include/asio/impl/error_code.ipp | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/asio/include/asio/impl/error_code.ipp b/asio/include/asio/impl/error_code.ipp
-index 55f5b361..3ef34fcd 100644
+index caeb1967c..4f5f6ed8e 100644
 --- a/asio/include/asio/impl/error_code.ipp
 +++ b/asio/include/asio/impl/error_code.ipp
 @@ -80,7 +80,7 @@ public:
@@ -25,5 +26,5 @@ index 55f5b361..3ef34fcd 100644
      if (length && msg[length - 1] == '\n')
        msg[--length] = '\0';
 -- 
-2.16.2.windows.1
+2.34.1
 
