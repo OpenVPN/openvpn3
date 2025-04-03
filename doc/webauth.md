@@ -370,7 +370,7 @@ of the OpenVPN protocol.
 
 When the server issues a challenge to the authentication
 request. For example suppose we have a user called 'test' and a password
-of 'mypass".  Get the OpenVPN config file:
+of 'mypass'.  Get the OpenVPN config file:
 
     curl -u test:mypass https://ACCESS_SERVER/rest/GetUserlogin
 
