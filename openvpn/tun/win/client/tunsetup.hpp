@@ -299,21 +299,21 @@ class Setup : public SetupBase
         {
             if (pull.dns_options.servers.empty())
                 return;
-            for (const auto &addr : pull.dns_options.servers.begin()->second.addresses)
-                add(addr, pull);
+            for (const auto &ip : pull.dns_options.servers.begin()->second.addresses)
+                add(ip.address, pull);
         }
 
-        static bool enabled(const DnsAddress &addr,
+        static bool enabled(const std::string &address,
                             const TunBuilderCapture &pull)
         {
-            return IP::Addr(addr.address).is_ipv6() && pull.block_ipv6 ? false : true;
+            return IP::Addr(address).is_ipv6() && pull.block_ipv6 ? false : true;
         }
 
-        int add(const DnsAddress &addr,
+        int add(const std::string &address,
                 const TunBuilderCapture &pull)
         {
-            if (enabled(addr, pull))
-                return indices[IP::Addr(addr.address).is_ipv6() ? 1 : 0]++;
+            if (enabled(address, pull))
+                return indices[IP::Addr(address).is_ipv6() ? 1 : 0]++;
             else
                 return -1;
         }
@@ -330,6 +330,65 @@ class Setup : public SetupBase
       private:
         int indices[2] = {0, 0};
     };
+
+    /**
+     * @brief Set the DNS server addresses with the VPN adapter
+     *
+     * @param create            reference to create ActionList
+     * @param destroy           reference to destroy ActionList
+     * @param itf_index_name    VPN interface index or name string ref
+     * @param addresses         vector of server address strings
+     * @param pull              reference to tunbuilder capture
+     */
+    void set_adapter_dns(ActionList &create,
+                         ActionList &destroy,
+                         const std::string &itf_index_name,
+                         const std::vector<std::string> &addresses,
+                         const TunBuilderCapture &pull)
+    {
+        // Usage: set dnsservers [name=]<string> [source=]dhcp|static
+        //  [[address=]<IP address>|none]
+        //  [[register=]none|primary|both]
+        //  [[validate=]yes|no]
+        // Usage: add dnsservers [name=]<string> [address=]<IPv4 address>
+        //  [[index=]<integer>] [[validate=]yes|no]
+        // Usage: delete dnsservers [name=]<string> [[address=]<IP address>|all] [[validate=]yes|no]
+        //
+        // Usage: set dnsservers [name=]<string> [source=]dhcp|static
+        //  [[address=]<IPv6 address>|none]
+        //  [[register=]none|primary|both]
+        //  [[validate=]yes|no]
+        // Usage: add dnsservers [name=]<string> [address=]<IPv6 address>
+        //  [[index=]<integer>] [[validate=]yes|no]
+        // Usage: delete dnsservers [name=]<string> [[address=]<IPv6 address>|all] [[validate=]yes|no]
+
+        // fix for vista and dnsserver vs win7+ dnsservers
+        std::string dns_servers_cmd = "dnsservers";
+        std::string validate_cmd = " validate=no";
+        if (IsWindowsVistaOrGreater() && !IsWindows7OrGreater())
+        {
+            dns_servers_cmd = "dnsserver";
+            validate_cmd = "";
+        }
+
+        UseDNS dc;
+        for (const auto &address : addresses)
+        {
+            // 0-based index for specific IPv4/IPv6 protocol, or -1 if disabled
+            const int count = dc.add(address, pull);
+            if (count >= 0)
+            {
+                const std::string proto = IP::Addr(address).is_ipv6() ? "ipv6" : "ip";
+                if (count)
+                    create.add(new WinCmd("netsh interface " + proto + " add " + dns_servers_cmd + " " + itf_index_name + ' ' + address + " " + to_string(count + 1) + validate_cmd));
+                else
+                {
+                    create.add(new WinCmd("netsh interface " + proto + " set " + dns_servers_cmd + " " + itf_index_name + " static " + address + " register=primary" + validate_cmd));
+                    destroy.add(new WinCmd("netsh interface " + proto + " delete " + dns_servers_cmd + " " + itf_index_name + " all" + validate_cmd));
+                }
+            }
+        }
+    }
 
     void register_rings(HANDLE handle, RingBuffer::Ptr ring_buffer)
     {
@@ -658,11 +717,17 @@ class Setup : public SetupBase
                     throw tun_win_setup("no applicable DNS server config found");
                 }
 
-                // To keep local resolvers working, only split rules must be created
                 if (!allow_local_dns_resolvers || !split_domains.empty())
                 {
+                    // To keep local resolvers working, only split rules must be created
                     create.add(new NRPT::ActionCreate(pid, split_domains, addresses, wide_search_domains, dnssec));
                     destroy.add(new NRPT::ActionDelete(pid));
+                }
+                else if (allow_local_dns_resolvers && pull.block_outside_dns)
+                {
+                    // Set pushed DNS servers with the adapter. In case the local resolver
+                    // doesn't work the VPN DNS resolvers will serve as a fallback
+                    set_adapter_dns(create, destroy, tap_index_name, addresses, pull);
                 }
 
                 create.add(new DNS::ActionCreate(tap.name, search_domains));
@@ -698,48 +763,10 @@ class Setup : public SetupBase
                 // add DNS servers via netsh
                 if (!(use_nrpt && split_dns) && !l2_post)
                 {
-                    // Usage: set dnsservers [name=]<string> [source=]dhcp|static
-                    //  [[address=]<IP address>|none]
-                    //  [[register=]none|primary|both]
-                    //  [[validate=]yes|no]
-                    // Usage: add dnsservers [name=]<string> [address=]<IPv4 address>
-                    //  [[index=]<integer>] [[validate=]yes|no]
-                    // Usage: delete dnsservers [name=]<string> [[address=]<IP address>|all] [[validate=]yes|no]
-                    //
-                    // Usage: set dnsservers [name=]<string> [source=]dhcp|static
-                    //  [[address=]<IPv6 address>|none]
-                    //  [[register=]none|primary|both]
-                    //  [[validate=]yes|no]
-                    // Usage: add dnsservers [name=]<string> [address=]<IPv6 address>
-                    //  [[index=]<integer>] [[validate=]yes|no]
-                    // Usage: delete dnsservers [name=]<string> [[address=]<IPv6 address>|all] [[validate=]yes|no]
-
-                    // fix for vista and dnsserver vs win7+ dnsservers
-                    std::string dns_servers_cmd = "dnsservers";
-                    std::string validate_cmd = " validate=no";
-                    if (IsWindowsVistaOrGreater() && !IsWindows7OrGreater())
-                    {
-                        dns_servers_cmd = "dnsserver";
-                        validate_cmd = "";
-                    }
-
-                    UseDNS dc;
-                    for (const auto &ip : server.addresses)
-                    {
-                        // 0-based index for specific IPv4/IPv6 protocol, or -1 if disabled
-                        const int count = dc.add(ip, pull);
-                        if (count >= 0)
-                        {
-                            const std::string proto = IP::Addr(ip.address).is_ipv6() ? "ipv6" : "ip";
-                            if (count)
-                                create.add(new WinCmd("netsh interface " + proto + " add " + dns_servers_cmd + " " + tap_index_name + ' ' + ip.address + " " + to_string(count + 1) + validate_cmd));
-                            else
-                            {
-                                create.add(new WinCmd("netsh interface " + proto + " set " + dns_servers_cmd + " " + tap_index_name + " static " + ip.address + " register=primary" + validate_cmd));
-                                destroy.add(new WinCmd("netsh interface " + proto + " delete " + dns_servers_cmd + " " + tap_index_name + " all" + validate_cmd));
-                            }
-                        }
-                    }
+                    std::vector<std::string> addresses;
+                    std::for_each(addresses.begin(), addresses.end(), [&addresses](const std::string &addr)
+                                  { addresses.push_back(addr); });
+                    set_adapter_dns(create, destroy, tap_index_name, addresses, pull);
                 }
 
                 // If NRPT enabled and at least one IPv4 or IPv6 DNS
