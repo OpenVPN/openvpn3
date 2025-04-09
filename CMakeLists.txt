@@ -46,6 +46,7 @@ add_subdirectory(openvpn/ovpnagent/mac)
 if (ENABLE_DOXYGEN)
     # Exclude some project specific directories
     set(DOXYGEN_EXCLUDE_PATTERNS
+        "${PROJECT_SOURCE_DIR}/README.md"
         "*/vcpkg_installed/*"
         "*/googletest-src/*"
         "*/rapidcheck-src/*"
@@ -55,7 +56,7 @@ if (ENABLE_DOXYGEN)
         "*/test/unittests/output/*"
         "*/test/unittests/userpass/*"
         )
-    set(DOXYGEN_USE_MDFILE_AS_MAINPAGE "${PROJECT_SOURCE_DIR}/README.md")
+    set(DOXYGEN_USE_MDFILE_AS_MAINPAGE "${PROJECT_SOURCE_DIR}/doc/developer_guide.md")
 
     configure_doxygen("OpenVPN 3 Core Library" "core" "doxygen/core")
 endif ()
