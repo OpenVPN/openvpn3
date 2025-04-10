@@ -231,7 +231,8 @@ the kinds of bugs that can introduce security vulnerabilities.
 Here is a brief set of guidelines:
 
 -   When dealing with strings, use a `std::string` rather than a
-    `char *`.
+    `char *`. When a function only needs to inspect text without taking
+    ownership, consider using `std::string_view` to avoid unnecessary copies.
 
 -   When dealing with binary data or buffers, always try to use a
     openvpn::Buffer, openvpn::ConstBuffer, openvpn::BufferAllocatedRc,
@@ -241,18 +242,20 @@ Here is a brief set of guidelines:
     openvpn/buffer/buffer.hpp for the OpenVPN `Buffer` classes.
 
 -   When it's necessary to have a pointer to an object, use
-    `std::unique_ptr<>` for non-shared objects and reference-counted
+    `std::make_unique<>` for non-shared objects and reference-counted
     smart pointers for shared objects. For shared-pointers, OpenVPN code
     should use the smart pointer classes defined in
     openvpn/common/rc.hpp. Please see the
     comments in this file for documentation.
 
--   Never use `malloc` or `free`. When allocating objects, use the C++
-    `new` operator and then immediately construct a smart pointer to
-    reference the object:
+-   Never use `malloc` or `free`. When allocating objects, use `std::make_unique`
+    or `std::make_shared` to allocate the object and create the smart pointer at
+    the same time:
 
-        std::unique_ptr<MyObject> ptr = new MyObject();
+        auto ptr = std::make_unique<MyObject>();
         ptr->method();
+
+    This is preferred over using `new` directly.
 
 -   When interfacing with C functions that deal with raw pointers,
     memory allocation, etc., consider wrapping the functionality in C++.
@@ -273,7 +276,7 @@ Here is a brief set of guidelines:
         }
 
 -   Any variable whose value is not expected to change should be
-    declared `const`.
+    declared `const`. When possible, prefer `constexpr`.
 
 -   Don't use non-const global or static variables unless absolutely
     necessary.
@@ -293,9 +296,6 @@ Here is a brief set of guidelines:
             os << "Reconnecting in " << n_seconds << " seconds.";
             return os.str();
         }
-
--   OpenVPN 3 is a *header-only* library, therefore all free functions
-    outside of classes should have the `inline` attribute.
 
 Conventions
 ===========
