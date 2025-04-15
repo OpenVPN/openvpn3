@@ -1,5 +1,6 @@
 #include "test_common.hpp"
 #include "test_generators.hpp"
+#include <rapidcheck/state.h>
 
 #include <iostream>
 
@@ -1094,4 +1095,693 @@ RC_GTEST_PROP(TunBuilderCapture, StringRepresentation, (const std::string &addre
     os << "Add Routes:\n";
     os << "Exclude Routes:\n";
     RC_ASSERT(tbc->to_string() == os.str());
+}
+
+struct TunBuilderCaptureModel
+{
+    std::string session_name;
+    int mtu{0};
+    Layer layer{Layer::OSI_LAYER_3};
+    TunBuilderCapture::RemoteAddress remote_address{};
+    std::vector<TunBuilderCapture::RouteAddress> tunnel_addresses;
+    int tunnel_address_index_ipv4{-1};
+    int tunnel_address_index_ipv6{-1};
+    TunBuilderCapture::RerouteGW reroute_gw{};
+    bool block_ipv4{false};
+    bool block_ipv6{false};
+    bool block_outside_dns{false};
+    int route_metric_default{-1};
+    std::vector<TunBuilderCapture::Route> add_routes;
+    std::vector<TunBuilderCapture::Route> exclude_routes;
+    DnsOptions dns_options{};
+    std::vector<TunBuilderCapture::ProxyBypass> proxy_bypass;
+    TunBuilderCapture::ProxyAutoConfigURL proxy_auto_config_url{};
+    TunBuilderCapture::ProxyHostPort http_proxy{};
+    TunBuilderCapture::ProxyHostPort https_proxy{};
+    std::vector<TunBuilderCapture::WINSServer> wins_servers{};
+    static constexpr auto mtu_ipv4_maximum{65'535};
+};
+
+struct SetRemoteAddress final : rc::state::Command<TunBuilderCaptureModel, TunBuilderCapture>
+{
+    std::string address;
+    bool ipv6{false};
+
+    explicit SetRemoteAddress()
+        : address{*rc::gen::arbitrary<std::string>()}, ipv6{*rc::gen::arbitrary<bool>()}
+    {
+    }
+
+    auto apply(TunBuilderCaptureModel &model) const -> void override
+    {
+        model.remote_address.address = address;
+        model.remote_address.ipv6 = ipv6;
+    }
+
+    auto run(const TunBuilderCaptureModel &model, TunBuilderCapture &sut) const -> void override
+    {
+        RC_ASSERT(sut.tun_builder_set_remote_address(address, ipv6));
+        RC_ASSERT(sut.remote_address.address == address);
+        RC_ASSERT(sut.remote_address.ipv6 == ipv6);
+    }
+
+    auto show(std::ostream &os) const -> void override
+    {
+        os << "Set RemoteAddress to " << address << " " << (ipv6 ? "IPv6" : "IPv4");
+    }
+};
+
+struct AddAddress final : rc::state::Command<TunBuilderCaptureModel, TunBuilderCapture>
+{
+    std::string address;
+    unsigned char prefix_length{0};
+    int metric{-1};
+    std::string gateway;
+    bool ipv6{false};
+    bool net30{false};
+
+    explicit AddAddress()
+        : address{*rc::gen::arbitrary<std::string>()}, prefix_length{*rc::gen::arbitrary<unsigned char>()}, gateway{*rc::gen::arbitrary<std::string>()}, ipv6{*rc::gen::arbitrary<bool>()}, net30{*rc::gen::arbitrary<bool>()}
+    {
+    }
+
+    auto apply(TunBuilderCaptureModel &model) const -> void override
+    {
+        TunBuilderCapture::RouteAddress address;
+        address.address = this->address;
+        address.prefix_length = static_cast<unsigned char>(prefix_length);
+        address.gateway = gateway;
+        address.ipv6 = ipv6;
+        address.net30 = net30;
+        if (ipv6)
+        {
+            model.tunnel_address_index_ipv6 = static_cast<int>(model.tunnel_addresses.size());
+        }
+        else
+        {
+            model.tunnel_address_index_ipv4 = static_cast<int>(model.tunnel_addresses.size());
+        }
+        model.tunnel_addresses.push_back(std::move(address));
+    }
+
+    auto run(const TunBuilderCaptureModel &model, TunBuilderCapture &sut) const -> void override
+    {
+        RC_ASSERT(sut.tun_builder_add_address(address, prefix_length, gateway, ipv6, net30));
+        RC_ASSERT(sut.tunnel_addresses.size() == model.tunnel_addresses.size() + 1);
+        if (ipv6)
+        {
+            RC_ASSERT(sut.tunnel_address_index_ipv6 == static_cast<int>(model.tunnel_addresses.size()));
+            const auto *current_address = sut.vpn_ipv6();
+            RC_ASSERT(current_address->address == address);
+            RC_ASSERT(current_address->prefix_length == prefix_length);
+            RC_ASSERT(current_address->gateway == gateway);
+            RC_ASSERT(current_address->ipv6 == ipv6);
+            RC_ASSERT(current_address->net30 == net30);
+        }
+        else
+        {
+            RC_ASSERT(sut.tunnel_address_index_ipv4 == static_cast<int>(model.tunnel_addresses.size()));
+            const auto *current_address = sut.vpn_ipv4();
+            RC_ASSERT(current_address->address == address);
+            RC_ASSERT(current_address->prefix_length == prefix_length);
+            RC_ASSERT(current_address->gateway == gateway);
+            RC_ASSERT(current_address->ipv6 == ipv6);
+            RC_ASSERT(current_address->net30 == net30);
+        }
+        const auto *current_address = sut.vpn_ip(ipv6 ? IP::Addr::V6 : IP::Addr::V4);
+        RC_ASSERT(current_address->address == address);
+        RC_ASSERT(current_address->prefix_length == prefix_length);
+        RC_ASSERT(current_address->gateway == gateway);
+        RC_ASSERT(current_address->ipv6 == ipv6);
+        RC_ASSERT(current_address->net30 == net30);
+    }
+
+    auto show(std::ostream &os) const -> void override
+    {
+        os << "Add address: " << address << " prefix_length: " << prefix_length << " gateway: " << gateway << (ipv6 ? "IPv6" : "IPv4") << " net30: " << net30;
+    }
+};
+
+struct RerouteGW final : rc::state::Command<TunBuilderCaptureModel, TunBuilderCapture>
+{
+    bool ipv4{false};
+    bool ipv6{false};
+    unsigned int flags{0};
+
+    explicit RerouteGW()
+        : ipv4{*rc::gen::arbitrary<bool>()}, ipv6{*rc::gen::arbitrary<bool>()}, flags{*rc::gen::arbitrary<unsigned int>()}
+    {
+    }
+
+    auto apply(TunBuilderCaptureModel &model) const -> void override
+    {
+        model.reroute_gw.ipv4 = ipv4;
+        model.reroute_gw.ipv6 = ipv6;
+        model.reroute_gw.flags = flags;
+    }
+
+    auto run(const TunBuilderCaptureModel &model, TunBuilderCapture &sut) const -> void override
+    {
+        RC_ASSERT(sut.tun_builder_reroute_gw(ipv4, ipv6, flags));
+        RC_ASSERT(sut.reroute_gw.ipv6 == ipv6);
+        RC_ASSERT(sut.reroute_gw.ipv4 == ipv4);
+        RC_ASSERT(sut.reroute_gw.ipv6 == ipv6);
+    }
+
+    auto show(std::ostream &os) const -> void override
+    {
+        os << "Set RerouteGW ipv4: " << ipv4 << " ipv6: " << ipv6 << " flags: " << flags;
+    }
+};
+
+struct SetRouteMetricDefault final : rc::state::Command<TunBuilderCaptureModel, TunBuilderCapture>
+{
+    int metric{};
+
+    explicit SetRouteMetricDefault()
+        : metric{*rc::gen::arbitrary<int>()}
+    {
+    }
+
+    auto apply(TunBuilderCaptureModel &model) const -> void override
+    {
+        model.route_metric_default = metric;
+    }
+
+    auto run(const TunBuilderCaptureModel &model, TunBuilderCapture &sut) const -> void override
+    {
+        RC_ASSERT(sut.tun_builder_set_route_metric_default(metric));
+        RC_ASSERT(sut.route_metric_default == metric);
+    }
+
+    auto show(std::ostream &os) const -> void override
+    {
+        os << "Set route metric default to " << metric;
+    }
+};
+
+struct AddRoute final : rc::state::Command<TunBuilderCaptureModel, TunBuilderCapture>
+{
+    std::string address;
+    unsigned char prefix_length{0};
+    int metric{-1};
+    std::string gateway;
+    bool ipv6{false};
+    bool net30{false};
+
+    explicit AddRoute()
+        : address{*rc::gen::arbitrary<std::string>()}, prefix_length{static_cast<unsigned char>(*rc::gen::arbitrary<int>())}, metric{*rc::gen::arbitrary<int>()}, ipv6{*rc::gen::arbitrary<bool>()}
+    {
+    }
+
+    auto apply(TunBuilderCaptureModel &model) const -> void override
+    {
+        TunBuilderCapture::Route route;
+        route.address = address;
+        route.prefix_length = static_cast<unsigned char>(prefix_length);
+        route.metric = (metric < 0 ? model.route_metric_default : metric);
+        route.ipv6 = ipv6;
+        model.add_routes.push_back(std::move(route));
+    }
+
+    auto run(const TunBuilderCaptureModel &model, TunBuilderCapture &sut) const -> void override
+    {
+        RC_ASSERT(sut.tun_builder_add_route(address, prefix_length, metric, ipv6));
+        RC_ASSERT(sut.add_routes.size() == model.add_routes.size() + 1);
+        const auto &added_route = sut.add_routes.back();
+        RC_ASSERT(added_route.address == address);
+        RC_ASSERT(added_route.prefix_length == prefix_length);
+        RC_ASSERT(added_route.metric == (metric < 0 ? model.route_metric_default : metric));
+        RC_ASSERT(added_route.ipv6 == ipv6);
+    }
+
+    auto show(std::ostream &os) const -> void override
+    {
+        os << "Add Route: " << address << " prefix length: " << prefix_length << " metric: " << metric << " ipv6: " << ipv6;
+    }
+};
+
+struct ExcludeRoute final : rc::state::Command<TunBuilderCaptureModel, TunBuilderCapture>
+{
+    std::string address;
+    unsigned char prefix_length{0};
+    int metric{-1};
+    std::string gateway;
+    bool ipv6{false};
+    bool net30{false};
+
+    explicit ExcludeRoute()
+        : address{*rc::gen::arbitrary<std::string>()}, prefix_length{static_cast<unsigned char>(*rc::gen::arbitrary<int>())}, metric{*rc::gen::arbitrary<int>()}, ipv6{*rc::gen::arbitrary<bool>()}
+    {
+    }
+
+    auto apply(TunBuilderCaptureModel &model) const -> void override
+    {
+        TunBuilderCapture::Route route;
+        route.address = address;
+        route.prefix_length = static_cast<unsigned char>(prefix_length);
+        route.metric = metric;
+        route.ipv6 = ipv6;
+        model.exclude_routes.push_back(std::move(route));
+    }
+
+    auto run(const TunBuilderCaptureModel &model, TunBuilderCapture &sut) const -> void override
+    {
+        RC_ASSERT(sut.tun_builder_exclude_route(address, prefix_length, metric, ipv6));
+        RC_ASSERT(sut.exclude_routes.size() == model.exclude_routes.size() + 1);
+        const auto &excluded_route = sut.exclude_routes.back();
+        RC_ASSERT(excluded_route.address == address);
+        RC_ASSERT(excluded_route.prefix_length == prefix_length);
+        RC_ASSERT(excluded_route.metric == metric);
+        RC_ASSERT(excluded_route.ipv6 == ipv6);
+    }
+
+    auto show(std::ostream &os) const -> void override
+    {
+        os << "Add Exclude Route: " << address << " prefix length: " << prefix_length << " metric: " << metric << " ipv6: " << ipv6;
+    }
+};
+
+struct SetLayer final : rc::state::Command<TunBuilderCaptureModel, TunBuilderCapture>
+{
+    int layer{};
+
+    explicit SetLayer() : layer{*rc::gen::elementOf<std::vector<int>>({0, 2, 3})}
+    {
+    }
+
+    auto apply(TunBuilderCaptureModel &model) const -> void override
+    {
+        model.layer = Layer::from_value(layer);
+    }
+
+    auto run(const TunBuilderCaptureModel &model, TunBuilderCapture &sut) const -> void override
+    {
+        RC_ASSERT(sut.tun_builder_set_layer(layer));
+        RC_ASSERT(sut.layer.value() == layer);
+    }
+
+    auto show(std::ostream &os) const -> void override
+    {
+        os << "Set Layer to: " << layer;
+    }
+};
+
+struct SetMTU final : rc::state::Command<TunBuilderCaptureModel, TunBuilderCapture>
+{
+    int mtu{};
+
+    explicit SetMTU() : mtu(*rc::gen::arbitrary<int>())
+    {
+    }
+
+    auto apply(TunBuilderCaptureModel &model) const -> void override
+    {
+        model.mtu = mtu;
+    }
+
+    auto run(const TunBuilderCaptureModel &model, TunBuilderCapture &sut) const -> void override
+    {
+        RC_ASSERT(sut.tun_builder_set_mtu(mtu));
+        RC_ASSERT(sut.mtu == mtu);
+    }
+
+    auto show(std::ostream &os) const -> void override
+    {
+        os << "Set mtu to " << mtu;
+    }
+};
+
+struct SetSessionName final : rc::state::Command<TunBuilderCaptureModel, TunBuilderCapture>
+{
+    std::string session_name{};
+
+    explicit SetSessionName() : session_name(*rc::gen::arbitrary<std::string>())
+    {
+    }
+
+    auto apply(TunBuilderCaptureModel &model) const -> void override
+    {
+        model.session_name = session_name;
+    }
+
+    auto run(const TunBuilderCaptureModel &model, TunBuilderCapture &sut) const -> void override
+    {
+        RC_ASSERT(sut.tun_builder_set_session_name(session_name));
+        RC_ASSERT(sut.session_name == session_name);
+    }
+
+    auto show(std::ostream &os) const -> void override
+    {
+        os << "Set session name to " << session_name;
+    }
+};
+
+struct AddProxyBypass final : rc::state::Command<TunBuilderCaptureModel, TunBuilderCapture>
+{
+    std::string bypass_host{};
+
+    explicit AddProxyBypass() : bypass_host(*rc::gen::arbitrary<std::string>())
+    {
+    }
+
+    auto apply(TunBuilderCaptureModel &model) const -> void override
+    {
+        TunBuilderCapture::ProxyBypass proxy_bypass;
+        proxy_bypass.bypass_host = bypass_host;
+        model.proxy_bypass.push_back(std::move(proxy_bypass));
+    }
+
+    auto run(const TunBuilderCaptureModel &model, TunBuilderCapture &sut) const -> void override
+    {
+        RC_ASSERT(sut.tun_builder_add_proxy_bypass(bypass_host));
+        RC_ASSERT(sut.proxy_bypass.size() == model.proxy_bypass.size() + 1);
+        const auto &added_bypass_host = sut.proxy_bypass.back();
+        RC_ASSERT(added_bypass_host.bypass_host == bypass_host);
+    }
+
+    auto show(std::ostream &os) const -> void override
+    {
+        os << "Add ProxyBypass: " << bypass_host;
+    }
+};
+
+struct SetProxyAutoConfigURL final : rc::state::Command<TunBuilderCaptureModel, TunBuilderCapture>
+{
+    std::string proxy_auto_config_url{};
+
+    explicit SetProxyAutoConfigURL() : proxy_auto_config_url(*rc::gen::arbitrary<std::string>())
+    {
+    }
+
+    auto apply(TunBuilderCaptureModel &model) const -> void override
+    {
+        model.proxy_auto_config_url.url = proxy_auto_config_url;
+    }
+
+    auto run(const TunBuilderCaptureModel &model, TunBuilderCapture &sut) const -> void override
+    {
+        RC_ASSERT(sut.tun_builder_set_proxy_auto_config_url(proxy_auto_config_url));
+        RC_ASSERT(sut.proxy_auto_config_url.url == proxy_auto_config_url);
+    }
+
+    auto show(std::ostream &os) const -> void override
+    {
+        os << "Set ProxyAutoConfigURL to " << proxy_auto_config_url;
+    }
+};
+
+struct SetProxyHTTP final : rc::state::Command<TunBuilderCaptureModel, TunBuilderCapture>
+{
+    std::string host;
+    int port{0};
+
+    explicit SetProxyHTTP()
+        : host{*rc::gen::arbitrary<std::string>()}, port{*rc::gen::arbitrary<int>()}
+    {
+    }
+
+    auto apply(TunBuilderCaptureModel &model) const -> void override
+    {
+        model.http_proxy.host = host;
+        model.http_proxy.port = port;
+    }
+
+    auto run(const TunBuilderCaptureModel &model, TunBuilderCapture &sut) const -> void override
+    {
+        RC_ASSERT(sut.tun_builder_set_proxy_http(host, port));
+        RC_ASSERT(sut.http_proxy.host == host);
+        RC_ASSERT(sut.http_proxy.port == port);
+    }
+
+    auto show(std::ostream &os) const -> void override
+    {
+        os << "Set ProxyHTTP to host: " << host << " port: " << port;
+    }
+};
+
+struct SetProxyHTTPS final : rc::state::Command<TunBuilderCaptureModel, TunBuilderCapture>
+{
+    std::string host;
+    int port{0};
+
+    explicit SetProxyHTTPS()
+        : host{*rc::gen::arbitrary<std::string>()}, port{*rc::gen::arbitrary<int>()}
+    {
+    }
+
+    auto apply(TunBuilderCaptureModel &model) const -> void override
+    {
+        model.https_proxy.host = host;
+        model.https_proxy.port = port;
+    }
+
+    auto run(const TunBuilderCaptureModel &model, TunBuilderCapture &sut) const -> void override
+    {
+        RC_ASSERT(sut.tun_builder_set_proxy_https(host, port));
+        RC_ASSERT(sut.https_proxy.host == host);
+        RC_ASSERT(sut.https_proxy.port == port);
+    }
+
+    auto show(std::ostream &os) const -> void override
+    {
+        os << "Set ProxyHTTPS to host: " << host << " port: " << port;
+    }
+};
+
+struct AddWINSServer final : rc::state::Command<TunBuilderCaptureModel, TunBuilderCapture>
+{
+    std::string address{};
+
+    explicit AddWINSServer() : address(*rc::gen::arbitrary<std::string>())
+    {
+    }
+
+    auto apply(TunBuilderCaptureModel &model) const -> void override
+    {
+        TunBuilderCapture::WINSServer wins;
+        wins.address = address;
+        model.wins_servers.push_back(std::move(wins));
+    }
+
+    auto run(const TunBuilderCaptureModel &model, TunBuilderCapture &sut) const -> void override
+    {
+        RC_ASSERT(sut.tun_builder_add_wins_server(address));
+        RC_ASSERT(sut.wins_servers.size() == model.wins_servers.size() + 1);
+        RC_ASSERT(sut.wins_servers.back().address == address);
+    }
+
+    auto show(std::ostream &os) const -> void override
+    {
+        os << "Add WINSServer: " << address;
+    }
+};
+
+struct SetAllowFamily final : rc::state::Command<TunBuilderCaptureModel, TunBuilderCapture>
+{
+    int af{};
+    bool allow{false};
+
+    explicit SetAllowFamily()
+        : af(*rc::gen::elementOf<std::vector<int>>({AF_INET, AF_INET6})),
+          allow{*rc::gen::arbitrary<bool>()}
+    {
+    }
+
+    auto apply(TunBuilderCaptureModel &model) const -> void override
+    {
+        if (af == AF_INET)
+        {
+            model.block_ipv4 = !allow;
+        }
+        else if (af == AF_INET6)
+        {
+            model.block_ipv6 = !allow;
+        }
+    }
+
+    auto run(const TunBuilderCaptureModel &model, TunBuilderCapture &sut) const -> void override
+    {
+        RC_ASSERT(sut.tun_builder_set_allow_family(af, allow));
+        if (af == AF_INET)
+        {
+            RC_ASSERT(sut.block_ipv4 == !allow);
+        }
+        else if (af == AF_INET6)
+        {
+            RC_ASSERT(sut.block_ipv6 == !allow);
+        }
+    }
+
+    auto show(std::ostream &os) const -> void override
+    {
+        os << "Set allow local family to " << af << allow;
+    }
+};
+
+struct SetAllowLocalDNS final : rc::state::Command<TunBuilderCaptureModel, TunBuilderCapture>
+{
+    bool allow{false};
+
+    explicit SetAllowLocalDNS()
+        : allow{*rc::gen::arbitrary<bool>()}
+    {
+    }
+
+    auto apply(TunBuilderCaptureModel &model) const -> void override
+    {
+        model.block_outside_dns = !allow;
+    }
+
+    auto run(const TunBuilderCaptureModel &model, TunBuilderCapture &sut) const -> void override
+    {
+        RC_ASSERT(sut.tun_builder_set_allow_local_dns(allow));
+        RC_ASSERT(sut.block_outside_dns == !allow);
+    }
+
+    auto show(std::ostream &os) const -> void override
+    {
+        os << "Set allow local DNS to " << !allow;
+    }
+};
+
+struct ResetTunnelAddresses final : rc::state::Command<TunBuilderCaptureModel, TunBuilderCapture>
+{
+    auto apply(TunBuilderCaptureModel &model) const -> void override
+    {
+        model.tunnel_addresses.clear();
+        model.tunnel_address_index_ipv4 = -1;
+        model.tunnel_address_index_ipv6 = -1;
+    }
+
+    auto run(const TunBuilderCaptureModel &model, TunBuilderCapture &sut) const -> void override
+    {
+        sut.reset_tunnel_addresses();
+        RC_ASSERT(sut.tunnel_addresses.empty());
+        RC_ASSERT(sut.tunnel_address_index_ipv4 == -1);
+        RC_ASSERT(sut.tunnel_address_index_ipv6 == -1);
+    }
+
+    auto show(std::ostream &os) const -> void override
+    {
+        os << "Reset Tunnel Addresses";
+    }
+};
+
+struct ResetDNSOptions final : rc::state::Command<TunBuilderCaptureModel, TunBuilderCapture>
+{
+    auto apply(TunBuilderCaptureModel &model) const -> void override
+    {
+        model.dns_options = {};
+    }
+
+    auto run(const TunBuilderCaptureModel &model, TunBuilderCapture &sut) const -> void override
+    {
+        sut.reset_dns_options();
+        const DnsOptions dns_options{};
+        RC_ASSERT(sut.dns_options == dns_options);
+    }
+
+    auto show(std::ostream &os) const -> void override
+    {
+        os << "Reset DNS Options";
+    }
+};
+
+struct VPN_IPv4 final : rc::state::Command<TunBuilderCaptureModel, TunBuilderCapture>
+{
+    auto run(const TunBuilderCaptureModel &model, TunBuilderCapture &sut) const -> void override
+    {
+        if (model.tunnel_address_index_ipv4 >= 0)
+        {
+            const auto &ipv4_address = sut.vpn_ipv4();
+            RC_ASSERT(model.tunnel_addresses[model.tunnel_address_index_ipv4].address == ipv4_address->address);
+            RC_ASSERT(model.tunnel_addresses[model.tunnel_address_index_ipv4].prefix_length == ipv4_address->prefix_length);
+            RC_ASSERT(model.tunnel_addresses[model.tunnel_address_index_ipv4].metric == ipv4_address->metric);
+            RC_ASSERT(model.tunnel_addresses[model.tunnel_address_index_ipv4].gateway == ipv4_address->gateway);
+            RC_ASSERT(model.tunnel_addresses[model.tunnel_address_index_ipv4].ipv6 == ipv4_address->ipv6);
+            RC_ASSERT(model.tunnel_addresses[model.tunnel_address_index_ipv4].net30 == ipv4_address->net30);
+        }
+        else
+        {
+            RC_ASSERT(sut.vpn_ipv4() == nullptr);
+        }
+    }
+
+    auto show(std::ostream &os) const -> void override
+    {
+        os << "VPN IPv4";
+    }
+};
+
+struct VPN_IPv6 final : rc::state::Command<TunBuilderCaptureModel, TunBuilderCapture>
+{
+    auto run(const TunBuilderCaptureModel &model, TunBuilderCapture &sut) const -> void override
+    {
+        if (model.tunnel_address_index_ipv6 >= 0)
+        {
+            const auto &ipv6_address = sut.vpn_ipv6();
+            RC_ASSERT(model.tunnel_addresses[model.tunnel_address_index_ipv6].address == ipv6_address->address);
+            RC_ASSERT(model.tunnel_addresses[model.tunnel_address_index_ipv6].prefix_length == ipv6_address->prefix_length);
+            RC_ASSERT(model.tunnel_addresses[model.tunnel_address_index_ipv6].metric == ipv6_address->metric);
+            RC_ASSERT(model.tunnel_addresses[model.tunnel_address_index_ipv6].gateway == ipv6_address->gateway);
+            RC_ASSERT(model.tunnel_addresses[model.tunnel_address_index_ipv6].ipv6 == ipv6_address->ipv6);
+            RC_ASSERT(model.tunnel_addresses[model.tunnel_address_index_ipv6].net30 == ipv6_address->net30);
+        }
+        else
+        {
+            RC_ASSERT(sut.vpn_ipv6() == nullptr);
+        }
+    }
+
+    auto show(std::ostream &os) const -> void override
+    {
+        os << "VPN IPv6";
+    }
+};
+
+struct VPN_IP final : rc::state::Command<TunBuilderCaptureModel, TunBuilderCapture>
+{
+    IP::Addr::Version version{};
+
+    explicit VPN_IP() : version{*rc::gen::elementOf<std::vector<IP::Addr::Version>>({IP::Addr::Version::V4, IP::Addr::Version::V6, IP::Addr::Version::UNSPEC})} {};
+
+    auto run(const TunBuilderCaptureModel &model, TunBuilderCapture &sut) const -> void override
+    {
+        const auto &ip_address = sut.vpn_ip(version);
+        if (version == IP::Addr::Version::UNSPEC)
+        {
+            RC_ASSERT(ip_address == nullptr);
+        }
+        else if (version == IP::Addr::Version::V4 && model.tunnel_address_index_ipv4 >= 0)
+        {
+            RC_ASSERT(model.tunnel_addresses[model.tunnel_address_index_ipv4].address == ip_address->address);
+            RC_ASSERT(model.tunnel_addresses[model.tunnel_address_index_ipv4].prefix_length == ip_address->prefix_length);
+            RC_ASSERT(model.tunnel_addresses[model.tunnel_address_index_ipv4].metric == ip_address->metric);
+            RC_ASSERT(model.tunnel_addresses[model.tunnel_address_index_ipv4].gateway == ip_address->gateway);
+            RC_ASSERT(model.tunnel_addresses[model.tunnel_address_index_ipv4].ipv6 == ip_address->ipv6);
+            RC_ASSERT(model.tunnel_addresses[model.tunnel_address_index_ipv4].net30 == ip_address->net30);
+        }
+        else if (version == IP::Addr::Version::V6 && model.tunnel_address_index_ipv6 >= 0)
+        {
+            RC_ASSERT(model.tunnel_addresses[model.tunnel_address_index_ipv6].address == ip_address->address);
+            RC_ASSERT(model.tunnel_addresses[model.tunnel_address_index_ipv6].prefix_length == ip_address->prefix_length);
+            RC_ASSERT(model.tunnel_addresses[model.tunnel_address_index_ipv6].metric == ip_address->metric);
+            RC_ASSERT(model.tunnel_addresses[model.tunnel_address_index_ipv6].gateway == ip_address->gateway);
+            RC_ASSERT(model.tunnel_addresses[model.tunnel_address_index_ipv6].ipv6 == ip_address->ipv6);
+            RC_ASSERT(model.tunnel_addresses[model.tunnel_address_index_ipv6].net30 == ip_address->net30);
+        }
+    }
+
+    auto show(std::ostream &os) const -> void override
+    {
+        os << "VPN IP";
+    }
+};
+
+RC_GTEST_PROP(TunBuilderCapture, Stateful, ())
+{
+    const TunBuilderCaptureModel model{};
+    TunBuilderCapture sut{};
+    check(model, sut, rc::state::gen::execOneOfWithArgs<SetRemoteAddress, AddAddress, RerouteGW, SetRouteMetricDefault, AddRoute, ExcludeRoute, SetLayer, SetMTU, SetSessionName, AddProxyBypass, SetProxyAutoConfigURL, SetProxyHTTP, SetProxyHTTPS, AddWINSServer, SetAllowFamily, SetAllowLocalDNS, ResetTunnelAddresses, ResetDNSOptions, VPN_IPv4, VPN_IPv6, VPN_IP>());
 }
