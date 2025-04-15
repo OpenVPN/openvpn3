@@ -78,6 +78,8 @@ struct DnsAddress
     }
 #endif
 
+    bool operator==(const DnsAddress &) const = default;
+
     std::string address;
     unsigned int port = 0;
 };
@@ -120,6 +122,8 @@ struct DnsDomain
 #endif
 
     std::string domain;
+
+    bool operator==(const DnsDomain &) const = default;
 };
 
 /**
@@ -283,6 +287,8 @@ struct DnsServer
     }
 #endif
 
+    bool operator==(const DnsServer &at) const = default;
+
     std::vector<DnsAddress> addresses;
     std::vector<DnsDomain> domains;
     Security dnssec = Security::Unset;
@@ -346,6 +352,8 @@ struct DnsOptions
         json::to_vector(root, search_domains, "search_domains", title);
     }
 #endif
+
+    bool operator==(const DnsOptions &at) const = default;
 
     bool from_dhcp_options = false;
     std::vector<DnsDomain> search_domains;
