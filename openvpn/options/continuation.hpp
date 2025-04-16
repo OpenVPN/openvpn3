@@ -256,7 +256,7 @@ class OptionListContinuation : public OptionList
         "block-ipv4",
         "block-ipv6",
         "block-outside-dns",
-        "dhcp-options",
+        "dhcp-option",
         "dns",
         "ifconfig",
         "ifconfig-ipv6",
