@@ -15,23 +15,27 @@ add_library(
 
 target_compile_definitions(xkey INTERFACE -DENABLE_EXTERNAL_PKI)
 add_ssl_library(xkey)
-
-
-add_executable(ovpncli cli.cpp)
-target_compile_definitions(ovpncli PRIVATE)
+add_library(ovpncli cli.cpp)
 target_link_libraries(ovpncli xkey)
+target_include_directories(ovpncli PRIVATE ${CORE_DIR})
 
-add_core_dependencies(ovpncli)
+
+
+add_executable(ovpnclibin main.cpp)
+target_compile_definitions(ovpnclibin PRIVATE)
+target_link_libraries(ovpnclibin ovpncli xkey)
+
+add_core_dependencies(ovpnclibin)
 
 if (${CLI_NULLTUN})
-    add_executable(ovpnclinull cli.cpp)
+    add_executable(ovpnclinull main.cpp)
     add_core_dependencies(ovpnclinull)
     target_compile_definitions(ovpnclinull PRIVATE -DOPENVPN_FORCE_TUN_NULL)
     target_link_libraries(ovpnclinull xkey)
 endif ()
 
 if (${CLI_KOVPN})
-    add_executable(ovpnclikovpn cli.cpp)
+    add_executable(ovpnclikovpn main.cpp)
     add_core_dependencies(ovpnclikovpn)
     target_link_libraries(ovpnclikovpn xkey)
 
@@ -45,17 +49,17 @@ if (${CLI_KOVPN})
 endif()
 
 if (${CLI_OVPNDCO})
-    target_compile_definitions(ovpncli PRIVATE -DENABLE_OVPNDCO )
+    target_compile_definitions(ovpnclibin PRIVATE -DENABLE_OVPNDCO )
 
     find_package(PkgConfig)
     pkg_search_module(LIBNL REQUIRED libnl-genl-3.0)
 
-    target_include_directories(ovpncli PRIVATE ${LIBNL_INCLUDE_DIRS})
-    target_link_libraries(ovpncli ${LIBNL_LIBRARIES})
+    target_include_directories(ovpnclibin PRIVATE ${LIBNL_INCLUDE_DIRS})
+    target_link_libraries(ovpnclibin ${LIBNL_LIBRARIES})
 endif()
 
 if (WIN32)
-    add_executable(ovpncliagent cli.cpp)
+    add_executable(ovpncliagent main.cpp)
     add_core_dependencies(ovpncliagent)
     add_json_library(ovpncliagent)
     target_link_libraries(ovpncliagent xkey)
@@ -64,14 +68,14 @@ if (WIN32)
 
     if (${CLI_OVPNDCOWIN})
         target_compile_definitions(ovpncliagent PRIVATE ENABLE_OVPNDCOWIN)
-        target_compile_definitions(ovpncli PRIVATE ENABLE_OVPNDCOWIN)
-        target_link_libraries(ovpncli "bcrypt.lib")
+        target_compile_definitions(ovpnclibin PRIVATE ENABLE_OVPNDCOWIN)
+        target_link_libraries(ovpnclibin "bcrypt.lib")
         target_link_libraries(ovpncliagent "bcrypt.lib")
     endif()
 endif ()
 
 if (APPLE)
-    add_executable(ovpncliagent cli.cpp)
+    add_executable(ovpncliagent main.cpp)
     target_link_libraries(xkey)
     add_core_dependencies(ovpncliagent)
     add_json_library(ovpncliagent)
@@ -79,5 +83,5 @@ if (APPLE)
 endif ()
 
 if (${CLI_TUNBUILDER})
-    target_compile_definitions(ovpncli PRIVATE USE_TUN_BUILDER)
+    target_compile_definitions(ovpnclibin PRIVATE USE_TUN_BUILDER)
 endif ()
