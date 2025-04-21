@@ -13,31 +13,34 @@ add_library(
         ${CORE_DIR}/openvpn/openssl/xkey/xkey_provider.c
 )
 
+set(OVPNCLI_SOURCES main.cpp)
+set(OVPNCLI_LIBS xkey ovpncliwrapper)
+
 target_compile_definitions(xkey INTERFACE -DENABLE_EXTERNAL_PKI)
 add_ssl_library(xkey)
-# add_library(ovpncliwrapper STATIC cli.cpp)
-# target_link_libraries(ovpncliwrapper xkey)
-# target_include_directories(ovpncliwrapper PUBLIC ${CORE_DIR})
+
+add_library(ovpncliwrapper STATIC cli.cpp)
+target_compile_definitions(ovpncliwrapper PRIVATE)
+add_core_dependencies(ovpncliwrapper)
 
 
-
-add_executable(ovpncli main.cpp cli.cpp)
+add_executable(ovpncli ${OVPNCLI_SOURCES})
 target_compile_definitions(ovpncli PRIVATE)
-target_link_libraries(ovpncli xkey)
+target_link_libraries(ovpncli ${OVPNCLI_LIBS})
 
 add_core_dependencies(ovpncli)
 
 if (${CLI_NULLTUN})
-    add_executable(ovpnclinull main.cpp)
+    add_executable(ovpnclinull ${OVPNCLI_SOURCES})
     add_core_dependencies(ovpnclinull)
     target_compile_definitions(ovpnclinull PRIVATE -DOPENVPN_FORCE_TUN_NULL)
-    target_link_libraries(ovpnclinull xkey)
+    target_link_libraries(ovpnclinull ${OVPNCLI_LIBS})
 endif ()
 
 if (${CLI_KOVPN})
-    add_executable(ovpnclikovpn main.cpp)
+    add_executable(ovpnclikovpn ${OVPNCLI_SOURCES})
     add_core_dependencies(ovpnclikovpn)
-    target_link_libraries(ovpnclikovpn xkey)
+    target_link_libraries(ovpnclikovpn ${OVPNCLI_LIBS})
 
     target_compile_definitions(ovpnclikovpn PRIVATE -DENABLE_KOVPN
       -DOPENVPN_REMOTE_OVERRIDE -DPRIVATE_TUNNEL_PROXY)
@@ -59,10 +62,10 @@ if (${CLI_OVPNDCO})
 endif()
 
 if (WIN32)
-    add_executable(ovpncliagent main.cpp)
+    add_executable(ovpncliagent ${OVPNCLI_SOURCES})
     add_core_dependencies(ovpncliagent)
     add_json_library(ovpncliagent)
-    target_link_libraries(ovpncliagent xkey)
+    target_link_libraries(ovpncliagent ${OVPNCLI_LIBS})
     target_compile_definitions(ovpncliagent PRIVATE OPENVPN_COMMAND_AGENT
                                                     OVPNAGENT_DISABLE_PATH_CHECK)
 
@@ -75,8 +78,8 @@ if (WIN32)
 endif ()
 
 if (APPLE)
-    add_executable(ovpncliagent main.cpp)
-    target_link_libraries(xkey)
+    add_executable(ovpncliagent ${OVPNCLI_SOURCES})
+    target_link_libraries(ovpncliagent ${OVPNCLI_LIBS})
     add_core_dependencies(ovpncliagent)
     add_json_library(ovpncliagent)
     target_compile_definitions(ovpncliagent PRIVATE -DOPENVPN_COMMAND_AGENT)

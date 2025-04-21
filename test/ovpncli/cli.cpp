@@ -41,7 +41,7 @@
 #endif
 
 // don't export core symbols
-#define OPENVPN_CORE_API_VISIBILITY_HIDDEN
+// #define OPENVPN_CORE_API_VISIBILITY_HIDDEN
 
 // use SITNL on Linux by default
 #if defined(OPENVPN_PLATFORM_LINUX) && !defined(OPENVPN_USE_IPROUTE2) && !defined(OPENVPN_USE_SITNL)
