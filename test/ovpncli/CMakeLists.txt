@@ -15,17 +15,17 @@ add_library(
 
 target_compile_definitions(xkey INTERFACE -DENABLE_EXTERNAL_PKI)
 add_ssl_library(xkey)
-add_library(ovpncli cli.cpp)
+# add_library(ovpncliwrapper STATIC cli.cpp)
+# target_link_libraries(ovpncliwrapper xkey)
+# target_include_directories(ovpncliwrapper PUBLIC ${CORE_DIR})
+
+
+
+add_executable(ovpncli main.cpp cli.cpp)
+target_compile_definitions(ovpncli PRIVATE)
 target_link_libraries(ovpncli xkey)
-target_include_directories(ovpncli PRIVATE ${CORE_DIR})
 
-
-
-add_executable(ovpnclibin main.cpp)
-target_compile_definitions(ovpnclibin PRIVATE)
-target_link_libraries(ovpnclibin ovpncli xkey)
-
-add_core_dependencies(ovpnclibin)
+add_core_dependencies(ovpncli)
 
 if (${CLI_NULLTUN})
     add_executable(ovpnclinull main.cpp)
@@ -49,13 +49,13 @@ if (${CLI_KOVPN})
 endif()
 
 if (${CLI_OVPNDCO})
-    target_compile_definitions(ovpnclibin PRIVATE -DENABLE_OVPNDCO )
+    target_compile_definitions(ovpncli PRIVATE -DENABLE_OVPNDCO )
 
     find_package(PkgConfig)
     pkg_search_module(LIBNL REQUIRED libnl-genl-3.0)
 
-    target_include_directories(ovpnclibin PRIVATE ${LIBNL_INCLUDE_DIRS})
-    target_link_libraries(ovpnclibin ${LIBNL_LIBRARIES})
+    target_include_directories(ovpncli PRIVATE ${LIBNL_INCLUDE_DIRS})
+    target_link_libraries(ovpncli ${LIBNL_LIBRARIES})
 endif()
 
 if (WIN32)
@@ -68,8 +68,8 @@ if (WIN32)
 
     if (${CLI_OVPNDCOWIN})
         target_compile_definitions(ovpncliagent PRIVATE ENABLE_OVPNDCOWIN)
-        target_compile_definitions(ovpnclibin PRIVATE ENABLE_OVPNDCOWIN)
-        target_link_libraries(ovpnclibin "bcrypt.lib")
+        target_compile_definitions(ovpncli PRIVATE ENABLE_OVPNDCOWIN)
+        target_link_libraries(ovpncli "bcrypt.lib")
         target_link_libraries(ovpncliagent "bcrypt.lib")
     endif()
 endif ()
@@ -83,5 +83,5 @@ if (APPLE)
 endif ()
 
 if (${CLI_TUNBUILDER})
-    target_compile_definitions(ovpnclibin PRIVATE USE_TUN_BUILDER)
+    target_compile_definitions(ovpncli PRIVATE USE_TUN_BUILDER)
 endif ()
