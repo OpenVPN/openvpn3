@@ -16,12 +16,15 @@ add_library(
 set(OVPNCLI_SOURCES main.cpp)
 set(OVPNCLI_LIBS xkey ovpncliwrapper)
 
+
 target_compile_definitions(xkey INTERFACE -DENABLE_EXTERNAL_PKI)
 add_ssl_library(xkey)
 
 add_library(ovpncliwrapper STATIC cli.cpp)
 target_compile_definitions(ovpncliwrapper PRIVATE)
 add_core_dependencies(ovpncliwrapper)
+add_library(openvpn3::ovpncliwrapper ALIAS ovpncliwrapper)
+
 
 
 add_executable(ovpncli ${OVPNCLI_SOURCES})
