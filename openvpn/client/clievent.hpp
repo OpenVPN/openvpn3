@@ -503,6 +503,8 @@ struct Connected : public Base
             << " on " << tun_name << '/' << vpn_ip4 << '/' << vpn_ip6
             << " gw=[" << vpn_gw4 << '/' << vpn_gw6 << ']'
             << " mtu=" << vpn_mtu;
+        if (vpn_interface_index != static_cast<uint32_t>(-1))
+            out << " vpn_interface_index=" << vpn_interface_index;
         return out.str();
     }
 };

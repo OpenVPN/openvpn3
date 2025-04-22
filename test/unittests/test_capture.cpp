@@ -1040,7 +1040,7 @@ RC_GTEST_PROP(TunBuilderCapture, ResetsDNSOptions, (const std::string &address, 
     RC_ASSERT(tbc->tun_builder_set_dns_options(dns_options));
     RC_ASSERT_FALSE(tbc->dns_options.to_string().empty());
     tbc->reset_dns_options();
-    RC_ASSERT(tbc->dns_options.to_string().empty());
+    RC_ASSERT(tbc->dns_options.to_string() == "Values from dhcp-options: false\n");
 }
 
 RC_GTEST_PROP(TunBuilderCapture, ReturnsVPNIPv4, (const std::string &address, const unsigned char prefix_length, const std::string &gateway, const bool net30))

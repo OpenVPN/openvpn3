@@ -322,6 +322,7 @@ struct DnsOptions
                 os << "  " << domain.to_string() << '\n';
             }
         }
+        os << "Values from dhcp-options: " << (from_dhcp_options ? "true" : "false") << '\n';
         return os.str();
     }
 
@@ -336,6 +337,7 @@ struct DnsOptions
         }
         root["servers"] = std::move(servers_json);
         json::from_vector(root, search_domains, "search_domains");
+        root["from_dhcp_options"] = Json::Value(from_dhcp_options);
         return root;
     }
 
@@ -350,6 +352,7 @@ struct DnsOptions
             servers[std::stoi(prio)] = std::move(server);
         }
         json::to_vector(root, search_domains, "search_domains", title);
+        json::to_bool(root, from_dhcp_options, "from_dhcp_options", title);
     }
 #endif
 
