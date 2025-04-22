@@ -1,4 +1,4 @@
-#include "cli.hpp"
+#include "ovpncli.hpp"
 #include <iostream>
 
 #ifndef OPENVPN_OVPNCLI_OMIT_MAIN

@@ -65,7 +65,7 @@
 #include <openvpn/common/argv.hpp>
 #include <openvpn/common/process.hpp>
 
-#include "cli.hpp"
+#include "ovpncli.hpp"
 
 #ifdef OPENVPN_REMOTE_OVERRIDE
 #include <openvpn/common/process.hpp>

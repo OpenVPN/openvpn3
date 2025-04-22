@@ -13,17 +13,24 @@ add_library(
         ${CORE_DIR}/openvpn/openssl/xkey/xkey_provider.c
 )
 
-set(OVPNCLI_SOURCES main.cpp)
+set(OVPNCLI_SOURCES src/main.cpp)
 set(OVPNCLI_LIBS xkey ovpncliwrapper)
 
 
 target_compile_definitions(xkey INTERFACE -DENABLE_EXTERNAL_PKI)
 add_ssl_library(xkey)
 
-add_library(ovpncliwrapper STATIC cli.cpp)
-target_compile_definitions(ovpncliwrapper PRIVATE)
+add_library(openvpn_headers INTERFACE)
+target_include_directories(openvpn_headers INTERFACE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+
+add_library(ovpncliwrapper STATIC src/ovpncli.cpp)
+target_compile_definitions(ovpncliwrapper PUBLIC)
 add_core_dependencies(ovpncliwrapper)
 add_library(openvpn3::ovpncliwrapper ALIAS ovpncliwrapper)
+target_link_libraries(ovpncliwrapper openvpn_headers)
 
 
 
