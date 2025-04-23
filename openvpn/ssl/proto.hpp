@@ -2928,7 +2928,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
 
         void active()
         {
-            OVPN_LOG_INFO("SSL Handshake: " << Base::ssl_handshake_details());
+            OVPN_LOG_INFO("TLS Handshake: " << Base::ssl_handshake_details());
 
             /* Our internal state machine only decides after push request what protocol
              * options we want to use. Therefore we also have to postpone data key

@@ -1054,11 +1054,11 @@ class OpenSSLContext : public SSLFactoryAPI
         }
 
         // Print a one line summary of SSL/TLS session handshake.
-        static std::string ssl_handshake_details(const ::SSL *c_ssl)
+        static std::string ssl_handshake_details(::SSL *ssl)
         {
             std::ostringstream os;
 
-            ::X509 *cert = SSL_get_peer_certificate(c_ssl);
+            ::X509 *cert = SSL_get_peer_certificate(ssl);
 
             if (cert)
                 os << "peer certificate: CN=" << OpenSSLPKI::x509_get_field(cert, NID_commonName);
@@ -1100,7 +1100,7 @@ class OpenSSLContext : public SSLFactoryAPI
                 X509_free(cert);
             }
 
-            const SSL_CIPHER *ciph = SSL_get_current_cipher(c_ssl);
+            const SSL_CIPHER *ciph = SSL_get_current_cipher(ssl);
             if (ciph)
             {
                 char *desc = SSL_CIPHER_description(ciph, nullptr, 0);
@@ -1110,15 +1110,26 @@ class OpenSSLContext : public SSLFactoryAPI
                 }
                 else
                 {
-                    os << ", cipher: " << desc;
+                    std::string cipher_str(desc);
+                    // remove \n at the end and any other excess whitespace
+                    string::trim(cipher_str);
+                    os << ", cipher: " << cipher_str;
                     OPENSSL_free(desc);
                 }
             }
-            // This has been changed in upstream SSL to have a const
-            // parameter, so we cast away const for older versions compatibility
-            // (Upstream commit: c04b66b18d1a90f0c6326858e4b8367be5444582)
-            if (SSL_session_reused(const_cast<::SSL *>(c_ssl)))
+
+            if (SSL_session_reused(ssl))
                 os << " [REUSED]";
+
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+            const char *key_agreement = SSL_get0_group_name(ssl);
+            if (!key_agreement)
+            {
+                key_agreement = "(error fetching key-agreeement)";
+            }
+            os << ", key-agreement: " << key_agreement;
+#endif
+
             return os.str();
         }
 
