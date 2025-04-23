@@ -29,7 +29,8 @@ namespace openvpn {
     underlying value. The struct provides a set of operators for bitwise operations, and
     could be extended to provide additional operators as needed.
 */
-template <typename BaseT, typename T, typename = std::enable_if_t<std::is_arithmetic_v<T>>>
+template <typename BaseT, typename T>
+    requires std::is_arithmetic_v<T>
 struct IntrinsicType
 {
     using value_type = T;
@@ -54,17 +55,6 @@ struct IntrinsicType
     }
 
     /**
-        @brief Equality operator - class friend
-        @param lhs Left argument
-        @param rhs Right argument
-        @return true if the underlying are equal otehrwise false
-    */
-    friend constexpr bool operator==(const BaseT lhs, const BaseT rhs) noexcept
-    {
-        return lhs.mValue == rhs.mValue;
-    }
-
-    /**
      * @brief Assignment operator from BaseT
      * @param arg The object to assign from
      * @return Reference to the modified object
@@ -76,14 +66,58 @@ struct IntrinsicType
     }
 
     /**
+        @brief Add assignment operator
+        @param arg The object to add
+        @return Reference to the modified object
+    */
+    constexpr BaseT operator+=(BaseT arg) noexcept
+    {
+        mValue += arg.mValue;
+        return CrtpBase();
+    }
+
+    /**
+        @brief Subtract assignment operator
+        @param arg The object to subtract
+        @return Reference to the modified object
+    */
+    constexpr BaseT operator-=(BaseT arg) noexcept
+    {
+        mValue -= arg.mValue;
+        return CrtpBase();
+    }
+
+    /**
+        @brief Multiply assignment operator
+        @param arg The object to multiply
+        @return Reference to the modified object
+    */
+    constexpr BaseT operator*=(BaseT arg) noexcept
+    {
+        mValue *= arg.mValue;
+        return CrtpBase();
+    }
+
+    /**
+        @brief Divide assignment operator
+        @param arg The object to divide
+        @return Reference to the modified object
+    */
+    constexpr BaseT operator/=(BaseT arg) noexcept
+    {
+        mValue /= arg.mValue;
+        return CrtpBase();
+    }
+
+    /**
      * @brief Bitwise OR assignment operator
      * @param arg The object to OR with
      * @return Reference to the modified object
      * @note This operator is marked constexpr and noexcept, and is enabled only for
      *       integral types
      */
-    template <typename = std::enable_if_t<std::is_integral_v<T>>>
     constexpr BaseT &operator|=(BaseT arg) noexcept
+        requires std::is_integral_v<T>
     {
         mValue |= arg.mValue;
         return CrtpBase();
@@ -96,8 +130,8 @@ struct IntrinsicType
      * @note This operator is marked constexpr and noexcept, and is enabled only for
      *       integral types
      */
-    template <typename = std::enable_if_t<std::is_integral_v<T>>>
     constexpr BaseT &operator&=(BaseT arg) noexcept
+        requires std::is_integral_v<T>
     {
         mValue &= arg.mValue;
         return CrtpBase();
@@ -145,6 +179,84 @@ struct IntrinsicType
 };
 
 /**
+ * @brief Equality comparison operator
+ * @param lhs The left operand of the operation
+ * @param rhs The right operand of the operation
+ * @return true if the objects are equal, false otherwise
+ */
+template <typename BaseT, typename T>
+    requires std::is_arithmetic_v<T>
+constexpr bool operator==(IntrinsicType<BaseT, T> lhs, IntrinsicType<BaseT, T> rhs) noexcept
+{
+    return lhs.get() == rhs.get();
+}
+
+/**
+ * @brief Equality comparison operator
+ * @param lhs The left operand of the operation
+ * @param rhs The right operand of the operation
+ * @return returns the result of the comparison
+ */
+template <typename BaseT, typename T>
+    requires std::is_arithmetic_v<T>
+constexpr auto operator<=>(IntrinsicType<BaseT, T> lhs, IntrinsicType<BaseT, T> rhs) noexcept
+{
+    return lhs.get() <=> rhs.get();
+}
+
+/**
+ * @brief Addition operator
+ * @param lhs The left operand of the operation
+ * @param rhs The right operand of the operation
+ * @return Sum of the two objects
+ */
+template <typename BaseT, typename T>
+    requires std::is_arithmetic_v<T>
+constexpr BaseT operator+(IntrinsicType<BaseT, T> lhs, IntrinsicType<BaseT, T> rhs) noexcept
+{
+    return BaseT(lhs.get() + rhs.get());
+}
+
+/**
+ * @brief Subtraction operator
+ * @param lhs The left operand of the operation
+ * @param rhs The right operand of the operation
+ * @return Difference of the two objects
+ */
+template <typename BaseT, typename T>
+    requires std::is_arithmetic_v<T>
+constexpr BaseT operator-(IntrinsicType<BaseT, T> lhs, IntrinsicType<BaseT, T> rhs) noexcept
+{
+    return BaseT(lhs.get() - rhs.get());
+}
+
+/**
+ * @brief Multiplication operator
+ * @param lhs The left operand of the operation
+ * @param rhs The right operand of the operation
+ * @return Product of the two objects
+ */
+template <typename BaseT, typename T>
+    requires std::is_arithmetic_v<T>
+constexpr BaseT operator*(IntrinsicType<BaseT, T> lhs, IntrinsicType<BaseT, T> rhs) noexcept
+{
+    return BaseT(lhs.get() * rhs.get());
+}
+
+/**
+ * @brief Division operator
+ * @param lhs The left operand of the operation
+ * @param rhs The right operand of the operation
+ * @return Quotient of the two objects
+ */
+template <typename BaseT, typename T>
+    requires std::is_arithmetic_v<T>
+constexpr BaseT operator/(IntrinsicType<BaseT, T> lhs, IntrinsicType<BaseT, T> rhs) noexcept
+{
+    return BaseT(lhs.get() / rhs.get());
+}
+
+/**
  * @brief Performs bitwise NOT operation on an IntrinsicType
  * @tparam BaseT The base type of the IntrinsicType
  * @tparam T The underlying value type of the IntrinsicType
@@ -153,7 +265,8 @@ struct IntrinsicType
  * @note This operator is marked constexpr and noexcept, and is enabled only for
  *       integral types
  */
-template <typename BaseT, typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
+template <typename BaseT, typename T>
+    requires std::is_integral_v<T>
 constexpr BaseT operator~(IntrinsicType<BaseT, T> t) noexcept
 {
     return BaseT{~T(t)};
@@ -169,7 +282,8 @@ constexpr BaseT operator~(IntrinsicType<BaseT, T> t) noexcept
  * @note This operator is marked constexpr and noexcept, and is enabled only for
  *       integral types
  */
-template <typename BaseT, typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
+template <typename BaseT, typename T>
+    requires std::is_integral_v<T>
 constexpr BaseT operator|(IntrinsicType<BaseT, T> l, IntrinsicType<BaseT, T> r) noexcept
 {
     return BaseT{T(l) | T(r)};
@@ -185,7 +299,8 @@ constexpr BaseT operator|(IntrinsicType<BaseT, T> l, IntrinsicType<BaseT, T> r) 
  * @note This operator is marked constexpr and noexcept, and is enabled only for
  *       integral types
  */
-template <typename BaseT, typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
+template <typename BaseT, typename T>
+    requires std::is_integral_v<T>
 constexpr BaseT operator&(IntrinsicType<BaseT, T> l, IntrinsicType<BaseT, T> r) noexcept
 {
     return BaseT{T(l) & T(r)};
