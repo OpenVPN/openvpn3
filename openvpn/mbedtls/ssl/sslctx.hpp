@@ -178,6 +178,31 @@ const mbedtls_x509_crt_profile crt_profile_preferred = // CONST GLOBAL
 } // namespace
 } // namespace mbedtls_ctx_private
 
+// Handle different APIs regarding curves
+#if MBEDTLS_VERSION_NUMBER >= 0x03000000
+using mbedtls_compat_group_id = uint16_t;
+#else
+using mbedtls_compat_group_id = mbedtls_ecp_group_id;
+#endif
+
+static inline mbedtls_compat_group_id
+mbedtls_compat_get_group_id(const mbedtls_ecp_curve_info *curve_info)
+{
+#if MBEDTLS_VERSION_NUMBER >= 0x03000000
+    return curve_info->tls_id;
+#else
+    return curve_info->grp_id;
+#endif
+}
+
+#if MBEDTLS_VERSION_NUMBER < 0x03000000
+static inline void
+mbedtls_ssl_conf_groups(mbedtls_ssl_config *conf, mbedtls_compat_group_id *groups)
+{
+    mbedtls_ssl_conf_curves(conf, groups);
+}
+#endif
+
 // Represents an SSL configuration that can be used
 // to instantiate actual SSL sessions.
 class MbedTLSContext : public SSLFactoryAPI
@@ -1025,10 +1050,10 @@ class MbedTLSContext : public SSLFactoryAPI
             }
         }
 
-        mbedtls_ssl_config *sslconf;                    // SSL configuration parameters for SSL connection object
-        std::unique_ptr<int[]> allowed_ciphers;         //! Hold the array that is used for setting the allowed ciphers
-                                                        // must have the same lifetime as sslconf
-        std::unique_ptr<mbedtls_ecp_group_id[]> groups; //! Hold the array that is used for setting the curves
+        mbedtls_ssl_config *sslconf;                       // SSL configuration parameters for SSL connection object
+        std::unique_ptr<int[]> allowed_ciphers;            //! Hold the array that is used for setting the allowed ciphers
+                                                           // must have the same lifetime as sslconf
+        std::unique_ptr<mbedtls_compat_group_id[]> groups; //! Hold the array that is used for setting the curves
 
 
         MbedTLSContext *parent;
@@ -1080,7 +1105,7 @@ class MbedTLSContext : public SSLFactoryAPI
             auto num_groups = std::count(tls_groups.begin(), tls_groups.end(), ':') + 1;
 
             /* add extra space for sentinel at the end */
-            groups.reset(new mbedtls_ecp_group_id[num_groups + 1]);
+            groups.reset(new mbedtls_compat_group_id[num_groups + 1]);
 
             std::stringstream groups_ss(tls_groups);
             std::string group;
@@ -1092,7 +1117,7 @@ class MbedTLSContext : public SSLFactoryAPI
 
                 if (ci)
                 {
-                    groups[i] = ci->grp_id;
+                    groups[i] = mbedtls_compat_get_group_id(ci);
                     i++;
                 }
                 else
@@ -1102,8 +1127,8 @@ class MbedTLSContext : public SSLFactoryAPI
                 }
             }
 
-            groups[i] = MBEDTLS_ECP_DP_NONE;
-            mbedtls_ssl_conf_curves(sslconf, groups.get());
+            groups[i] = mbedtls_compat_group_id(0);
+            mbedtls_ssl_conf_groups(sslconf, groups.get());
         }
 
         // cleartext read callback
