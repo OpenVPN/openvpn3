@@ -940,14 +940,11 @@ class MbedTLSContext : public SSLFactoryAPI
                     throw MbedTLSException("CA chain not defined");
 
                 // Set hostname for SNI or if a CA chain is configured
-                // In pre-mbedtls-2.x the hostname for the CA chain was set in ssl_set_ca_chain().
-                // From mbedtls-2.x, the hostname must be set via mbedtls_ssl_set_hostname()
-                // https://tls.mbed.org/kb/how-to/upgrade-2.0
-                if (hostname && ((c.flags & SSLConst::ENABLE_CLIENT_SNI) || c.ca_chain))
-                {
-                    if (mbedtls_ssl_set_hostname(ssl, hostname))
-                        throw MbedTLSException("mbedtls_ssl_set_hostname failed");
-                }
+                // Otherwise set the hostname explicitly to null to avoid
+                // MBEDTLS_ERR_SSL_CERTIFICATE_VERIFICATION_WITHOUT_HOSTNAME
+                bool use_hostname = hostname && ((c.flags & SSLConst::ENABLE_CLIENT_SNI) || c.ca_chain);
+                if (mbedtls_ssl_set_hostname(ssl, use_hostname ? hostname : nullptr))
+                    throw MbedTLSException("mbedtls_ssl_set_hostname failed");
 
                 // client cert+key
                 if (c.local_cert_enabled)
