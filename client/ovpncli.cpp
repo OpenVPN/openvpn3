@@ -495,9 +495,7 @@ class ClientState
         remote_override.set_parent(parent);
     }
 
-    ClientState()
-    {
-    }
+    ClientState() = default;
 
     ~ClientState()
     {

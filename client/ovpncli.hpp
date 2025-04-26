@@ -149,9 +149,7 @@ struct DynamicChallenge
 // passed as a dictionary
 struct KeyValue
 {
-    KeyValue()
-    {
-    }
+    KeyValue() = default;
 
     KeyValue(std::string key_arg, std::string value_arg)
         : key(std::move(key_arg)),
@@ -437,9 +435,8 @@ struct Status
 // (client reads)
 struct LogInfo
 {
-    LogInfo()
-    {
-    }
+    LogInfo() = default;
+
     LogInfo(std::string str)
         : text(std::move(str))
     {
