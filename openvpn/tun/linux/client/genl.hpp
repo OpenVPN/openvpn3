@@ -653,18 +653,18 @@ class GeNL : public RC<thread_unsafe_refcount>
             return NL_SKIP;
         }
 
-        if (!attrs[OVPN_ATTR_IFINDEX])
-        {
-            OPENVPN_LOG("missing OVPN_ATTR_IFINDEX attribute in message");
-            return NL_SKIP;
-        }
-
-        if (self->ifindex != nla_get_u32(attrs[OVPN_ATTR_IFINDEX]))
-            return NL_SKIP;
-
         switch (gnlh->cmd)
         {
         case OVPN_CMD_DEL_PEER:
+            if (!attrs[OVPN_ATTR_IFINDEX])
+            {
+                OPENVPN_LOG("missing OVPN_ATTR_IFINDEX attribute in message");
+                return NL_SKIP;
+            }
+
+            if (self->ifindex != nla_get_u32(attrs[OVPN_ATTR_IFINDEX]))
+                return NL_SKIP;
+
             if (!attrs[OVPN_ATTR_DEL_PEER])
                 OPENVPN_THROW(netlink_error, "missing OVPN_ATTR_DEL_PEER attribute in "
                                              "OVPN_CMD_DEL_PEER command");
