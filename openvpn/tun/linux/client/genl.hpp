@@ -713,9 +713,14 @@ class GeNL : public RC<thread_unsafe_refcount>
                 memcpy(&peer.ipv4, nla_data(get_peer_attrs[OVPN_GET_PEER_RESP_ATTR_IPV4]), sizeof(peer.ipv4));
                 memcpy(&peer.ipv6, nla_data(get_peer_attrs[OVPN_GET_PEER_RESP_ATTR_IPV6]), sizeof(peer.ipv6));
                 peer.local_port = nla_get_u16(get_peer_attrs[OVPN_GET_PEER_RESP_ATTR_LOCAL_PORT]);
-                memcpy(&peer.remote,
-                       nla_data(get_peer_attrs[OVPN_GET_PEER_RESP_ATTR_SOCKADDR_REMOTE]),
-                       nla_len(get_peer_attrs[OVPN_GET_PEER_RESP_ATTR_SOCKADDR_REMOTE]));
+
+                if (get_peer_attrs[OVPN_GET_PEER_RESP_ATTR_SOCKADDR_REMOTE])
+                {
+                    memcpy(&peer.remote,
+                           nla_data(get_peer_attrs[OVPN_GET_PEER_RESP_ATTR_SOCKADDR_REMOTE]),
+                           nla_len(get_peer_attrs[OVPN_GET_PEER_RESP_ATTR_SOCKADDR_REMOTE]));
+                }
+
                 peer.keepalive.interval = nla_get_u32(get_peer_attrs[OVPN_GET_PEER_RESP_ATTR_KEEPALIVE_INTERVAL]);
                 peer.keepalive.timeout = nla_get_u32(get_peer_attrs[OVPN_GET_PEER_RESP_ATTR_KEEPALIVE_TIMEOUT]);
                 peer.vpn.rx_bytes = nla_get_u64(get_peer_attrs[OVPN_GET_PEER_RESP_ATTR_VPN_RX_BYTES]);
