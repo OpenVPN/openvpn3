@@ -270,6 +270,12 @@ class OvpnDcoClient : public Client,
         }
     }
 
+    void apply_push_update(const OptionList &opt, TransportClient & /* transcli */) override
+    {
+        tun_setup(opt);
+        tun_parent->tun_connected();
+    }
+
     void rekey(const CryptoDCInstance::RekeyType rktype,
                const KoRekey::Info &rkinfo) override
     {
@@ -581,6 +587,9 @@ class OvpnDcoClient : public Client,
         }
         else
         {
+            if (remove_cmds)
+                remove_cmds->execute_log();
+
             ActionList::Ptr add_cmds = new ActionList();
             remove_cmds.reset(new ActionListReversed());
 
