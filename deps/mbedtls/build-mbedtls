@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 set -e
 if [ -z "$O3" ]; then
@@ -20,11 +20,11 @@ if [ -z "$TARGET" ]; then
 fi
 
 # source vars
-. $O3/core/vars/vars-${TARGET}
-. $O3/core/deps/lib-versions
+. "$O3/core/vars/vars-${TARGET}"
+. "$O3/core/deps/lib-versions"
 
 # source helper functions
-. $O3/core/deps/functions.sh
+. "$O3/core/deps/functions.sh"
 
 FNAME=${MBEDTLS_VERSION}.tar.gz
 PN=${MBEDTLS_VERSION#*-}
@@ -35,29 +35,29 @@ download
 
 # put build targets here
 DIST=$(pwd)/mbedtls/mbedtls-$PLATFORM
-rm -rf $DIST
-mkdir -p $DIST
+rm -rf "$DIST"
+mkdir -p "$DIST"
 
 if [ "$NO_WIPE" = "1" ]; then
     echo RETAIN existing source
-    cd $MBEDTLS_VERSION
+    cd "$MBEDTLS_VERSION"
 else
     echo WIPE and reunzip source
-    rm -rf $MBEDTLS_VERSION
+    rm -rf "$MBEDTLS_VERSION"
     [ -z "$DL" ] && DL=~/Downloads
-    tar xfz $DL/$MBEDTLS_VERSION.tar.gz
-    cd $MBEDTLS_VERSION
+    tar xfz "$DL/$MBEDTLS_VERSION.tar.gz"
+    cd "$MBEDTLS_VERSION"
 
     # enable MD4 (needed for NTLM auth)
     perl -pi -e 's/^\/\/// if /#define MBEDTLS_MD4_C/' include/mbedtls/config.h
 fi
 
-if [ "x$NO_BUILD" == x1 ]; then
+if [ "$NO_BUILD" = 1 ]; then
    echo "Not building"
    exit 0
 fi
 
-if [[ "x$TARGET" == xlinux* || "x$TARGET" == xosx* ]]; then
+if echo "$TARGET" | grep -q '^linux.*$' || echo "$TARGET" | grep -q '^osx.*$'; then
     # run unit tests and then clean
     echo RUNNING CHECK
     make check
@@ -80,21 +80,21 @@ RANLIB=ranlib
 # build it
 SRC=$(pwd)
 cd library
-rm -f *.o
+rm -f ./*.o
 for c in *.c ; do
     CMD="$CC -I../include -DMBEDTLS_RELAXED_X509_DATE \
-         $PLATFORM_FLAGS $(lto_flags $c) $OTHER_COMPILER_FLAGS $LIB_OPT_LEVEL $LIB_FPIC -c $c"
-    echo $CMD
+         $PLATFORM_FLAGS $(lto_flags "$c") $OTHER_COMPILER_FLAGS $LIB_OPT_LEVEL $LIB_FPIC -c $c"
+    echo "$CMD"
     $CMD
 done
 
 # create archive
-cd $DIST
+cd "$DIST"
 mkdir library
-$AR library/libmbedtls.a $SRC/library/*.o
+$AR library/libmbedtls.a "$SRC/library/"*.o
 $RANLIB library/libmbedtls.a 2>&1 | grep -v "has no symbols" || true
 
 # copy headers
 mkdir -p include/mbedtls
-cp $SRC/include/mbedtls/*.h include/mbedtls/
+cp "$SRC/include/mbedtls/"*.h include/mbedtls/
 exit 0
