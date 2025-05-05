@@ -1362,6 +1362,33 @@ struct ExcludeRoute final : rc::state::Command<TunBuilderCaptureModel, TunBuilde
     }
 };
 
+struct SetDNSOptions final : rc::state::Command<TunBuilderCaptureModel, TunBuilderCapture>
+{
+    DnsOptions options{};
+
+    explicit SetDNSOptions()
+        : options{*rc::genDNSOptions()}
+    {
+    }
+
+    auto apply(TunBuilderCaptureModel &model) const -> void override
+    {
+        model.dns_options = options;
+    }
+
+    auto run(const TunBuilderCaptureModel &model, TunBuilderCapture &sut) const -> void override
+    {
+        RC_ASSERT(sut.tun_builder_set_dns_options(options));
+        RC_ASSERT(sut.dns_options == options);
+    }
+
+    auto show(std::ostream &os) const -> void override
+    {
+        os << "Set DNS Options with " << options.servers.size() << " servers and "
+           << options.search_domains.size() << " search domains";
+    }
+};
+
 struct SetLayer final : rc::state::Command<TunBuilderCaptureModel, TunBuilderCapture>
 {
     int layer{};
@@ -1783,5 +1810,5 @@ RC_GTEST_PROP(TunBuilderCapture, Stateful, ())
 {
     const TunBuilderCaptureModel model{};
     TunBuilderCapture sut{};
-    check(model, sut, rc::state::gen::execOneOfWithArgs<SetRemoteAddress, AddAddress, RerouteGW, SetRouteMetricDefault, AddRoute, ExcludeRoute, SetLayer, SetMTU, SetSessionName, AddProxyBypass, SetProxyAutoConfigURL, SetProxyHTTP, SetProxyHTTPS, AddWINSServer, SetAllowFamily, SetAllowLocalDNS, ResetTunnelAddresses, ResetDNSOptions, VPN_IPv4, VPN_IPv6, VPN_IP>());
+    check(model, sut, rc::state::gen::execOneOfWithArgs<SetRemoteAddress, AddAddress, RerouteGW, SetRouteMetricDefault, AddRoute, ExcludeRoute, SetDNSOptions, SetLayer, SetMTU, SetSessionName, AddProxyBypass, SetProxyAutoConfigURL, SetProxyHTTP, SetProxyHTTPS, AddWINSServer, SetAllowFamily, SetAllowLocalDNS, ResetTunnelAddresses, ResetDNSOptions, VPN_IPv4, VPN_IPv6, VPN_IP>());
 }

@@ -677,5 +677,216 @@ inline auto calculateIPPrefixRange(const std::string &ipAddress) -> std::tuple<i
 
     return {minimumPrefix, openvpn::IPv4::Addr::SIZE};
 }
+
+namespace helpers {
+
+/**
+ * @brief Generates a host string.
+ * @details Creates a string based on the input parameter. Valid hosts conform to length
+ *          constraints (between @c HOST_MIN_LENGTH and @c HOST_MAX_LENGTH characters) and contain
+ *          only allowed characters. Invalid hosts may exceed the maximum length or contain invalid
+ *          characters.
+ *
+ * @param valid If @c true (default), the function will generally produce valid host strings
+ *              If @c false, the function will deliberately generate invalid host strings.
+ *
+ * @return A generator for host strings with the specified validity characteristics.
+ *
+ * @note This generator does not produce meaningful hosts, just string with valid length and from allowed characters
+ */
+inline auto genHost(const bool valid = true) -> Gen<std::string>
+{
+    static constexpr size_t HOST_MAX_LENGTH = 256;
+    static constexpr size_t HOST_MIN_LENGTH = 1;
+    static constexpr size_t INVALID_MAX_LENGTH_LIMIT = 8192;
+
+    static const std::string allowed_chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-:";
+
+    auto [valid_chars, valid_length] = valid ? *generateValidityFlags<2>() : *generateValidityFlags<2>(false);
+    const auto length = valid_length ? *gen::inRange(HOST_MIN_LENGTH, HOST_MAX_LENGTH + 1) : *gen::inRange(HOST_MAX_LENGTH + 1, INVALID_MAX_LENGTH_LIMIT);
+
+    return gen::container<std::string>(length, from_allowed_chars(allowed_chars, valid_chars));
+}
+
+/**
+ * @brief Generates random DNS server security settings.
+ * @details Creates a generator that produces random values from the @c openvpn::DnsServer::Security
+ *          enumeration. The generated values can be one of: @c Unset, @c No, @c Yes, or @c Optional.
+ * @return A generator that yields random @c openvpn::DnsServer::Security enum values.
+ */
+inline auto genDnsServerSecurity() -> Gen<openvpn::DnsServer::Security>
+{
+    return gen::element(
+        openvpn::DnsServer::Security::Unset,
+        openvpn::DnsServer::Security::No,
+        openvpn::DnsServer::Security::Yes,
+        openvpn::DnsServer::Security::Optional);
+}
+
+/**
+ * @brief Generates random DNS server transport.
+ * @details Creates a generator that produces random values from the @c openvpn::DnsServer::Transport
+ *          enumeration. The generator yields one of: @c Unset, @c Plain, @c HTTPS, or @c TLS.
+ * @return A generator that yields random @c openvpn::DnsServer::Transport enum values.
+ */
+inline auto genDnsServerTransport() -> Gen<openvpn::DnsServer::Transport>
+{
+    return gen::element(
+        openvpn::DnsServer::Transport::Unset,
+        openvpn::DnsServer::Transport::Plain,
+        openvpn::DnsServer::Transport::HTTPS,
+        openvpn::DnsServer::Transport::TLS);
+}
+
+} // namespace helpers
+
+/**
+ * @brief Generates a DnsDomain.
+ * @details Creates a generator that produces instances of the @c openvpn::DnsDomain class.
+ *          The generator can create either valid or invalid DNS domain names based on the
+ *          provided parameter. It uses the @c helpers::genHost function to generate
+ *          appropriate domain strings.
+ * @param valid A boolean flag indicating whether to generate valid (@c true ) or
+ *              invalid (@c false ) domain names. Defaults to @c true.
+ * @return A generator that produces @c openvpn::DnsDomain objects with either valid or
+ *         invalid domain values.
+ *
+ * Example usage:
+ * @code
+ * // Generate a valid DNS domain
+ * auto validDomain = *genDnsDomain();
+ *
+ * // Generate an invalid DNS domain
+ * auto invalidDomain = *genDnsDomain(false);
+ * @endcode
+ */
+inline auto genDnsDomain(const bool valid = true) -> Gen<openvpn::DnsDomain>
+{
+    return gen::build(
+        gen::construct<openvpn::DnsDomain>(),
+        gen::set(&openvpn::DnsDomain::domain, helpers::genHost(valid)));
+}
+
+/**
+ * @brief Generates a DNS address.
+ * @details Creates a generator that produces instances of the @c openvpn::DnsAddress class.
+ *          The generator can create either valid or invalid DNS addresses based on the
+ *          provided parameter. It combines an IP address (either IPv4 or IPv6) with an
+ *          optional port number. The port is randomly included or excluded, and its value
+ *          is not validated during DnsAddress validation.
+ *
+ * @param valid A boolean flag indicating whether to generate a valid (@c true ) or
+ *              invalid (@c false ) DNS address. Defaults to @c true.
+ * @return A generator that produces @c openvpn::DnsAddress objects with either valid or
+ *         invalid address values.
+ *
+ * Example usage:
+ * @code
+ * // Generate a valid DNS address
+ * auto validDnsAddr = *genDnsAddress();
+ *
+ * // Generate an invalid DNS address
+ * auto invalidDnsAddr = *genDnsAddress(false);
+ * @endcode
+ */
+inline auto genDnsAddress(const bool valid = true) -> Gen<openvpn::DnsAddress>
+{
+    return gen::map(
+        gen::tuple(
+            gen::oneOf(IPv4Address(valid), IPv6Address(valid)),
+            gen::maybe(port(*rc::gen::arbitrary<bool>()))), // port is not checked during DnsAddress validation
+        [](const auto &params) -> openvpn::DnsAddress
+        {
+            const auto &[address, maybe_port] = params;
+            openvpn::DnsAddress result;
+            result.address = address;
+            if (maybe_port)
+            {
+                result.port = *maybe_port;
+            }
+            return result;
+        });
+}
+
+/**
+ * @brief Generates a DNS server.
+ * @details Creates a generator that produces random @c openvpn::DnsServer instances with populated fields.
+ *          The generator creates:
+ *          - A list of DNS addresses (using @c genDnsAddress )
+ *          - A list of DNS domains (using @c genDnsDomain )
+ *          - A DNSSEC security setting (using @c helpers::genDnsServerSecurity )
+ *          - A transport setting (using @c helpers::genDnsServerTransport )
+ *          - A random SNI string
+ *
+ *          The vector sizes for addresses and domains are limited to a maximum of 100 elements.
+ *
+ * @return A generator that produces random @c openvpn::DnsServer instances.
+ */
+inline auto genDnsServer() -> Gen<openvpn::DnsServer>
+{
+    static constexpr auto MAX_VECTOR_SIZE = 100;
+    return gen::build(
+        gen::construct<openvpn::DnsServer>(),
+        gen::set(&openvpn::DnsServer::addresses,
+                 gen::container<std::vector<openvpn::DnsAddress>>(
+                     *gen::inRange<size_t>(0, MAX_VECTOR_SIZE),
+                     genDnsAddress())),
+        gen::set(&openvpn::DnsServer::domains,
+                 gen::container<std::vector<openvpn::DnsDomain>>(
+                     *gen::inRange<size_t>(0, MAX_VECTOR_SIZE),
+                     genDnsDomain())),
+        gen::set(&openvpn::DnsServer::dnssec, helpers::genDnsServerSecurity()),
+        gen::set(&openvpn::DnsServer::transport, helpers::genDnsServerTransport()),
+        gen::set(&openvpn::DnsServer::sni, gen::string<std::string>()));
+}
+
+/**
+ * @brief Generates random DNS options.
+ * @details This function creates a generator for @c openvpn::DnsOptions objects with randomized values.
+ * It generates random DNS servers with priorities, search domains, and a boolean flag indicating
+ * whether the options should be derived from DHCP options.
+ *
+ * The generator uses helper functions to create components of the DnsOptions structure including
+ * - A random boolean for the @c from_dhcp_options flag
+ * - A vector of @c DnsDomain objects for search domains
+ * - A map of DNS servers with integer priorities
+ *
+ * @return A generator for random @c openvpn::DnsOptions.
+ */
+inline auto genDNSOptions() -> Gen<openvpn::DnsOptions>
+{
+    static constexpr auto MAX_CONTAINER_SIZE = 100;
+    auto generateDnsServerMap = []() -> Gen<std::map<int, openvpn::DnsServer>>
+    {
+        return gen::map(
+            gen::tuple(
+                gen::container<std::vector<openvpn::DnsServer>>(
+                    *gen::inRange<size_t>(0, MAX_CONTAINER_SIZE),
+                    genDnsServer()),
+                gen::unique<std::vector<int>>(*gen::inRange<size_t>(0, MAX_CONTAINER_SIZE), gen::nonNegative<int>())),
+            [](const auto &params) -> std::map<int, openvpn::DnsServer>
+            {
+                const auto &[servers, priorities] = params;
+                std::map<int, openvpn::DnsServer> result;
+
+                for (size_t i = 0; i < std::min(servers.size(), priorities.size()); ++i)
+                {
+                    result[priorities[i]] = servers[i];
+                }
+
+                return result;
+            });
+    };
+
+    return gen::build(
+        gen::construct<openvpn::DnsOptions>(),
+        gen::set(&openvpn::DnsOptions::from_dhcp_options, gen::arbitrary<bool>()),
+        gen::set(&openvpn::DnsOptions::search_domains,
+                 gen::container<std::vector<openvpn::DnsDomain>>(
+                     *gen::inRange<size_t>(0, MAX_CONTAINER_SIZE),
+                     genDnsDomain())),
+        gen::set(&openvpn::DnsOptions::servers, generateDnsServerMap()));
+}
+
 } // namespace rc
 #endif // TEST_GENERATORS_HPP
