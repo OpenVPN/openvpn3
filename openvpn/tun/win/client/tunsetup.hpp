@@ -764,8 +764,8 @@ class Setup : public SetupBase
                 if (!(use_nrpt && split_dns) && !l2_post)
                 {
                     std::vector<std::string> addresses;
-                    std::for_each(addresses.begin(), addresses.end(), [&addresses](const std::string &addr)
-                                  { addresses.push_back(addr); });
+                    std::for_each(server.addresses.begin(), server.addresses.end(), [&addresses](const DnsAddress &ip)
+                                  { addresses.push_back(ip.address); });
                     set_adapter_dns(create, destroy, tap_index_name, addresses, pull);
                 }
 
