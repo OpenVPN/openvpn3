@@ -689,14 +689,14 @@ inline std::string remove_char(const std::string &str, const char remove)
     @details This function takes a delimiter and a variadic number of arguments,
     and concatenates them into a single string, separated by the specified delimiter.
     The function uses a fold expression to handle the variadic arguments and
-    formats each argument using std::format. The resulting string is returned.
+    formats each argument using format. The resulting string is returned.
     @note The function is designed to work with any type that can be formatted
     @tparam ArgsT variadic template parameter pack for the arguments to be formatted.
     @param delim The delimiter to be used for separating the arguments in the resulting string.
     @param args The variadic arguments to be concatenated into a string.
     @return std::string The concatenated string with the specified delimiter separating
     the arguments.
-    @throws std::format_error if formatting fails.
+    @throws format_error if formatting fails.
     @throws exceptions from std::string operations
 */
 template <typename... ArgsT>
@@ -716,7 +716,7 @@ inline auto args_to_string(std::string_view delim, ArgsT &&...args) -> std::stri
     @param format The format string to be used for formatting.
     @param args The arguments to be formatted into the string.
     @return std::optional<std::string> The formatted string or nullopt on format error
-    @note This function uses std::vformat and std::make_format_args for formatting.
+    @note This function uses vformat and make_format_args for formatting.
     @note The function is designed to handle exceptions that may occur during formatting,
     including std::exception and other unknown exceptions. If an exception occurs,
     it returns a nullopt to indicate that the formatting failed.
