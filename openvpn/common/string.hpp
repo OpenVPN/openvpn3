@@ -15,10 +15,14 @@
 #define OPENVPN_COMMON_STRING_H
 
 #include <string>
+#include <string_view>
 #include <vector>
 #include <cstring>
 #include <locale>
 #include <algorithm>
+#include <optional>
+
+#include <fmt/core.h>
 
 #include <openvpn/common/platform.hpp>
 #include <openvpn/common/size.hpp>
@@ -678,6 +682,56 @@ inline std::string remove_char(const std::string &str, const char remove)
             ret.push_back(c);
     }
     return ret;
+}
+
+/**
+    @brief Convert variadic arguments to a string.
+    @details This function takes a delimiter and a variadic number of arguments,
+    and concatenates them into a single string, separated by the specified delimiter.
+    The function uses a fold expression to handle the variadic arguments and
+    formats each argument using std::format. The resulting string is returned.
+    @note The function is designed to work with any type that can be formatted
+    @tparam ArgsT variadic template parameter pack for the arguments to be formatted.
+    @param delim The delimiter to be used for separating the arguments in the resulting string.
+    @param args The variadic arguments to be concatenated into a string.
+    @return std::string The concatenated string with the specified delimiter separating
+    the arguments.
+    @throws std::format_error if formatting fails.
+    @throws exceptions from std::string operations
+*/
+template <typename... ArgsT>
+inline auto args_to_string(std::string_view delim, ArgsT &&...args) -> std::string
+{
+    std::string result;
+    ((result += std::string(result.empty() ? "" : delim) + fmt::format("{}", args)), ...);
+    return result;
+}
+
+/**
+    @brief Format a string with error handling.
+    @details This function attempts to format a string using the provided format
+    and arguments. If an exception occurs during formatting, it catches the exception
+    and returns std::nullopt to indicate that the formatting failed.
+    @tparam ArgsT variadic template parameter pack for the arguments to be formatted.
+    @param format The format string to be used for formatting.
+    @param args The arguments to be formatted into the string.
+    @return std::optional<std::string> The formatted string or nullopt on format error
+    @note This function uses std::vformat and std::make_format_args for formatting.
+    @note The function is designed to handle exceptions that may occur during formatting,
+    including std::exception and other unknown exceptions. If an exception occurs,
+    it returns a nullopt to indicate that the formatting failed.
+*/
+template <typename... ArgsT>
+inline auto format_safe(std::string format, ArgsT &&...args) noexcept -> std::optional<std::string>
+{
+    try
+    {
+        return fmt::vformat(format, fmt::make_format_args(args...));
+    }
+    catch (...)
+    {
+        return std::nullopt;
+    }
 }
 
 } // namespace openvpn::string

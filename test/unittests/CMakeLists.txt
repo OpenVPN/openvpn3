@@ -85,6 +85,7 @@ add_executable(coreUnitTests
         test_validatecreds.cpp
         test_weak.cpp
         test_cliopt.cpp
+        test_string.cpp
         test_buffer.cpp
         test_proto.cpp
 )

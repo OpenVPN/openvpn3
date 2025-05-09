@@ -131,6 +131,10 @@ function(add_corelibrary_dependencies target)
     find_package(lz4 REQUIRED)
     target_link_libraries(${target} lz4::lz4)
 
+    # fmtlib
+    find_package(fmt REQUIRED)
+    target_link_libraries(${target} fmt::fmt)
+
     add_ssl_library(${target})
 
     if (APPLE)
