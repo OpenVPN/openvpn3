@@ -30,7 +30,7 @@ target_include_directories(openvpn_headers INTERFACE
 add_library(ovpncliwrapper STATIC src/ovpncli.cpp)
 target_compile_definitions(ovpncliwrapper PUBLIC)
 if (${CLI_SINGLETHREAD})
-    target_compile_definitions(ovpncliwrapper PRIVATE -DOPENVPN_SINGLE_THREAD)
+    target_compile_definitions(ovpncliwrapper PRIVATE -DOPENVPN_OVPNCLI_SINGLE_THREAD)
 endif ()
 add_core_dependencies(ovpncliwrapper)
 add_library(openvpn3::ovpncliwrapper ALIAS ovpncliwrapper)
