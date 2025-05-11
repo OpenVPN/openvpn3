@@ -4,6 +4,7 @@ option(CLI_KOVPN "Build ovpncli variant with kovpn kernel module support" OFF)
 option(CLI_OVPNDCO "Build ovpncli with ovpn-dco kernel module support" OFF)
 option(CLI_OVPNDCOWIN "Build ovpncli with ovpn-dco-win driver support" OFF)
 option(CLI_TUNBUILDER "Build ovpncli with tunbuilder interface support" OFF)
+option(CLI_SINGLETHREAD "Build ovpncli with single thread support" ON)
 
 set(KOVPN_SOURCE "${CORE_DIR}/../kovpn" CACHE PATH "ovpn-dco kernel module source tree")
 
@@ -28,6 +29,9 @@ target_include_directories(openvpn_headers INTERFACE
 
 add_library(ovpncliwrapper STATIC src/ovpncli.cpp)
 target_compile_definitions(ovpncliwrapper PUBLIC)
+if (${CLI_SINGLETHREAD})
+    target_compile_definitions(ovpncliwrapper PRIVATE -DOPENVPN_SINGLE_THREAD)
+endif ()
 add_core_dependencies(ovpncliwrapper)
 add_library(openvpn3::ovpncliwrapper ALIAS ovpncliwrapper)
 target_link_libraries(ovpncliwrapper openvpn_headers)
