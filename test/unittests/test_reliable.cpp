@@ -109,7 +109,6 @@ TEST(reliable, ack_dup)
 
 TEST(reliable, simple_packet)
 {
-    std::ostringstream actual;
     ReliableAck ack{};
 
     BufferAllocated buf(256);
@@ -118,7 +117,6 @@ TEST(reliable, simple_packet)
     ack.push_back(0);
 
     ack.prepend(buf, false);
-
 
     ack.push_back(1);
     ack.push_back(2);

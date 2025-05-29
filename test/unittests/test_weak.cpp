@@ -209,8 +209,6 @@ void test()
 {
     ASSERT_EQ(StaticCounter::count(), 0);
 
-    std::string result;
-
     // create new Ref objects that point back to their parent (Object)
     typename Object::Ptr obj(new Object);
     obj->vec.emplace_back(new Ref("One", obj));

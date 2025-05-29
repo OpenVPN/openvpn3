@@ -1418,9 +1418,6 @@ class OpenSSLContext : public SSLFactoryAPI
         if (TLSCertProfile::default_if_undef(config->tls_cert_profile) >= TLSCertProfile::PREFERRED)
             tls_cipher_list += ":!SHA1";
 
-
-        std::string translated_cipherlist;
-
         if (!config->tls_cipher_list.empty())
         {
             tls_cipher_list = translate_cipher_list(config->tls_cipher_list);
