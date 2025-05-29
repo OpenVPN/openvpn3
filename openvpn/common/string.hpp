@@ -79,34 +79,12 @@ inline bool is_true(const std::string &str)
     return str == "1" || !strcasecmp(str.c_str(), "true");
 }
 
-template <typename STRING>
-inline bool starts_with(const STRING &str, const std::string &prefix)
-{
-    const size_t len = str.length();
-    const size_t plen = prefix.length();
-    if (plen <= len)
-        return std::memcmp(str.c_str(), prefix.c_str(), plen) == 0;
-    else
-        return false;
-}
-
-template <typename STRING>
-inline bool starts_with(const STRING &str, const char *prefix)
-{
-    const size_t len = str.length();
-    const size_t plen = std::strlen(prefix);
-    if (plen <= len)
-        return std::memcmp(str.c_str(), prefix, plen) == 0;
-    else
-        return false;
-}
-
 // Return true if str == prefix or if str starts with prefix + delim
 template <typename STRING>
 inline bool starts_with_delim(const STRING &str, const std::string &prefix, const char delim)
 {
     if (prefix.length() < str.length())
-        return str[prefix.length()] == delim && string::starts_with(str, prefix);
+        return str[prefix.length()] == delim && str.starts_with(prefix);
     else
         return prefix == str;
 }

@@ -735,7 +735,7 @@ class Session : ProtoContextCallbackInterface,
         if (msg.length() >= 13)
             reason = string::trim_left_copy(std::string(msg, 12));
 
-        if (string::starts_with(reason, "TEMP"))
+        if (reason.starts_with("TEMP"))
         {
             log_reason = "AUTH_FAILED_TEMP:" + parse_auth_failed_temp(std::string(reason, 4));
         }
@@ -810,7 +810,7 @@ class Session : ProtoContextCallbackInterface,
 
             unsigned int timeout = 0;
 
-            if (string::starts_with(msg, "AUTH_PENDING,"))
+            if (msg.starts_with("AUTH_PENDING,"))
             {
                 key_words = msg.substr(strlen("AUTH_PENDING,"));
                 auto opts = OptionList::parse_from_csv_static(key_words, nullptr);
@@ -875,7 +875,7 @@ class Session : ProtoContextCallbackInterface,
         else
             info_msg = msg.substr(std::string_view{"INFO,"}.length());
 
-        if (string::starts_with(info_msg, "ACC:"))
+        if (info_msg.starts_with("ACC:"))
         {
             // We want this to be parsed exactly like the custom-control option.
             // That means we replace ACC: with custom-control for the parser.
@@ -886,7 +886,7 @@ class Session : ProtoContextCallbackInterface,
         }
         else
         {
-            if ((string::starts_with(info_msg, "WEB_AUTH:") || string::starts_with(info_msg, "CR_TEXT:")) && creds)
+            if ((info_msg.starts_with("WEB_AUTH:") || info_msg.starts_with("CR_TEXT:")) && creds)
             {
                 creds->set_need_user_interaction();
             }
@@ -944,11 +944,11 @@ class Session : ProtoContextCallbackInterface,
 
         // OPENVPN_LOG("SERVER: " << sanitize_control_message(msg));
 
-        if (string::starts_with(msg, "PUSH_REPLY,"))
+        if (msg.starts_with("PUSH_REPLY,"))
         {
             recv_push_reply(msg);
         }
-        else if (string::starts_with(msg, "AUTH_FAILED"))
+        else if (msg.starts_with("AUTH_FAILED"))
         {
             recv_auth_failed(msg);
         }
@@ -956,15 +956,15 @@ class Session : ProtoContextCallbackInterface,
         {
             recv_halt_restart(msg);
         }
-        else if (info && string::starts_with(msg, "INFO,"))
+        else if (info && msg.starts_with("INFO,"))
         {
             recv_info(msg, false);
         }
-        else if (info && string::starts_with(msg, "INFO_PRE,"))
+        else if (info && msg.starts_with("INFO_PRE,"))
         {
             recv_info(msg, true);
         }
-        else if (msg == "AUTH_PENDING" || string::starts_with(msg, "AUTH_PENDING,"))
+        else if (msg == "AUTH_PENDING" || msg.starts_with("AUTH_PENDING,"))
         {
             recv_auth_pending(msg);
         }
@@ -972,11 +972,11 @@ class Session : ProtoContextCallbackInterface,
         {
             recv_relay();
         }
-        else if (string::starts_with(msg, "ACC,"))
+        else if (msg.starts_with("ACC,"))
         {
             recv_custom_control_message(msg);
         }
-        else if (string::starts_with(msg, "PUSH_UPDATE,"))
+        else if (msg.starts_with("PUSH_UPDATE,"))
         {
             recv_push_update(msg);
         }

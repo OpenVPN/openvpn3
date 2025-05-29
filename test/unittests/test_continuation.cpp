@@ -53,7 +53,7 @@ enum PCMode
 static std::string get_csv(Buffer buf, const PCMode pc_mode, const std::string &prefix)
 {
     // verify PUSH_REPLY then remove it
-    if (!string::starts_with(buf, prefix + ','))
+    if (!buf_to_string(buf).starts_with(prefix + ','))
         throw Exception("expected that buffer would begin with " + prefix);
     buf.advance(prefix.length() + 1);
 

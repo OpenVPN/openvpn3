@@ -312,7 +312,7 @@ class OMI : public OMICore, public ClientAPI::LogReceiver
                 const Option &o = opt[*i];
                 o.touch();
                 const std::string &k = o.get(1, 64);
-                if (string::starts_with(k, "IV_") || string::starts_with(k, "UV_"))
+                if (k.starts_with("IV_") || k.starts_with("UV_"))
                 {
                     const std::string &v = o.get(2, 256);
                     ret.emplace_back(k, v);
@@ -881,7 +881,7 @@ class OMI : public OMICore, public ClientAPI::LogReceiver
             reconnect_reason = "";
 
             // generate a TCP_CONNECT event if TCP connection
-            if (ci && string::starts_with(ci->serverProto, "TCP"))
+            if (ci && ci->serverProto.starts_with("TCP"))
                 state_line(gen_state_msg(false, "TCP_CONNECT", ""));
 
             // push the event string to state notification/history

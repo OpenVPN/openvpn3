@@ -169,14 +169,14 @@ class OptionListContinuation : public OptionList
             std::string &name = it->ref(0);
 
             // option prefixed with "-" should be removed
-            bool remove = string::starts_with(name, "-");
+            bool remove = name.starts_with("-");
             if (remove)
             {
                 name.erase(name.begin());
             }
 
             // option prefixed with "?" is considered "optional"
-            bool optional = string::starts_with(name, "?");
+            bool optional = name.starts_with("?");
             if (optional)
             {
                 name.erase(name.begin());

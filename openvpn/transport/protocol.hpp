@@ -322,7 +322,7 @@ class Protocol
                 s = s.substr(0, s.length() - 7);
             break;
         }
-        if (string::starts_with(s, "unix")) // unix domain socket
+        if (s.starts_with("unix")) // unix domain socket
         {
             if (s == "unix-stream")
                 ret = UnixStream;

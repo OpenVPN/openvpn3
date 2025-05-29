@@ -122,7 +122,7 @@ class ParseClientConfig
                         }
                         else if (arg1 == "PUSH_PEER_INFO")
                             pushPeerInfo_ = true;
-                        else if (string::starts_with(arg1, "UV_") && arg1.length() >= 4 && string::is_word(arg1))
+                        else if (arg1.starts_with("UV_") && arg1.length() >= 4 && string::is_word(arg1))
                         {
                             const std::string value = o.get_optional(2, 256);
                             if (string::is_printable(value))

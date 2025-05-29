@@ -16,7 +16,6 @@
 
 #include <openvpn/common/options.hpp>
 #include <openvpn/common/numeric_util.hpp>
-#include <openvpn/common/string.hpp>
 #include <openvpn/client/dns.hpp>
 
 // Options filters, consumes the route-nopull and pull-filter client options
@@ -129,7 +128,7 @@ class PushedOptionsFilter : public OptionList::FilterBase
         if (!is_safe_conversion<int>(match.size() - 1))
             return false;
         int i = static_cast<int>(match.size() - 1);
-        if (!string::starts_with(pushed.get(i, -1), match.get(i, -1)))
+        if (!pushed.get(i, -1).starts_with(match.get(i, -1)))
             return false;
 
         while (--i >= 0)

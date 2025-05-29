@@ -23,7 +23,6 @@
 #include <openvpn/common/rc.hpp>
 #include <openvpn/common/unicode.hpp>
 #include <openvpn/common/link.hpp>
-#include <openvpn/common/string.hpp>
 #include <openvpn/buffer/bufstream.hpp>
 #include <openvpn/time/asiotimer.hpp>
 #include <openvpn/time/coarsetime.hpp>
@@ -367,7 +366,7 @@ class ServerProto
                 disconnect_type = DT_HALT_RESTART;
                 disconnect_in(Time::Duration::seconds(1));
             }
-            else if (string::starts_with(msg, "ACC,"))
+            else if (msg.starts_with("ACC,"))
             {
                 if (get_management())
                     ManLink::send->app_control(msg);

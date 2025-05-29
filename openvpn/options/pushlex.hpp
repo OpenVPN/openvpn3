@@ -38,7 +38,7 @@ class PushLex
     {
         if (!discard_prefix || !defined())
             return;
-        if (!string::starts_with(buf_, "PUSH_"))
+        if (!buf_to_string(buf_).starts_with("PUSH_"))
             throw pushlex_error("not a valid PUSH_x message [1]");
         buf_.advance(5);
         while (defined())

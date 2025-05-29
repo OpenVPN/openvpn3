@@ -696,7 +696,7 @@ class OptionList : public std::vector<Option>, public RCCopyable<thread_unsafe_r
             Option opt;
             const std::string unesc_value = unescape(value, newline_present);
 
-            if (string::starts_with(key, meta_prefix))
+            if (key.starts_with(meta_prefix))
             {
                 opt.push_back(std::string(key, meta_prefix.length()));
                 opt.set_meta();
@@ -914,7 +914,7 @@ class OptionList : public std::vector<Option>, public RCCopyable<thread_unsafe_r
         for (auto &arg : argv)
         {
             std::string a = arg;
-            if (string::starts_with(a, "--"))
+            if (a.starts_with("--"))
             {
                 if (!opt.empty())
                 {
@@ -1062,7 +1062,7 @@ class OptionList : public std::vector<Option>, public RCCopyable<thread_unsafe_r
             if (in.line_overflow())
                 line_too_long(line_num);
             std::string &line = in.line_ref();
-            if (string::starts_with(line, "# "))
+            if (line.starts_with("# "))
             {
                 line = std::string(line, 2);
                 if (in_multiline)
@@ -1086,7 +1086,7 @@ class OptionList : public std::vector<Option>, public RCCopyable<thread_unsafe_r
                         mref += '\n';
                     }
                 }
-                else if (string::starts_with(line, prefix))
+                else if (line.starts_with(prefix))
                 {
                     Option opt = Split::by_char<Option, NullLex, Limits>(std::string(line, prefix.length()), '=', 0, 1, lim);
                     if (opt.size())

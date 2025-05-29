@@ -22,7 +22,6 @@
 #include <openvpn/common/base64.hpp>
 #include <openvpn/common/split.hpp>
 #include <openvpn/common/rc.hpp>
-#include <openvpn/common/string.hpp>
 
 // Static Challenge response:
 //   SCRV1:<BASE64_PASSWORD>:<BASE64_RESPONSE>
@@ -113,12 +112,12 @@ class ChallengeResponse : public RC<thread_unsafe_refcount>
 
     static bool is_dynamic(const std::string &s)
     {
-        return string::starts_with(s, "CRV1:");
+        return s.starts_with("CRV1:");
     }
 
     static bool is_static(const std::string &s)
     {
-        return string::starts_with(s, "SCRV1:");
+        return s.starts_with("SCRV1:");
     }
 
     static void validate_dynamic(const std::string &cookie)

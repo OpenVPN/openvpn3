@@ -106,7 +106,7 @@ class PushContinuationFragment : public std::vector<BufferPtr>
         {
             const Buffer &buf = *bv[i];
             const char *pc = (i == size - 1) ? pc1 : pc2;
-            if (string::starts_with(buf, prefix_comma) && string::ends_with(buf, pc))
+            if (buf_to_string(buf).starts_with(prefix_comma) && string::ends_with(buf, pc))
             {
                 Buffer b = buf;
                 b.advance(prefix.size());  // advance past prefix

@@ -492,9 +492,9 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
                 if (!dev)
                     throw proto_option_error(ERR_INVALID_CONFIG, "missing dev-type or dev option");
                 const std::string &dev_type = dev->get(1, 64);
-                if (string::starts_with(dev_type, "tun"))
+                if (dev_type.starts_with("tun"))
                     layer = Layer(Layer::OSI_LAYER_3);
-                else if (string::starts_with(dev_type, "tap"))
+                else if (dev_type.starts_with("tap"))
                     throw proto_option_error(ERR_INVALID_CONFIG, "TAP mode is not supported");
                 else
                     throw proto_option_error(ERR_INVALID_OPTION_VAL, "bad dev-type");

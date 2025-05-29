@@ -22,7 +22,6 @@
 #include <utility>
 
 #include <openvpn/common/stringize.hpp> // for OPENVPN_STRINGIZE
-#include <openvpn/common/string.hpp>
 
 #ifdef OPENVPN_DEBUG_EXCEPTION
 // well-known preprocessor hack to get __FILE__:__LINE__ rendered as a string
@@ -63,7 +62,7 @@ class Exception : public std::exception
     void remove_label(const std::string &label)
     {
         const std::string head = label + ": ";
-        if (string::starts_with(err_, head))
+        if (err_.starts_with(head))
             err_ = err_.substr(head.length());
     }
 

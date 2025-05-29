@@ -306,11 +306,11 @@ class Client : public ClientBase
         }
         else if (ev.name == "INFO")
         {
-            if (string::starts_with(ev.info, "OPEN_URL:"))
+            if (ev.info.starts_with("OPEN_URL:"))
             {
                 open_url(ev.info.substr(9));
             }
-            else if (string::starts_with(ev.info, "WEB_AUTH:"))
+            else if (ev.info.starts_with("WEB_AUTH:"))
             {
                 auto extra = ev.info.substr(9);
                 size_t flagsend = extra.find(':');
@@ -319,7 +319,7 @@ class Client : public ClientBase
                     open_url(extra.substr(flagsend + 1));
                 }
             }
-            else if (string::starts_with(ev.info, "CR_TEXT:"))
+            else if (ev.info.starts_with("CR_TEXT:"))
             {
                 std::string cr_response;
                 std::cout << "\n\n"
@@ -340,12 +340,12 @@ class Client : public ClientBase
 
     void handle_dpc1_protocol(const ClientAPI::AppCustomControlMessageEvent &acev)
     {
-        if (string::starts_with(acev.payload, "{\"dpc_request\"") && acev.payload.find("certificate") != std::string::npos)
+        if (acev.payload.starts_with("{\"dpc_request\"") && acev.payload.find("certificate") != std::string::npos)
         {
             std::cout << "ACC CERTCHECK challenge initiated" << std::endl;
             handle_certcheck_request();
         }
-        else if (string::starts_with(acev.payload, "{\"dpc_request\"") && acev.payload.find("client_info") != std::string::npos)
+        else if (acev.payload.starts_with("{\"dpc_request\"") && acev.payload.find("client_info") != std::string::npos)
         {
 
             std::string fakeResponse{R"({"dpc_response": {
@@ -357,7 +357,7 @@ class Client : public ClientBase
             std::cout << "ACC DPC1: sending fake client info:" << fakeResponse << std::endl;
             send_app_control_channel_msg("dpc1", fakeResponse);
         }
-        else if (string::starts_with(acev.payload, "{\"dpc_request\""))
+        else if (acev.payload.starts_with("{\"dpc_request\""))
         {
             std::cout << "Cannot parse dpc request message:" << acev.payload << std::endl;
         }
@@ -425,8 +425,7 @@ class Client : public ClientBase
 
     void open_url(std::string url_str)
     {
-        if (string::starts_with(url_str, "http://")
-            || string::starts_with(url_str, "https://"))
+        if (url_str.starts_with("http://") || url_str.starts_with("https://"))
         {
             if (!write_url_fn.empty())
             {

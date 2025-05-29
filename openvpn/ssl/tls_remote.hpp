@@ -17,12 +17,10 @@
 #include <cstring>
 #include <string>
 
-#include <openvpn/common/string.hpp>
-
 namespace openvpn::TLSRemote {
 inline bool test(const std::string &tls_remote, const std::string &subject, const std::string &common_name)
 {
-    return tls_remote == subject || string::starts_with(common_name, tls_remote);
+    return tls_remote == subject || common_name.starts_with(tls_remote);
 }
 
 inline void log(const std::string &tls_remote, const std::string &subject, const std::string &common_name)

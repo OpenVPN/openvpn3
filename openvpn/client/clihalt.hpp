@@ -19,7 +19,6 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/split.hpp>
 #include <openvpn/common/unicode.hpp>
-#include <openvpn/common/string.hpp>
 
 // Process halt/restart messages from server:
 //   HALT,<client_reason>        -> disconnect
@@ -50,7 +49,7 @@ class ClientHalt
         if (sl.size() >= 2)
         {
             size_t reason_pos = 0;
-            if (restart_ && string::starts_with(sl[1], "[P]:"))
+            if (restart_ && sl[1].starts_with("[P]:"))
             {
                 psid_ = true;
                 reason_pos = 4;
