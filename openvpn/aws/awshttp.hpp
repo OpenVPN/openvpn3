@@ -96,6 +96,7 @@ class HTTPContext
         ssl->set_flags(ssl_flags);
         ssl->set_frame(frame_);
         ssl->set_rng(rng_);
+        ssl->set_debug_level(debug_level_);
 
         // make HTTP context
         WS::Client::Config::Ptr hc(new WS::Client::Config());
