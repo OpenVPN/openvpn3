@@ -22,7 +22,6 @@
 
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/rc.hpp>
-#include <openvpn/common/string.hpp>
 #include <openvpn/common/hexstr.hpp>
 #include <openvpn/common/binprefix.hpp>
 #include <openvpn/common/to_string.hpp>
@@ -442,7 +441,7 @@ class AuthCert : public RC<thread_unsafe_refcount>
 
     std::string normalize_cn() const // remove trailing "_AUTOLOGIN" from AS certs
     {
-        if (string::ends_with(cn, "_AUTOLOGIN"))
+        if (cn.ends_with("_AUTOLOGIN"))
             return cn.substr(0, cn.length() - 10);
         else
             return cn;

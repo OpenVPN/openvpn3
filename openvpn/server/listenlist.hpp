@@ -175,7 +175,7 @@ class List : public std::vector<Item>
                 if (n_threads_exists)
                 {
                     std::string n_threads = o.get(4 - local, 16);
-                    if (string::ends_with(n_threads, "*N"))
+                    if (n_threads.ends_with("*N"))
                     {
                         mult = n_cores;
                         n_threads = n_threads.substr(0, n_threads.length() - 2);

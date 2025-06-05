@@ -60,13 +60,13 @@ static std::string get_csv(Buffer buf, const PCMode pc_mode, const std::string &
     // possibly remove push-continuation options from tail of buffer
     if (pc_mode == PC_1)
     {
-        if (!string::ends_with(buf, ",push-continuation 1"))
+        if (!buf_to_string(buf).ends_with(",push-continuation 1"))
             throw Exception("expected that buffer would end with push-continuation 1");
         buf.set_size(buf.size() - 20);
     }
     else if (pc_mode == PC_2)
     {
-        if (!string::ends_with(buf, ",push-continuation 2"))
+        if (!buf_to_string(buf).ends_with(",push-continuation 2"))
             throw Exception("expected that buffer would end with push-continuation 2");
         buf.set_size(buf.size() - 20);
     }

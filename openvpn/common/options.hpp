@@ -1651,7 +1651,7 @@ class OptionList : public std::vector<Option>, public RCCopyable<thread_unsafe_r
     // return true if string is a meta tag, e.g. WEB_CA_BUNDLE_START
     static bool is_open_meta_tag(const std::string &str)
     {
-        return string::ends_with(str, "_START");
+        return str.ends_with("_START");
     }
 
     // return true if string is a tag, e.g. WEB_CA_BUNDLE_STOP

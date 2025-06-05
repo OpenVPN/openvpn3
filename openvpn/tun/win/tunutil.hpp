@@ -552,7 +552,7 @@ inline HANDLE tap_open(const Type tun_type,
 
                 if (tun_type == OvpnDco)
                 {
-                    if (!string::ends_with(inst_id_interface.device_interface, OVPNDCO_DEV_INTERFACE_REF_STRING))
+                    if (!inst_id_interface.device_interface.ends_with(OVPNDCO_DEV_INTERFACE_REF_STRING))
                         continue;
                 }
                 path = inst_id_interface.device_interface;

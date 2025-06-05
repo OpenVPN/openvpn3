@@ -89,40 +89,11 @@ inline bool starts_with_delim(const STRING &str, const std::string &prefix, cons
         return prefix == str;
 }
 
-template <typename STRING>
-inline bool ends_with(const STRING &str, const std::string &suffix)
-{
-    const size_t len = str.length();
-    const size_t slen = suffix.length();
-    if (slen <= len)
-        return std::memcmp(str.c_str() + (len - slen), suffix.c_str(), slen) == 0;
-    else
-        return false;
-}
-
-template <typename STRING>
-inline bool ends_with(const STRING &str, const char *suffix)
-{
-    const size_t len = str.length();
-    const size_t slen = std::strlen(suffix);
-    if (slen <= len)
-        return std::memcmp(str.c_str() + (len - slen), suffix, slen) == 0;
-    else
-        return false;
-}
-
-// return true if string ends with char c
-template <typename STRING>
-inline bool ends_with(const STRING &str, const char c)
-{
-    return str.length() && str.back() == c;
-}
-
 // return true if string ends with a newline
 template <typename STRING>
 inline bool ends_with_newline(const STRING &str)
 {
-    return ends_with(str, '\n');
+    return str.ends_with('\n');
 }
 
 // return true if string ends with a CR or LF
@@ -156,7 +127,7 @@ inline std::string add_leading(const std::string &str, const size_t min_len, con
 // make sure that string ends with char c, if not append it
 inline std::string add_trailing_copy(const std::string &str, const char c)
 {
-    if (ends_with(str, c))
+    if (str.ends_with(c))
         return str;
     else
         return str + c;
@@ -165,18 +136,18 @@ inline std::string add_trailing_copy(const std::string &str, const char c)
 // make sure that string ends with char c, if not append it
 inline void add_trailing(std::string &str, const char c)
 {
-    if (!ends_with(str, c))
+    if (!str.ends_with(c))
         str += c;
 }
 
 // make sure that string ends with CRLF, if not append it
 inline void add_trailing_crlf(std::string &str)
 {
-    if (ends_with(str, "\r\n"))
+    if (str.ends_with("\r\n"))
         ;
-    else if (ends_with(str, '\r'))
+    else if (str.ends_with('\r'))
         str += '\n';
-    else if (ends_with(str, '\n'))
+    else if (str.ends_with('\n'))
     {
         str.pop_back();
         str += "\r\n";
@@ -195,7 +166,7 @@ inline std::string add_trailing_crlf_copy(std::string str)
 // make sure that string ends with char c, if not append it (unless the string is empty)
 inline std::string add_trailing_unless_empty_copy(const std::string &str, const char c)
 {
-    if (str.empty() || ends_with(str, c))
+    if (str.empty() || str.ends_with(c))
         return str;
     else
         return str + c;

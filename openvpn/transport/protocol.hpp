@@ -314,11 +314,11 @@ class Protocol
         case NO_SUFFIX:
             break;
         case CLIENT_SUFFIX:
-            if (string::ends_with(s, "-client"))
+            if (s.ends_with("-client"))
                 s = s.substr(0, s.length() - 7);
             break;
         case SERVER_SUFFIX:
-            if (string::ends_with(s, "-server"))
+            if (s.ends_with("-server"))
                 s = s.substr(0, s.length() - 7);
             break;
         }
