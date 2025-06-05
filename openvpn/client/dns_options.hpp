@@ -18,11 +18,15 @@
 #include <sstream>
 
 #include <openvpn/common/number.hpp>
+#include <openvpn/common/option_error.hpp>
 #include <openvpn/common/jsonlib.hpp>
 #include <openvpn/common/hostport.hpp>
 #include <openvpn/addr/ip.hpp>
 
 #ifdef HAVE_JSON
+#ifndef OPENVPN_JSON
+#include <json/json.h>
+#endif
 #include <openvpn/common/jsonhelper.hpp>
 #endif
 
@@ -34,6 +38,51 @@ namespace openvpn {
  */
 struct DnsAddress
 {
+    DnsAddress() = default;
+    virtual ~DnsAddress() noexcept = default;
+
+    /**
+     *  Constructs the DnsAddress object by parsing the input string
+     *  into separate "address" and "port" fields.  If "port" is missing,
+     *  it will be set to 0.
+     *
+     *  Supported formats:
+     *      192.168.0.1
+     *      192.168.0.1:53
+     *      [2001:db8:1234::1]
+     *      [2001:db8:1234::1]:53
+     */
+    explicit DnsAddress(const std::string &address_input)
+    {
+        IP::Addr addr;
+        std::string addr_str = address_input;
+        port = 0;
+
+        const bool v4_port_found = addr_str.find(':') != std::string::npos
+                                   && addr_str.find(':') == addr_str.rfind(':');
+
+        if (addr_str[0] == '[' || v4_port_found)
+        {
+            const auto &addr_port_str = address_input;
+            std::string port_str;
+            if (!HostPort::split_host_port(addr_port_str, addr_str, port_str, "", false, &port))
+            {
+                OPENVPN_THROW_EXCEPTION("Invalid address '" << addr_port_str << "'");
+            }
+        }
+
+        try
+        {
+            addr = IP::Addr(addr_str, "dns-ip-address");
+        }
+        catch (const IP::ip_exception &)
+        {
+            OPENVPN_THROW_EXCEPTION("Invalid address '" << addr_str << "'");
+        }
+        address = addr.to_string();
+    }
+
+
     /**
      * @brief Return string representation of the DnsAddress object
      *

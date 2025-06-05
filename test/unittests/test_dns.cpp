@@ -169,9 +169,9 @@ TEST(Dns, ServerInvalidAddress)
     OptionList config;
     config.parse_from_config("dns server 0 address 1.1.1.1 foobar\n", nullptr);
     config.update_map();
-    JY_EXPECT_THROW(DnsOptionsParser dns(config, false),
-                    option_error,
-                    "dns server 0 invalid address: foobar");
+    OVPN_EXPECT_THROW(DnsOptionsParser dns(config, false),
+                      option_error,
+                      "dns server 0 error: Invalid address 'foobar'");
 }
 
 TEST(Dns, ServerInvalidDnssec)

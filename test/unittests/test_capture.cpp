@@ -1,3 +1,14 @@
+//    OpenVPN -- An application to securely tunnel IP networks
+//               over a single port, with support for SSL/TLS-based
+//               session authentication and key exchange,
+//               packet encryption, packet authentication, and
+//               packet compression.
+//
+//    Copyright (C) 2019- OpenVPN Inc.
+//
+//    SPDX-License-Identifier: MPL-2.0 OR AGPL-3.0-only WITH openvpn3-openssl-exception
+//
+
 #include "test_common.hpp"
 #include "test_generators.hpp"
 
@@ -11,7 +22,7 @@ using namespace openvpn;
 TEST(misc, capture)
 {
     DnsServer server;
-    server.addresses = {{{"8.8.8.8"}, 0}, {{"8.8.4.4"}, 53}};
+    server.addresses = {DnsAddress("8.8.8.8"), DnsAddress("8.8.4.4:53")};
     DnsOptions dns_options;
     dns_options.servers[0] = std::move(server);
     dns_options.search_domains = {{"yonan.net"}, {"openvpn.net"}};
