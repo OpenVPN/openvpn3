@@ -187,13 +187,20 @@ struct DnsServer
 {
     enum class Security
     {
-        Unset,
-        No,
-        Yes,
-        Optional
+        Unset,   ///<  Undefined setting; default value when not set
+        No,      ///<  Do not use DNSSEC
+        Yes,     ///<  Enforce using DNSSEC
+        Optional ///<  Try to use DNSSEC opportunistically.  If it fails, the DNS resolver may ignore DNSSEC
     };
 
-    std::string dnssec_string(const Security dnssec) const
+    /**
+     * @brief Return string representation of a given DnsServer::Security
+     *        value
+     *
+     * @param  dnssec DnsServer::Security value
+     * @return std::string  the string representation generated
+     */
+    static std::string dnssec_string(const Security dnssec)
     {
         switch (dnssec)
         {
@@ -208,15 +215,35 @@ struct DnsServer
         }
     }
 
+
+    /**
+     * @brief Return string representation of the dnssec
+     *        value in this DnsServer object
+     *
+     * @return std::string  the string representation generated
+     */
+    std::string dnssec_string() const
+    {
+        return dnssec_string(dnssec);
+    }
+
+
     enum class Transport
     {
-        Unset,
-        Plain,
-        HTTPS,
-        TLS
+        Unset, ///<  Undefined setting; default value when not set
+        Plain, ///<  Use the classic unencrypted DNS protocol
+        HTTPS, ///<  Use DNS-over-HTTPS (DoH)
+        TLS    ///<  Use DNS-over-TLS (DoT)
     };
 
-    std::string transport_string(const Transport transport) const
+    /**
+     * @brief Return string representation of a given DnsServer::Transport
+     *        value
+     *
+     * @param  transport DnsServer::Transport value
+     * @return std::string  the string representation generated
+     */
+    static std::string transport_string(const Transport transport)
     {
         switch (transport)
         {
@@ -229,6 +256,17 @@ struct DnsServer
         default:
             return "Unset";
         }
+    }
+
+    /**
+     * @brief Return string representation of a given DnsServer::Transport
+     *        value
+     *
+     * @return std::string  the string representation generated
+     */
+    std::string transport_string() const
+    {
+        return transport_string(transport);
     }
 
     std::string to_string(const char *prefix = "") const
