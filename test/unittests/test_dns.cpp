@@ -200,9 +200,9 @@ TEST(Dns, ServerInvalidTransport)
         OptionList config;
         config.parse_from_config("dns server 0 transport avian-carrier\n", nullptr);
         config.update_map();
-        JY_EXPECT_THROW(DnsOptionsParser dns(config, false),
-                        option_error,
-                        "dns server 0 transport 'avian-carrier' invalid");
+        OVPN_EXPECT_THROW(DnsOptionsParser dns(config, false),
+                          option_error,
+                          "dns server 0 error: Invalid transport value 'avian-carrier'");
     }
     {
         OptionList config;

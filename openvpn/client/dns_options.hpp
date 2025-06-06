@@ -297,6 +297,34 @@ struct DnsServer
         return transport_string(transport);
     }
 
+    /**
+     *  Parse the --dns server n transport VALUE into the
+     *  internal DnsServer::Transport representation.  This
+     *  method is typically called from the option parser.
+     *
+     *  @param transport_value   std::string containing the DNS transport setting to use
+     *  @throws openvpn::Exception on invalid values
+     */
+    void parse_transport_value(const std::string &transport_value)
+    {
+        if (transport_value == "plain")
+        {
+            transport = DnsServer::Transport::Plain;
+        }
+        else if (transport_value == "DoH")
+        {
+            transport = DnsServer::Transport::HTTPS;
+        }
+        else if (transport_value == "DoT")
+        {
+            transport = DnsServer::Transport::TLS;
+        }
+        else
+        {
+            OPENVPN_THROW_EXCEPTION("Invalid transport value '" << transport_value << "'");
+        }
+    }
+
     DnsServer() = default;
     virtual ~DnsServer() noexcept = default;
 

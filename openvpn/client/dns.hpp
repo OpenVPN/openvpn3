@@ -120,22 +120,13 @@ struct DnsOptionsParser : public DnsOptions
                     }
                     else if (server_suboption == "transport" && o.size() == 5)
                     {
-                        const auto &transport_value = o.ref(4);
-                        if (transport_value == "plain")
+                        try
                         {
-                            server.transport = DnsServer::Transport::Plain;
+                            server.parse_transport_value(o.ref(4));
                         }
-                        else if (transport_value == "DoH")
+                        catch (const openvpn::Exception &error)
                         {
-                            server.transport = DnsServer::Transport::HTTPS;
-                        }
-                        else if (transport_value == "DoT")
-                        {
-                            server.transport = DnsServer::Transport::TLS;
-                        }
-                        else
-                        {
-                            OPENVPN_THROW_ARG1(option_error, ERR_INVALID_OPTION_DNS, "dns server " << priority << " transport '" << transport_value << "' invalid");
+                            OPENVPN_THROW_ARG1(option_error, ERR_INVALID_OPTION_DNS, "dns server " << priority << " error: " << error.what());
                         }
                     }
                     else if (server_suboption == "sni" && o.size() == 5)
