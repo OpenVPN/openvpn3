@@ -519,7 +519,7 @@ class TunBuilderCapture : public TunBuilderBase, public RC<thread_unsafe_refcoun
 
     void reset_dns_options()
     {
-        dns_options = {};
+        dns_options = DnsOptions();
     }
 
     const RouteAddress *vpn_ipv4() const

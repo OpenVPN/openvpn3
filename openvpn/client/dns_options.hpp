@@ -498,6 +498,23 @@ struct DnsServer
  */
 struct DnsOptions
 {
+    DnsOptions() = default;
+    ~DnsOptions() noexcept = default;
+
+#ifdef HAVE_JSON
+    /**
+     *  Instantiate a new DnsOptions object with information from a JSON blob,
+     *  typically exported using the DnsOptions::to_json() method
+     *
+     *  @param root   The root Json::Value object to import
+     *  @param title  std::string with details used for error logging
+     */
+    explicit DnsOptions(const Json::Value &root, const std::string &title = "")
+    {
+        from_json(root, title);
+    }
+#endif
+
     /**
      *  Generate a human readable representation of the configured
      *  DnsOptions variables
