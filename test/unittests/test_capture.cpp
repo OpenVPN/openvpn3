@@ -25,7 +25,7 @@ TEST(misc, capture)
     server.addresses = {DnsAddress("8.8.8.8"), DnsAddress("8.8.4.4:53")};
     DnsOptions dns_options;
     dns_options.servers[0] = std::move(server);
-    dns_options.search_domains = {{"yonan.net"}, {"openvpn.net"}};
+    dns_options.search_domains = {DnsDomain("yonan.net"), DnsDomain("openvpn.net")};
 
     TunBuilderCapture::Ptr tbc(new TunBuilderCapture);
 

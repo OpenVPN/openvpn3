@@ -137,6 +137,14 @@ struct DnsAddress
  */
 struct DnsDomain
 {
+    DnsDomain() = default;
+    virtual ~DnsDomain() noexcept = default;
+
+    explicit DnsDomain(const std::string &domain_)
+    {
+        domain = domain_;
+    }
+
     /**
      * @brief Return string representation of the DnsDomain object
      *

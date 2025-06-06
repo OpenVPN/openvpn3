@@ -73,7 +73,7 @@ struct DnsOptionsParser : public DnsOptions
                 {
                     for (std::size_t j = 2; j < o.size(); j++)
                     {
-                        search_domains.push_back({o.ref(j)});
+                        search_domains.emplace_back(o.ref(j));
                     }
                 }
                 else if (o.size() >= 5 && o.ref(1) == "server")
@@ -102,7 +102,7 @@ struct DnsOptionsParser : public DnsOptions
                     {
                         for (std::size_t j = 4; j < o.size(); j++)
                         {
-                            server.domains.push_back({o.ref(j)});
+                            server.domains.emplace_back(o.ref(j));
                         }
                     }
                     else if (server_suboption == "dnssec" && o.size() == 5)
@@ -251,11 +251,11 @@ struct DnsOptionsParser : public DnsOptions
                             if (use_search_as_split_domains)
                             {
                                 auto &server = get_server(0);
-                                server.domains.push_back({domain});
+                                server.domains.emplace_back(domain);
                             }
                             else
                             {
-                                search_domains.push_back({domain});
+                                search_domains.emplace_back(domain);
                             }
                         }
                     }
@@ -279,7 +279,7 @@ struct DnsOptionsParser : public DnsOptions
 
         if (!adapter_domain_suffix.empty())
         {
-            search_domains.insert(search_domains.begin(), {std::move(adapter_domain_suffix)});
+            search_domains.insert(search_domains.begin(), DnsDomain(std::move(adapter_domain_suffix)));
         }
 
         if (!ignore_values && servers.size() && servers[0].addresses.empty())
