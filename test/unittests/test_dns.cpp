@@ -180,9 +180,9 @@ TEST(Dns, ServerInvalidDnssec)
         OptionList config;
         config.parse_from_config("dns server 0 dnssec foo\n", nullptr);
         config.update_map();
-        JY_EXPECT_THROW(DnsOptionsParser dns(config, false),
-                        option_error,
-                        "dns server 0 dnssec setting 'foo' invalid");
+        OVPN_EXPECT_THROW(DnsOptionsParser dns(config, false),
+                          option_error,
+                          "dns server 0 error: Invalid DNSSEC value 'foo'");
     }
     {
         OptionList config;

@@ -228,6 +228,34 @@ struct DnsServer
     }
 
 
+    /**
+     *  Parse the --dns server n dnssec VALUE into the
+     *  internal DnsServer::Security representation.  This
+     *  method is typically called from the option parser.
+     *
+     *  @param dnssec_value   std::string containing the DNSSEC setting to use
+     *  @throws openvpn::Exception on invalid values
+     */
+    void parse_dnssec_value(const std::string &dnssec_value)
+    {
+        if (dnssec_value == "yes")
+        {
+            dnssec = DnsServer::Security::Yes;
+        }
+        else if (dnssec_value == "no")
+        {
+            dnssec = DnsServer::Security::No;
+        }
+        else if (dnssec_value == "optional")
+        {
+            dnssec = DnsServer::Security::Optional;
+        }
+        else
+        {
+            OPENVPN_THROW_EXCEPTION("Invalid DNSSEC value '" << dnssec_value << "'");
+        }
+    }
+
     enum class Transport
     {
         Unset, ///<  Undefined setting; default value when not set

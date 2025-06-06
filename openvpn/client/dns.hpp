@@ -107,22 +107,15 @@ struct DnsOptionsParser : public DnsOptions
                     }
                     else if (server_suboption == "dnssec" && o.size() == 5)
                     {
-                        const auto &dnssec_value = o.ref(4);
-                        if (dnssec_value == "yes")
+                        try
                         {
-                            server.dnssec = DnsServer::Security::Yes;
+                            server.parse_dnssec_value(o.ref(4));
                         }
-                        else if (dnssec_value == "no")
+                        catch (const openvpn::Exception &error)
                         {
-                            server.dnssec = DnsServer::Security::No;
-                        }
-                        else if (dnssec_value == "optional")
-                        {
-                            server.dnssec = DnsServer::Security::Optional;
-                        }
-                        else
-                        {
-                            OPENVPN_THROW_ARG1(option_error, ERR_INVALID_OPTION_DNS, "dns server " << priority << " dnssec setting '" << dnssec_value << "' invalid");
+                            OPENVPN_THROW_ARG1(option_error,
+                                               ERR_INVALID_OPTION_DNS,
+                                               "dns server " << priority << " error: " << error.what());
                         }
                     }
                     else if (server_suboption == "transport" && o.size() == 5)
