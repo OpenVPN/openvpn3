@@ -510,10 +510,10 @@ struct DnsOptions
         if (!servers.empty())
         {
             os << "DNS Servers:\n";
-            for (const auto &elem : servers)
+            for (const auto &[priority, server] : servers)
             {
-                os << "  Priority: " << elem.first << '\n';
-                os << elem.second.to_string("  ");
+                os << "  Priority: " << priority << '\n';
+                os << server.to_string("  ");
             }
         }
         if (!search_domains.empty())
