@@ -269,6 +269,23 @@ struct DnsServer
         return transport_string(transport);
     }
 
+    DnsServer() = default;
+    virtual ~DnsServer() noexcept = default;
+
+#ifdef HAVE_JSON
+    /**
+     *  Instantiate a new DnsServer object with information from a JSON blob,
+     *  typically exported using the DnsServer::to_json() method
+     *
+     *  @param root   The root Json::Value object to import
+     *  @param title  std::string with details used for error logging
+     */
+    explicit DnsServer(const Json::Value &root, const std::string &title = "")
+    {
+        from_json(root, title);
+    }
+#endif
+
     /**
      *  Generate a human readable representation of the configured
      *  DnsServer variables
@@ -470,8 +487,7 @@ struct DnsOptions
         json::assert_dict(root["servers"], title);
         for (const auto &prio : root["servers"].getMemberNames())
         {
-            DnsServer server;
-            server.from_json(root["servers"][prio], title);
+            DnsServer server(root["servers"][prio], title);
             servers[std::stoi(prio)] = std::move(server);
         }
         json::to_vector(root, search_domains, "search_domains", title);
