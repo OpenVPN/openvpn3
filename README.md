@@ -63,20 +63,26 @@ Options used:
 -   `route-nopull` : if you are connected via ssh, prevent ssh session
     lockout
 
-### Using cli with ovpn-dco
+### Using cli with the ovpn Linux kernel module
 
-ovpn-dco is a kernel module which optimises data channel encryption and
+ovpn is a kernel module which optimises data channel encryption and
 transport, providing better performance. The cli will detect when the
 kernel module is available and enable dco automatically (use `--no-dco`
 to disable this).
 
-Download, build and install ovpn-dco:
+The ovpn kernel module has been merged upstream as of linux-6.16.
+From this kernel version onwards you directly get the DCO module as
+shipped by your kernel.
 
-    $ sudo apt install make
-    $ git clone https://github.com/OpenVPN/ovpn-dco.git
-    $ cd ovpn-dco
-    $ make && sudo make install
-    $ sudo modprobe ovpn-dco
+Alternatively, if you run an older kernel or if you want to use a more
+recent DCO module than the one shipped by your kernel, you need to use
+the ovpn-backports project.
+
+To learn how to use the ovpn-backports project and build your own DCO
+kernel module, please refer to the README file available at:
+
+  https://github.com/OpenVPN/ovpn-backports/blob/main/README.md
+
 
 Install core dependencies:
 

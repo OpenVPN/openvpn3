@@ -76,17 +76,17 @@ class OvpnDcoClient : public Client,
         dc_settings.set_factory(CryptoDCFactory::Ptr(new KoRekey::Factory(
             dc_settings.factory(), this, config->transport.frame)));
 
-        // add peer in ovpn-dco
-        add_peer(peer_id,
-                 state->vpn_ip4_gw.to_ipv4_zero(),
-                 state->vpn_ip6_gw.to_ipv6_zero());
+        // add peer in ovpn-dco: in client mode we do not specify
+        // any peer VPN IP, because all traffic will go over the
+        // tunnel
+        add_peer(peer_id, IPv4::Addr(), IPv6::Addr());
         // signal that we are connected
         tun_parent->tun_connected();
     }
 
     std::string tun_name() const override
     {
-        return "ovpn-dco";
+        return OVPN_FAMILY_NAME;
     }
 
     IP::Addr server_endpoint_addr() const override
@@ -150,6 +150,7 @@ class OvpnDcoClient : public Client,
         OPENVPN_THROW(dcocli_error,
                       "Non-const send expected for data channel only, but "
                       "ovpndcocli is not expected to handle data packets");
+        return true;
     }
 
     void get_remote_sockaddr(struct sockaddr_storage &sa, socklen_t &salen)
@@ -174,6 +175,8 @@ class OvpnDcoClient : public Client,
 
     void del_peer(uint32_t peer_id)
     {
+        OPENVPN_LOG("Deleting DCO peer " << peer_id);
+
         TunBuilderBase *tb = config->builder;
         if (tb)
         {
@@ -190,6 +193,10 @@ class OvpnDcoClient : public Client,
         socklen_t salen;
 
         get_remote_sockaddr(sa, salen);
+
+        OPENVPN_LOG("Adding DCO peer " << peer_id << " remote "
+                                       << transport->server_endpoint_addr() << ":"
+                                       << transport->server_endpoint_port());
 
         TunBuilderBase *tb = config->builder;
         if (tb)
@@ -214,6 +221,8 @@ class OvpnDcoClient : public Client,
     void update_peer_stats(uint32_t peer_id, bool sync)
     {
         const SessionStats::DCOTransportSource::Data old_stats = last_stats;
+
+        OPENVPN_LOG("Updating stats for DCO peer " << peer_id);
 
         if (peer_id == OVPN_PEER_ID_UNDEF)
             return;
@@ -297,29 +306,31 @@ class OvpnDcoClient : public Client,
         switch (rktype)
         {
         case CryptoDCInstance::ACTIVATE_PRIMARY:
+            OPENVPN_LOG("Installing PRIMARY key for peer " << peer_id);
             genl->new_key(OVPN_KEY_SLOT_PRIMARY, kc);
 
             handle_keepalive();
             break;
 
         case CryptoDCInstance::NEW_SECONDARY:
-
+            OPENVPN_LOG("Installing SECONDARY key for peer " << peer_id);
             genl->new_key(OVPN_KEY_SLOT_SECONDARY, kc);
             break;
 
         case CryptoDCInstance::PRIMARY_SECONDARY_SWAP:
-
+            OPENVPN_LOG("Swapping keys for peer " << peer_id);
             genl->swap_keys(peer_id);
             break;
 
         case CryptoDCInstance::DEACTIVATE_SECONDARY:
-
+            OPENVPN_LOG("Deleting SECONDARY key for peer " << peer_id);
             genl->del_key(peer_id, OVPN_KEY_SLOT_SECONDARY);
             break;
 
         case CryptoDCInstance::DEACTIVATE_ALL:
-            // TODO: deactivate all keys
-            OPENVPN_LOG("ovpndcocli: deactivate all keys");
+            OPENVPN_LOG("Deleting all keys for peer " << peer_id);
+            genl->del_key(peer_id, OVPN_KEY_SLOT_PRIMARY);
+            genl->del_key(peer_id, OVPN_KEY_SLOT_SECONDARY);
             break;
 
         default:
@@ -382,7 +393,7 @@ class OvpnDcoClient : public Client,
 
         switch (cmd)
         {
-        case OVPN_CMD_DEL_PEER:
+        case OVPN_CMD_PEER_DEL_NTF:
             {
                 uint32_t peer_id;
                 buf.read(&peer_id, sizeof(peer_id));
@@ -427,7 +438,7 @@ class OvpnDcoClient : public Client,
                 break;
             }
 
-        case OVPN_CMD_GET_PEER:
+        case OVPN_CMD_PEER_GET:
             {
                 struct OvpnDcoPeer peer;
                 buf.read(&peer, sizeof(peer));
@@ -537,7 +548,7 @@ class OvpnDcoClient : public Client,
         }
 
         std::ostringstream os;
-        int res = TunNetlink::iface_new(os, config->dev_name, "ovpn-dco");
+        int res = TunNetlink::iface_new(os, config->dev_name, OVPN_FAMILY_NAME);
         if (res != 0)
         {
             stop_();
@@ -633,6 +644,8 @@ class OvpnDcoClient : public Client,
             }
             else
             {
+                OPENVPN_LOG("Setting DCO peer " << peer_id << " interval: " << keepalive_interval << " timeout: " << keepalive_timeout);
+
                 // enable keepalive in kernel
                 genl->set_peer(peer_id, keepalive_interval, keepalive_timeout);
             }
