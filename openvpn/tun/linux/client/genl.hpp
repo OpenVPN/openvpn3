@@ -29,6 +29,26 @@
 
 #include <memory>
 
+/* The following enum members exist in netlink.h since linux-6.1.
+ * However, some distro we support still ship an old header, thus
+ * failing the OpenVPN compilation.
+ *
+ * For the time being we add the needed defines manually.
+ * We will drop this definition once we stop supporting those old
+ * distros.
+ *
+ * @NLMSGERR_ATTR_MISS_TYPE: type of a missing required attribute,
+ *  %NLMSGERR_ATTR_MISS_NEST will not be present if the attribute was
+ *  missing at the message level
+ * @NLMSGERR_ATTR_MISS_NEST: offset of the nest where attribute was missing
+ */
+enum ovpn_nlmsgerr_attrs
+{
+    OVPN_NLMSGERR_ATTR_MISS_TYPE = 5,
+    OVPN_NLMSGERR_ATTR_MISS_NEST = 6,
+    OVPN_NLMSGERR_ATTR_MAX = 6,
+};
+
 namespace openvpn {
 
 #define nla_nest_start(_msg, _type) nla_nest_start(_msg, (_type) | NLA_F_NESTED)
@@ -126,6 +146,11 @@ class GeNL : public RC<thread_unsafe_refcount>
         if (ret != 0)
             OPENVPN_THROW(netlink_error,
                           " cannot connect to generic netlink: " << nl_geterror(ret));
+
+        ret = 1;
+        if (setsockopt(nl_socket_get_fd(sock), SOL_NETLINK, NETLINK_EXT_ACK, &ret, sizeof(ret)) < 0)
+            OPENVPN_THROW(netlink_error,
+                          " cannot enable NETLINK_EXT_ACK on socket: " << errno);
 
         int mcast_id = get_mcast_id();
         if (mcast_id < 0)
@@ -777,7 +802,7 @@ class GeNL : public RC<thread_unsafe_refcount>
                                 void *arg)
     {
         struct nlmsghdr *nlh = (struct nlmsghdr *)err - 1;
-        struct nlattr *tb_msg[NLMSGERR_ATTR_MAX + 1];
+        struct nlattr *tb_msg[OVPN_NLMSGERR_ATTR_MAX + 1];
         int len = nlh->nlmsg_len;
         struct nlattr *attrs;
         int *ret = static_cast<int *>(arg);
@@ -802,6 +827,18 @@ class GeNL : public RC<thread_unsafe_refcount>
         {
             OPENVPN_LOG(__func__ << " kernel error "
                                  << (char *)nla_data(tb_msg[NLMSGERR_ATTR_MSG]));
+        }
+
+        if (tb_msg[OVPN_NLMSGERR_ATTR_MISS_NEST])
+        {
+            OPENVPN_LOG(__func__ << "missing required nesting type "
+                                 << nla_get_u32(tb_msg[OVPN_NLMSGERR_ATTR_MISS_NEST]));
+        }
+
+        if (tb_msg[OVPN_NLMSGERR_ATTR_MISS_TYPE])
+        {
+            OPENVPN_LOG(__func__ << "missing required attribute type "
+                                 << nla_get_u32(tb_msg[OVPN_NLMSGERR_ATTR_MISS_TYPE]));
         }
 
         return NL_STOP;
