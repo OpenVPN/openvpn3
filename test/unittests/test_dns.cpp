@@ -136,6 +136,62 @@ TEST(Dns, OptionsMerger)
     ASSERT_EQ(pushed[1].ref(4), "2.2.2.2");
 }
 
+TEST(Dns, DnsAddress_tostring)
+{
+    /**
+     * Supported formats:
+     *   192.168.0.1
+     *   192.168.0.1:53
+     *   [2001:db8:1234::1]
+     *   [2001:db8:1234::1]:53
+     */
+
+    DnsAddress ipv4_addr("192.168.0.1");
+    EXPECT_STREQ(ipv4_addr.to_string().c_str(), "192.168.0.1");
+
+    DnsAddress ipv4_port("192.168.20.1:9876");
+    EXPECT_STREQ(ipv4_port.to_string().c_str(), "192.168.20.1 9876");
+
+    DnsAddress ipv6_addr("2001:db8:5678::1");
+    EXPECT_STREQ(ipv6_addr.to_string().c_str(), "2001:db8:5678::1");
+
+    DnsAddress ipv6_port("[2001:db8:1234::1]:5678");
+    EXPECT_STREQ(ipv6_port.to_string().c_str(), "2001:db8:1234::1 5678");
+
+    OVPN_EXPECT_THROW(DnsAddress invalid1("192.168.0"),
+                      openvpn::Exception,
+                      "Invalid address '192.168.0'");
+
+    OVPN_EXPECT_THROW(DnsAddress invalid2("192.168.200.1::1234"),
+                      openvpn::Exception,
+                      "Invalid address '192.168.200.1::1234'");
+
+    OVPN_EXPECT_THROW(DnsAddress invalid3("192.168.200.1:blabla"),
+                      openvpn::Exception,
+                      "Invalid address '192.168.200.1:blabla'");
+
+    OVPN_EXPECT_THROW(DnsAddress invalid4("192.168.200.1:77701"),
+                      openvpn::Exception,
+                      "Invalid address '192.168.200.1:77701'");
+
+    OVPN_EXPECT_THROW(DnsAddress invalid5("2001:defg:1234:1234::"),
+                      openvpn::Exception,
+                      "Invalid address '2001:defg:1234:1234::'");
+
+    OVPN_EXPECT_THROW(DnsAddress invalid6("2001:abcd:1234:12345::1"),
+                      openvpn::Exception,
+                      "Invalid address '2001:abcd:1234:12345::1'");
+
+    OVPN_EXPECT_THROW(DnsAddress invalid7("[2001:abcd:1234:::]"),
+                      openvpn::Exception,
+                      "Invalid address '[2001:abcd:1234:::]'");
+
+    OVPN_EXPECT_THROW(DnsAddress invalid8("[2001:abcd:1234::]:65547"),
+                      openvpn::Exception,
+                      "Invalid address '[2001:abcd:1234::]:65547");
+}
+
+
 TEST(Dns, ServerNoAddress)
 {
     OptionList config;
