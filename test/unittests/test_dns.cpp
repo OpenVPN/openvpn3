@@ -148,15 +148,25 @@ TEST(Dns, DnsAddress_tostring)
 
     DnsAddress ipv4_addr("192.168.0.1");
     EXPECT_STREQ(ipv4_addr.to_string().c_str(), "192.168.0.1");
+    DnsAddress parse_ipv4_addr(ipv4_addr.to_string());
+    EXPECT_STREQ(parse_ipv4_addr.to_string().c_str(), "192.168.0.1");
 
     DnsAddress ipv4_port("192.168.20.1:9876");
-    EXPECT_STREQ(ipv4_port.to_string().c_str(), "192.168.20.1 9876");
+    EXPECT_STREQ(ipv4_port.to_string().c_str(), "192.168.20.1:9876");
+    DnsAddress parse_ipv4_port(ipv4_port.to_string());
+    EXPECT_STREQ(parse_ipv4_port.to_string().c_str(), "192.168.20.1:9876");
 
     DnsAddress ipv6_addr("2001:db8:5678::1");
     EXPECT_STREQ(ipv6_addr.to_string().c_str(), "2001:db8:5678::1");
+    DnsAddress parse_ipv6_addr(ipv6_addr.to_string());
+    EXPECT_STREQ(parse_ipv6_addr.to_string().c_str(), "2001:db8:5678::1")
+        << "parse_ipv6_addr failed";
 
     DnsAddress ipv6_port("[2001:db8:1234::1]:5678");
-    EXPECT_STREQ(ipv6_port.to_string().c_str(), "2001:db8:1234::1 5678");
+    EXPECT_STREQ(ipv6_port.to_string().c_str(), "[2001:db8:1234::1]:5678");
+    DnsAddress parse_ipv6_port(ipv6_port.to_string());
+    EXPECT_STREQ(parse_ipv6_port.to_string().c_str(), "[2001:db8:1234::1]:5678")
+        << "parse_ipv6_port failed";
 
     OVPN_EXPECT_THROW(DnsAddress invalid1("192.168.0"),
                       openvpn::Exception,
@@ -168,11 +178,11 @@ TEST(Dns, DnsAddress_tostring)
 
     OVPN_EXPECT_THROW(DnsAddress invalid3("192.168.200.1:blabla"),
                       openvpn::Exception,
-                      "Invalid address '192.168.200.1:blabla'");
+                      "Invalid address:port format '192.168.200.1:blabla'");
 
     OVPN_EXPECT_THROW(DnsAddress invalid4("192.168.200.1:77701"),
                       openvpn::Exception,
-                      "Invalid address '192.168.200.1:77701'");
+                      "Invalid address:port format '192.168.200.1:77701'");
 
     OVPN_EXPECT_THROW(DnsAddress invalid5("2001:defg:1234:1234::"),
                       openvpn::Exception,
@@ -184,11 +194,11 @@ TEST(Dns, DnsAddress_tostring)
 
     OVPN_EXPECT_THROW(DnsAddress invalid7("[2001:abcd:1234:::]"),
                       openvpn::Exception,
-                      "Invalid address '[2001:abcd:1234:::]'");
+                      "Invalid address '2001:abcd:1234:::'");
 
     OVPN_EXPECT_THROW(DnsAddress invalid8("[2001:abcd:1234::]:65547"),
                       openvpn::Exception,
-                      "Invalid address '[2001:abcd:1234::]:65547");
+                      "Invalid address:port format '[2001:abcd:1234::]:65547");
 }
 
 
@@ -602,8 +612,8 @@ TEST(Dns, JsonRoundtripAllValuesSet)
               "  SNI: snidom1\n"
               "  Priority: 20\n"
               "  Addresses:\n"
-              "    2::2 5353\n"
-              "    2.2.2.2 5353\n"
+              "    [2::2]:5353\n"
+              "    2.2.2.2:5353\n"
               "  Domains:\n"
               "    rdom21\n"
               "    rdom22\n"

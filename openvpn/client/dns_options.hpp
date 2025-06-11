@@ -58,21 +58,37 @@ struct DnsAddress
         std::string addr_str = address_input;
         port = 0;
 
+        bool ipv6_bracket_encaps = address_input.length() > 2
+                                   && address_input[0] == '['
+                                   && address_input.rfind(']') != std::string::npos;
+
+        auto last_colon_pos = address_input.rfind(':');
+        const bool v6_port_found = ipv6_bracket_encaps
+                                   && last_colon_pos > address_input.rfind(']');
+
         const bool v4_port_found = addr_str.find(':') != std::string::npos
                                    && addr_str.find(':') == addr_str.rfind(':');
 
-        if (addr_str[0] == '[' || v4_port_found)
+        if (v6_port_found || v4_port_found)
         {
             const auto &addr_port_str = address_input;
             std::string port_str;
             if (!HostPort::split_host_port(addr_port_str, addr_str, port_str, "", false, &port))
             {
-                OPENVPN_THROW_EXCEPTION("Invalid address '" << addr_port_str << "'");
+                OPENVPN_THROW_EXCEPTION("Invalid address:port format '" << addr_port_str << "'");
             }
+
+            // If it was an IPv6 address, the bracket encapsulation has been removed
+            // by HostPort::split_host_port()
+            ipv6_bracket_encaps = false;
         }
 
         try
         {
+            if (ipv6_bracket_encaps)
+            {
+                addr_str = addr_str.substr(1, addr_str.length() - 2);
+            }
             addr = IP::Addr(addr_str, "dns-ip-address");
         }
         catch (const IP::ip_exception &)
@@ -84,17 +100,26 @@ struct DnsAddress
 
 
     /**
-     * @brief Return string representation of the DnsAddress object
+     * @brief Return string representation of the IP address
+     *        and port stored in the DnsAddress object.
+     *
+     *        The output of this method is expected to be
+     *        parsable by this class constructor.
      *
      * @return std::string  the string representation generated
      */
     std::string to_string() const
     {
         std::ostringstream os;
-        os << address;
+
+        IP::Addr addr(address);
+        os << (addr.is_ipv6() && port ? "[" : "")
+           << address
+           << (addr.is_ipv6() && port ? "]" : "");
+
         if (port)
         {
-            os << " " << port;
+            os << ":" << port;
         }
         return os.str();
     }
