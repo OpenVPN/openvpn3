@@ -17,6 +17,8 @@
 
 using namespace openvpn;
 
+namespace unittests {
+
 TEST(Dns, Options)
 {
     OptionList config;
@@ -558,3 +560,5 @@ TEST(Dns, JsonRoundtripAllValuesSet)
               "  dom3\n"
               "Values from dhcp-options: false\n");
 }
+
+} // namespace unittests
