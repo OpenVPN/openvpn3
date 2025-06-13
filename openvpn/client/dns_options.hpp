@@ -62,20 +62,20 @@ struct DnsAddress
                                    && address_input[0] == '['
                                    && address_input.rfind(']') != std::string::npos;
 
+        auto first_colon_pos = address_input.find(':');
         auto last_colon_pos = address_input.rfind(':');
         const bool v6_port_found = ipv6_bracket_encaps
                                    && last_colon_pos > address_input.rfind(']');
 
-        const bool v4_port_found = addr_str.find(':') != std::string::npos
-                                   && addr_str.find(':') == addr_str.rfind(':');
+        const bool v4_port_found = first_colon_pos != std::string::npos
+                                   && first_colon_pos == addr_str.rfind(':');
 
         if (v6_port_found || v4_port_found)
         {
-            const auto &addr_port_str = address_input;
             std::string port_str;
-            if (!HostPort::split_host_port(addr_port_str, addr_str, port_str, "", false, &port))
+            if (!HostPort::split_host_port(address_input, addr_str, port_str, "", false, &port))
             {
-                OPENVPN_THROW_EXCEPTION("Invalid address:port format '" << addr_port_str << "'");
+                OPENVPN_THROW_EXCEPTION("Invalid address:port format '" << address_input << "'");
             }
 
             // If it was an IPv6 address, the bracket encapsulation has been removed
