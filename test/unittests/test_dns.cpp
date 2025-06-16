@@ -168,9 +168,15 @@ TEST(Dns, DnsAddress_tostring)
     EXPECT_STREQ(parse_ipv6_port.to_string().c_str(), "[2001:db8:1234::1]:5678")
         << "parse_ipv6_port failed";
 
+
+#ifndef OPENVPN_PLATFORM_WIN
+    // Test disabled on Windows.  Windows allows partial IP address strings.
+    // On Linux, this error happens inside the ASIO library when calling
+    // inet_pton() in asio::ip::make_address_v4()
     OVPN_EXPECT_THROW(DnsAddress invalid1("192.168.0"),
                       openvpn::Exception,
                       "Invalid address '192.168.0'");
+#endif
 
     OVPN_EXPECT_THROW(DnsAddress invalid2("192.168.200.1::1234"),
                       openvpn::Exception,
