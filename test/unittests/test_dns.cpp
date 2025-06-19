@@ -17,6 +17,8 @@
 
 using namespace openvpn;
 
+namespace unittests {
+
 TEST(Dns, Options)
 {
     OptionList config;
@@ -134,6 +136,78 @@ TEST(Dns, OptionsMerger)
     ASSERT_EQ(pushed[1].ref(4), "2.2.2.2");
 }
 
+TEST(Dns, DnsAddress_tostring)
+{
+    /**
+     * Supported formats:
+     *   192.168.0.1
+     *   192.168.0.1:53
+     *   [2001:db8:1234::1]
+     *   [2001:db8:1234::1]:53
+     */
+
+    DnsAddress ipv4_addr("192.168.0.1");
+    EXPECT_STREQ(ipv4_addr.to_string().c_str(), "192.168.0.1");
+    DnsAddress parse_ipv4_addr(ipv4_addr.to_string());
+    EXPECT_STREQ(parse_ipv4_addr.to_string().c_str(), "192.168.0.1");
+
+    DnsAddress ipv4_port("192.168.20.1:9876");
+    EXPECT_STREQ(ipv4_port.to_string().c_str(), "192.168.20.1:9876");
+    DnsAddress parse_ipv4_port(ipv4_port.to_string());
+    EXPECT_STREQ(parse_ipv4_port.to_string().c_str(), "192.168.20.1:9876");
+
+    DnsAddress ipv6_addr("2001:db8:5678::1");
+    EXPECT_STREQ(ipv6_addr.to_string().c_str(), "2001:db8:5678::1");
+    DnsAddress parse_ipv6_addr(ipv6_addr.to_string());
+    EXPECT_STREQ(parse_ipv6_addr.to_string().c_str(), "2001:db8:5678::1")
+        << "parse_ipv6_addr failed";
+
+    DnsAddress ipv6_port("[2001:db8:1234::1]:5678");
+    EXPECT_STREQ(ipv6_port.to_string().c_str(), "[2001:db8:1234::1]:5678");
+    DnsAddress parse_ipv6_port(ipv6_port.to_string());
+    EXPECT_STREQ(parse_ipv6_port.to_string().c_str(), "[2001:db8:1234::1]:5678")
+        << "parse_ipv6_port failed";
+
+
+#ifndef OPENVPN_PLATFORM_WIN
+    // Test disabled on Windows.  Windows allows partial IP address strings.
+    // On Linux, this error happens inside the ASIO library when calling
+    // inet_pton() in asio::ip::make_address_v4()
+    OVPN_EXPECT_THROW(DnsAddress invalid1("192.168.0"),
+                      openvpn::Exception,
+                      "Invalid address '192.168.0'");
+#endif
+
+    OVPN_EXPECT_THROW(DnsAddress invalid2("192.168.200.1::1234"),
+                      openvpn::Exception,
+                      "Invalid address '192.168.200.1::1234'");
+
+    OVPN_EXPECT_THROW(DnsAddress invalid3("192.168.200.1:blabla"),
+                      openvpn::Exception,
+                      "Invalid address:port format '192.168.200.1:blabla'");
+
+    OVPN_EXPECT_THROW(DnsAddress invalid4("192.168.200.1:77701"),
+                      openvpn::Exception,
+                      "Invalid address:port format '192.168.200.1:77701'");
+
+    OVPN_EXPECT_THROW(DnsAddress invalid5("2001:defg:1234:1234::"),
+                      openvpn::Exception,
+                      "Invalid address '2001:defg:1234:1234::'");
+
+    OVPN_EXPECT_THROW(DnsAddress invalid6("2001:abcd:1234:12345::1"),
+                      openvpn::Exception,
+                      "Invalid address '2001:abcd:1234:12345::1'");
+
+    OVPN_EXPECT_THROW(DnsAddress invalid7("[2001:abcd:1234:::]"),
+                      openvpn::Exception,
+                      "Invalid address '2001:abcd:1234:::'");
+
+    OVPN_EXPECT_THROW(DnsAddress invalid8("[2001:abcd:1234::]:65547"),
+                      openvpn::Exception,
+                      "Invalid address:port format '[2001:abcd:1234::]:65547");
+}
+
+
 TEST(Dns, ServerNoAddress)
 {
     OptionList config;
@@ -169,9 +243,9 @@ TEST(Dns, ServerInvalidAddress)
     OptionList config;
     config.parse_from_config("dns server 0 address 1.1.1.1 foobar\n", nullptr);
     config.update_map();
-    JY_EXPECT_THROW(DnsOptionsParser dns(config, false),
-                    option_error,
-                    "dns server 0 invalid address: foobar");
+    OVPN_EXPECT_THROW(DnsOptionsParser dns(config, false),
+                      option_error,
+                      "dns server 0 error: Invalid address 'foobar'");
 }
 
 TEST(Dns, ServerInvalidDnssec)
@@ -180,9 +254,9 @@ TEST(Dns, ServerInvalidDnssec)
         OptionList config;
         config.parse_from_config("dns server 0 dnssec foo\n", nullptr);
         config.update_map();
-        JY_EXPECT_THROW(DnsOptionsParser dns(config, false),
-                        option_error,
-                        "dns server 0 dnssec setting 'foo' invalid");
+        OVPN_EXPECT_THROW(DnsOptionsParser dns(config, false),
+                          option_error,
+                          "dns server 0 error: Invalid DNSSEC value 'foo'");
     }
     {
         OptionList config;
@@ -200,9 +274,9 @@ TEST(Dns, ServerInvalidTransport)
         OptionList config;
         config.parse_from_config("dns server 0 transport avian-carrier\n", nullptr);
         config.update_map();
-        JY_EXPECT_THROW(DnsOptionsParser dns(config, false),
-                        option_error,
-                        "dns server 0 transport 'avian-carrier' invalid");
+        OVPN_EXPECT_THROW(DnsOptionsParser dns(config, false),
+                          option_error,
+                          "dns server 0 error: Invalid transport value 'avian-carrier'");
     }
     {
         OptionList config;
@@ -544,8 +618,8 @@ TEST(Dns, JsonRoundtripAllValuesSet)
               "  SNI: snidom1\n"
               "  Priority: 20\n"
               "  Addresses:\n"
-              "    2::2 5353\n"
-              "    2.2.2.2 5353\n"
+              "    [2::2]:5353\n"
+              "    2.2.2.2:5353\n"
               "  Domains:\n"
               "    rdom21\n"
               "    rdom22\n"
@@ -558,3 +632,5 @@ TEST(Dns, JsonRoundtripAllValuesSet)
               "  dom3\n"
               "Values from dhcp-options: false\n");
 }
+
+} // namespace unittests

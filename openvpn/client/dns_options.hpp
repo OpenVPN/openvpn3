@@ -18,11 +18,15 @@
 #include <sstream>
 
 #include <openvpn/common/number.hpp>
+#include <openvpn/common/option_error.hpp>
 #include <openvpn/common/jsonlib.hpp>
 #include <openvpn/common/hostport.hpp>
 #include <openvpn/addr/ip.hpp>
 
 #ifdef HAVE_JSON
+#ifndef OPENVPN_JSON
+#include <json/json.h>
+#endif
 #include <openvpn/common/jsonhelper.hpp>
 #endif
 
@@ -34,18 +38,88 @@ namespace openvpn {
  */
 struct DnsAddress
 {
+    DnsAddress() = default;
+    virtual ~DnsAddress() noexcept = default;
+
     /**
-     * @brief Return string representation of the DnsAddress object
+     *  Constructs the DnsAddress object by parsing the input string
+     *  into separate "address" and "port" fields.  If "port" is missing,
+     *  it will be set to 0.
+     *
+     *  Supported formats:
+     *      192.168.0.1
+     *      192.168.0.1:53
+     *      [2001:db8:1234::1]
+     *      [2001:db8:1234::1]:53
+     */
+    explicit DnsAddress(const std::string &address_input)
+    {
+        IP::Addr addr;
+        std::string addr_str = address_input;
+        port = 0;
+
+        bool ipv6_bracket_encaps = address_input.length() > 2
+                                   && address_input[0] == '['
+                                   && address_input.rfind(']') != std::string::npos;
+
+        auto first_colon_pos = address_input.find(':');
+        auto last_colon_pos = address_input.rfind(':');
+        const bool v6_port_found = ipv6_bracket_encaps
+                                   && last_colon_pos > address_input.rfind(']');
+
+        const bool v4_port_found = first_colon_pos != std::string::npos
+                                   && first_colon_pos == addr_str.rfind(':');
+
+        if (v6_port_found || v4_port_found)
+        {
+            std::string port_str;
+            if (!HostPort::split_host_port(address_input, addr_str, port_str, "", false, &port))
+            {
+                OPENVPN_THROW_EXCEPTION("Invalid address:port format '" << address_input << "'");
+            }
+
+            // If it was an IPv6 address, the bracket encapsulation has been removed
+            // by HostPort::split_host_port()
+            ipv6_bracket_encaps = false;
+        }
+
+        try
+        {
+            if (ipv6_bracket_encaps)
+            {
+                addr_str = addr_str.substr(1, addr_str.length() - 2);
+            }
+            addr = IP::Addr(addr_str, "dns-ip-address");
+        }
+        catch (const IP::ip_exception &)
+        {
+            OPENVPN_THROW_EXCEPTION("Invalid address '" << addr_str << "'");
+        }
+        address = addr.to_string();
+    }
+
+
+    /**
+     * @brief Return string representation of the IP address
+     *        and port stored in the DnsAddress object.
+     *
+     *        The output of this method is expected to be
+     *        parsable by this class constructor.
      *
      * @return std::string  the string representation generated
      */
     std::string to_string() const
     {
         std::ostringstream os;
-        os << address;
+
+        IP::Addr addr(address);
+        os << (addr.is_ipv6() && port ? "[" : "")
+           << address
+           << (addr.is_ipv6() && port ? "]" : "");
+
         if (port)
         {
-            os << " " << port;
+            os << ":" << port;
         }
         return os.str();
     }
@@ -90,6 +164,14 @@ struct DnsAddress
  */
 struct DnsDomain
 {
+    DnsDomain() = default;
+    virtual ~DnsDomain() noexcept = default;
+
+    explicit DnsDomain(const std::string &domain_)
+    {
+        domain = domain_;
+    }
+
     /**
      * @brief Return string representation of the DnsDomain object
      *
@@ -134,13 +216,20 @@ struct DnsServer
 {
     enum class Security
     {
-        Unset,
-        No,
-        Yes,
-        Optional
+        Unset,   ///<  Undefined setting; default value when not set
+        No,      ///<  Do not use DNSSEC
+        Yes,     ///<  Enforce using DNSSEC
+        Optional ///<  Try to use DNSSEC opportunistically.  If it fails, the DNS resolver may ignore DNSSEC
     };
 
-    std::string dnssec_string(const Security dnssec) const
+    /**
+     * @brief Return string representation of a given DnsServer::Security
+     *        value
+     *
+     * @param  dnssec DnsServer::Security value
+     * @return std::string  the string representation generated
+     */
+    static std::string dnssec_string(const Security dnssec)
     {
         switch (dnssec)
         {
@@ -155,15 +244,63 @@ struct DnsServer
         }
     }
 
+
+    /**
+     * @brief Return string representation of the dnssec
+     *        value in this DnsServer object
+     *
+     * @return std::string  the string representation generated
+     */
+    std::string dnssec_string() const
+    {
+        return dnssec_string(dnssec);
+    }
+
+
+    /**
+     *  Parse the --dns server n dnssec VALUE into the
+     *  internal DnsServer::Security representation.  This
+     *  method is typically called from the option parser.
+     *
+     *  @param dnssec_value   std::string containing the DNSSEC setting to use
+     *  @throws openvpn::Exception on invalid values
+     */
+    void parse_dnssec_value(const std::string &dnssec_value)
+    {
+        if (dnssec_value == "yes")
+        {
+            dnssec = DnsServer::Security::Yes;
+        }
+        else if (dnssec_value == "no")
+        {
+            dnssec = DnsServer::Security::No;
+        }
+        else if (dnssec_value == "optional")
+        {
+            dnssec = DnsServer::Security::Optional;
+        }
+        else
+        {
+            OPENVPN_THROW_EXCEPTION("Invalid DNSSEC value '" << dnssec_value << "'");
+        }
+    }
+
     enum class Transport
     {
-        Unset,
-        Plain,
-        HTTPS,
-        TLS
+        Unset, ///<  Undefined setting; default value when not set
+        Plain, ///<  Use the classic unencrypted DNS protocol
+        HTTPS, ///<  Use DNS-over-HTTPS (DoH)
+        TLS    ///<  Use DNS-over-TLS (DoT)
     };
 
-    std::string transport_string(const Transport transport) const
+    /**
+     * @brief Return string representation of a given DnsServer::Transport
+     *        value
+     *
+     * @param  transport DnsServer::Transport value
+     * @return std::string  the string representation generated
+     */
+    static std::string transport_string(const Transport transport)
     {
         switch (transport)
         {
@@ -178,6 +315,68 @@ struct DnsServer
         }
     }
 
+    /**
+     * @brief Return string representation of a given DnsServer::Transport
+     *        value
+     *
+     * @return std::string  the string representation generated
+     */
+    std::string transport_string() const
+    {
+        return transport_string(transport);
+    }
+
+    /**
+     *  Parse the --dns server n transport VALUE into the
+     *  internal DnsServer::Transport representation.  This
+     *  method is typically called from the option parser.
+     *
+     *  @param transport_value   std::string containing the DNS transport setting to use
+     *  @throws openvpn::Exception on invalid values
+     */
+    void parse_transport_value(const std::string &transport_value)
+    {
+        if (transport_value == "plain")
+        {
+            transport = DnsServer::Transport::Plain;
+        }
+        else if (transport_value == "DoH")
+        {
+            transport = DnsServer::Transport::HTTPS;
+        }
+        else if (transport_value == "DoT")
+        {
+            transport = DnsServer::Transport::TLS;
+        }
+        else
+        {
+            OPENVPN_THROW_EXCEPTION("Invalid transport value '" << transport_value << "'");
+        }
+    }
+
+    DnsServer() = default;
+    virtual ~DnsServer() noexcept = default;
+
+#ifdef HAVE_JSON
+    /**
+     *  Instantiate a new DnsServer object with information from a JSON blob,
+     *  typically exported using the DnsServer::to_json() method
+     *
+     *  @param root   The root Json::Value object to import
+     *  @param title  std::string with details used for error logging
+     */
+    explicit DnsServer(const Json::Value &root, const std::string &title = "")
+    {
+        from_json(root, title);
+    }
+#endif
+
+    /**
+     *  Generate a human readable representation of the configured
+     *  DnsServer variables
+     *
+     * @return std::string  the string representation generated
+     */
     std::string to_string(const char *prefix = "") const
     {
         std::ostringstream os;
@@ -210,6 +409,17 @@ struct DnsServer
     }
 
 #ifdef HAVE_JSON
+    /**
+     *  Generate a JSON representation of the configured
+     *  DnsServer variables.
+     *
+     *  The output of this function can be imported into
+     *  another DnsServer object by passing the Json::Value
+     *  to the DnsServer constructor or using the
+     *  DnsServer::from_json() method.
+     *
+     * @return Json::Value of information this object carries
+     */
     Json::Value to_json() const
     {
         Json::Value server(Json::objectValue);
@@ -233,6 +443,14 @@ struct DnsServer
         return server;
     }
 
+    /**
+     *  Import a Json::Value, typically generated by DnsServer::to_json()
+     *  which will reconfigure this object to carry the information from
+     *  the JSON data.
+     *
+     *  @param root   The root Json::Value object to import
+     *  @param title  std::string with details used for error logging
+     */
     void from_json(const Json::Value &root, const std::string &title)
     {
         json::assert_dict(root, title);
@@ -289,10 +507,19 @@ struct DnsServer
 
     bool operator==(const DnsServer &at) const = default;
 
+    //! Parsed from --dns server n address ADDRESS[:PORT] [...] or --dhcp-option DNS/DNS6
     std::vector<DnsAddress> addresses;
+
+    //! Parsed from --dns server n resolve-domains DOMAIN [...] or --dhcp-option DOMAIN/DOMAIN-SEARCH if use_search_as_split_domains is true
     std::vector<DnsDomain> domains;
+
+    //! Parsed from --dns server n dnssec {yes,optional,no}
     Security dnssec = Security::Unset;
+
+    //! Parsed from --dns server n transport {plain,DoT,DoH}
     Transport transport = Transport::Unset;
+
+    //! Parsed from --dns server n sni
     std::string sni;
 };
 
@@ -302,16 +529,39 @@ struct DnsServer
  */
 struct DnsOptions
 {
+    DnsOptions() = default;
+    ~DnsOptions() noexcept = default;
+
+#ifdef HAVE_JSON
+    /**
+     *  Instantiate a new DnsOptions object with information from a JSON blob,
+     *  typically exported using the DnsOptions::to_json() method
+     *
+     *  @param root   The root Json::Value object to import
+     *  @param title  std::string with details used for error logging
+     */
+    explicit DnsOptions(const Json::Value &root, const std::string &title = "")
+    {
+        from_json(root, title);
+    }
+#endif
+
+    /**
+     *  Generate a human readable representation of the configured
+     *  DnsOptions variables
+     *
+     * @return std::string  the string representation generated
+     */
     std::string to_string() const
     {
         std::ostringstream os;
         if (!servers.empty())
         {
             os << "DNS Servers:\n";
-            for (const auto &elem : servers)
+            for (const auto &[priority, server] : servers)
             {
-                os << "  Priority: " << elem.first << '\n';
-                os << elem.second.to_string("  ");
+                os << "  Priority: " << priority << '\n';
+                os << server.to_string("  ");
             }
         }
         if (!search_domains.empty())
@@ -327,6 +577,17 @@ struct DnsOptions
     }
 
 #ifdef HAVE_JSON
+    /**
+     *  Generate a JSON representation of the configured
+     *  DnsOptions variables.
+     *
+     *  The output of this function can be imported into
+     *  another DnsOptions object by passing the Json::Value
+     *  to the DnsOptions constructor or using the
+     *  DnsOptions::from_json() method.
+     *
+     * @return Json::Value of information this object carries
+     */
     Json::Value to_json() const
     {
         Json::Value root(Json::objectValue);
@@ -341,14 +602,21 @@ struct DnsOptions
         return root;
     }
 
+    /**
+     *  Import a Json::Value, typically generated by DnsOptions::to_json()
+     *  which will reconfigure this object to carry the information from
+     *  the JSON data.
+     *
+     *  @param root   The root Json::Value object to import
+     *  @param title  std::string with details used for error logging
+     */
     void from_json(const Json::Value &root, const std::string &title)
     {
         json::assert_dict(root, title);
         json::assert_dict(root["servers"], title);
         for (const auto &prio : root["servers"].getMemberNames())
         {
-            DnsServer server;
-            server.from_json(root["servers"][prio], title);
+            DnsServer server(root["servers"][prio], title);
             servers[std::stoi(prio)] = std::move(server);
         }
         json::to_vector(root, search_domains, "search_domains", title);
@@ -358,11 +626,18 @@ struct DnsOptions
 
     bool operator==(const DnsOptions &at) const = default;
 
-    bool from_dhcp_options = false;
-    std::vector<DnsDomain> search_domains;
-    std::map<int, DnsServer> servers;
+    bool from_dhcp_options = false;        ///< Set to true if the DNS options comes from --dhcp-option options
+    std::vector<DnsDomain> search_domains; ///< List of global DNS search domains to use
+    std::map<int, DnsServer> servers;      ///< List of DNS servers to use, according to the list of priority
 
   protected:
+    /**
+     *  Instantiate a new DnsServer object for a given DNS server priority
+     *  and add it to the DnsOptions server list.
+     *
+     *  @param priority   Priority value for the new DnsServer setting
+     *  @return A new instantiated DnsServer object
+     */
     DnsServer &get_server(const int priority)
     {
         auto it = servers.insert(std::make_pair(priority, DnsServer())).first;

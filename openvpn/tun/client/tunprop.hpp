@@ -698,7 +698,7 @@ class TunProp
     {
         DnsServer server;
         DnsOptions google_dns;
-        server.addresses = {{{"8.8.8.8"}, 0}, {{"8.8.4.4"}, 0}};
+        server.addresses = {DnsAddress("8.8.8.8"), DnsAddress("8.8.4.4")};
         google_dns.servers[0] = std::move(server);
         if (!tb->tun_builder_set_dns_options(google_dns))
             throw tun_prop_dns_option_error(ERR_INVALID_OPTION_PUSHED, "tun_builder_set_dns_options failed for Google DNS");

@@ -678,7 +678,7 @@ class Session : ProtoContextCallbackInterface,
 
                 if (key == "backoff")
                 {
-                    int timeout;
+                    int timeout = 0;
                     if (!parse_number(value, timeout))
                     {
                         OPENVPN_LOG("invalid AUTH_FAILED,TEMP flag: " << flag);

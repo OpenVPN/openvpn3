@@ -717,18 +717,15 @@ class Setup : public SetupBase
                     throw tun_win_setup("no applicable DNS server config found");
                 }
 
+                // To keep resolvers on loopback working, only split NRPT rules can be created
                 if (!allow_local_dns_resolvers || !split_domains.empty())
                 {
-                    // To keep local resolvers working, only split rules must be created
                     create.add(new NRPT::ActionCreate(pid, split_domains, addresses, wide_search_domains, dnssec));
                     destroy.add(new NRPT::ActionDelete(pid));
                 }
-                else if (allow_local_dns_resolvers && pull.block_outside_dns)
-                {
-                    // Set pushed DNS servers with the adapter. In case the local resolver
-                    // doesn't work the VPN DNS resolvers will serve as a fallback
-                    set_adapter_dns(create, destroy, tap_index_name, addresses, pull);
-                }
+
+                // Set pushed DNS servers with the adapter
+                set_adapter_dns(create, destroy, tap_index_name, addresses, pull);
 
                 create.add(new DNS::ActionCreate(tap.name, search_domains));
                 destroy.add(new DNS::ActionDelete(tap.name, search_domains));
@@ -736,6 +733,10 @@ class Setup : public SetupBase
                 // Apply changes to DNS settings
                 create.add(new DNS::ActionApply());
                 destroy.add(new DNS::ActionApply());
+
+                // flush DNS cache
+                create.add(new WinCmd("ipconfig /flushdns"));
+                destroy.add(new WinCmd("ipconfig /flushdns"));
 
                 // Use WFP for DNS leak protection unless local traffic is blocked already.
                 // Block DNS on all interfaces except the TAP adapter.
@@ -764,8 +765,8 @@ class Setup : public SetupBase
                 if (!(use_nrpt && split_dns) && !l2_post)
                 {
                     std::vector<std::string> addresses;
-                    std::for_each(addresses.begin(), addresses.end(), [&addresses](const std::string &addr)
-                                  { addresses.push_back(addr); });
+                    std::for_each(server.addresses.begin(), server.addresses.end(), [&addresses](const DnsAddress &ip)
+                                  { addresses.push_back(ip.address); });
                     set_adapter_dns(create, destroy, tap_index_name, addresses, pull);
                 }
 

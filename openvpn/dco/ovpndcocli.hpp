@@ -69,57 +69,7 @@ class OvpnDcoClient : public Client,
             OPENVPN_THROW(dcocli_error, "Cannot extract peer-id: " << e.what());
         }
 
-        // notify parent
-        tun_parent->tun_pre_tun_config();
-
-        // parse pushed options
-        TunBuilderCapture::Ptr po;
-        TunBuilderBase *builder;
-
-        if (config->builder)
-        {
-            builder = config->builder;
-        }
-        else
-        {
-            po.reset(new TunBuilderCapture());
-            builder = po.get();
-        }
-
-        TunProp::configure_builder(builder,
-                                   state.get(),
-                                   config->transport.stats.get(),
-                                   server_endpoint_addr(),
-                                   config->tun.tun_prop,
-                                   opt,
-                                   nullptr,
-                                   false);
-
-        if (po)
-            OPENVPN_LOG("CAPTURED OPTIONS:" << std::endl
-                                            << po->to_string());
-
-        if (config->builder)
-        {
-            config->builder->tun_builder_dco_establish();
-        }
-        else
-        {
-            ActionList::Ptr add_cmds = new ActionList();
-            remove_cmds.reset(new ActionListReversed());
-
-            std::vector<IP::Route> rtvec;
-
-            TUN_LINUX::tun_config(config->dev_name,
-                                  *po,
-                                  &rtvec,
-                                  *add_cmds,
-                                  *remove_cmds,
-                                  TunConfigFlags::ADD_BYPASS_ROUTES);
-
-            // execute commands to bring up interface
-            add_cmds->execute_log();
-        }
+        tun_setup(opt);
 
         // Add a hook so ProtoContext will call back to
         // rekey() on rekey ops.
@@ -318,6 +268,12 @@ class OvpnDcoClient : public Client,
             if (transport)
                 transport->stop();
         }
+    }
+
+    void apply_push_update(const OptionList &opt, TransportClient & /* transcli */) override
+    {
+        tun_setup(opt);
+        tun_parent->tun_connected();
     }
 
     void rekey(const CryptoDCInstance::RekeyType rktype,
@@ -591,6 +547,64 @@ class OvpnDcoClient : public Client,
 
         genl.reset(new GeNLImpl(
             io_context_arg, if_nametoindex(config_arg->dev_name.c_str()), this));
+    }
+
+    void tun_setup(const OptionList &opt)
+    {
+        // notify parent
+        tun_parent->tun_pre_tun_config();
+
+        // parse pushed options
+        TunBuilderCapture::Ptr po;
+        TunBuilderBase *builder;
+
+        if (config->builder)
+        {
+            builder = config->builder;
+        }
+        else
+        {
+            po.reset(new TunBuilderCapture());
+            builder = po.get();
+        }
+
+        TunProp::configure_builder(builder,
+                                   state.get(),
+                                   config->transport.stats.get(),
+                                   server_endpoint_addr(),
+                                   config->tun.tun_prop,
+                                   opt,
+                                   nullptr,
+                                   false);
+
+        if (po)
+            OPENVPN_LOG("CAPTURED OPTIONS:" << std::endl
+                                            << po->to_string());
+
+        if (config->builder)
+        {
+            config->builder->tun_builder_dco_establish();
+        }
+        else
+        {
+            if (remove_cmds)
+                remove_cmds->execute_log();
+
+            ActionList::Ptr add_cmds = new ActionList();
+            remove_cmds.reset(new ActionListReversed());
+
+            std::vector<IP::Route> rtvec;
+
+            TUN_LINUX::tun_config(config->dev_name,
+                                  *po,
+                                  &rtvec,
+                                  *add_cmds,
+                                  *remove_cmds,
+                                  TunConfigFlags::ADD_BYPASS_ROUTES);
+
+            // execute commands to bring up interface
+            add_cmds->execute_log();
+        }
     }
 
     void handle_keepalive()

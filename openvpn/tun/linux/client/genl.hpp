@@ -710,8 +710,16 @@ class GeNL : public RC<thread_unsafe_refcount>
 
                 struct OvpnDcoPeer peer = {0};
                 peer.id = nla_get_u32(get_peer_attrs[OVPN_GET_PEER_RESP_ATTR_PEER_ID]);
-                memcpy(&peer.ipv4, nla_data(get_peer_attrs[OVPN_GET_PEER_RESP_ATTR_IPV4]), sizeof(peer.ipv4));
-                memcpy(&peer.ipv6, nla_data(get_peer_attrs[OVPN_GET_PEER_RESP_ATTR_IPV6]), sizeof(peer.ipv6));
+
+                if (get_peer_attrs[OVPN_GET_PEER_RESP_ATTR_IPV4])
+                {
+                    memcpy(&peer.ipv4, nla_data(get_peer_attrs[OVPN_GET_PEER_RESP_ATTR_IPV4]), sizeof(peer.ipv4));
+                }
+                if (get_peer_attrs[OVPN_GET_PEER_RESP_ATTR_IPV6])
+                {
+                    memcpy(&peer.ipv6, nla_data(get_peer_attrs[OVPN_GET_PEER_RESP_ATTR_IPV6]), sizeof(peer.ipv6));
+                }
+
                 peer.local_port = nla_get_u16(get_peer_attrs[OVPN_GET_PEER_RESP_ATTR_LOCAL_PORT]);
 
                 if (get_peer_attrs[OVPN_GET_PEER_RESP_ATTR_SOCKADDR_REMOTE])

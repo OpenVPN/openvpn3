@@ -284,7 +284,7 @@ class DHCPCapture
                     {
                         /* get DNS addresses */
                         for (unsigned int j = 0; j < len; j += 4)
-                            ret.push_back({IPv4::Addr::from_bytes_net(p + i + j + 2).to_string(), 0});
+                            ret.emplace_back(IPv4::Addr::from_bytes_net(p + i + j + 2).to_string());
 
                         i += (len + 2); /* advance to next option */
                     }

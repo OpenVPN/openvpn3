@@ -73,7 +73,7 @@ struct DnsOptionsParser : public DnsOptions
                 {
                     for (std::size_t j = 2; j < o.size(); j++)
                     {
-                        search_domains.push_back({o.ref(j)});
+                        search_domains.emplace_back(o.ref(j));
                     }
                 }
                 else if (o.size() >= 5 && o.ref(1) == "server")
@@ -86,80 +86,47 @@ struct DnsOptionsParser : public DnsOptions
                     {
                         for (std::size_t j = 4; j < o.size(); j++)
                         {
-                            IP::Addr addr;
-                            unsigned int port = 0;
-                            std::string addr_str = o.ref(j);
-
-                            const bool v4_port_found = addr_str.find(':') != std::string::npos
-                                                       && addr_str.find(':') == addr_str.rfind(':');
-
-                            if (addr_str[0] == '[' || v4_port_found)
-                            {
-                                const auto &addr_port_str = o.ref(j);
-                                std::string port_str;
-                                if (!HostPort::split_host_port(addr_port_str, addr_str, port_str, "", false, &port))
-                                {
-                                    OPENVPN_THROW_ARG1(option_error, ERR_INVALID_OPTION_DNS, "dns server " << priority << " invalid address: " << addr_port_str);
-                                }
-                            }
-
                             try
                             {
-                                addr = IP::Addr(addr_str);
+                                server.addresses.emplace_back(DnsAddress(o.ref(j)));
                             }
-                            catch (const IP::ip_exception &)
+                            catch (const openvpn::Exception &error)
                             {
-                                OPENVPN_THROW_ARG1(option_error, ERR_INVALID_OPTION_DNS, "dns server " << priority << " invalid address: " << addr_str);
+                                OPENVPN_THROW_ARG1(option_error,
+                                                   ERR_INVALID_OPTION_DNS,
+                                                   "dns server " << priority << " error: " << error.what());
                             }
-
-                            server.addresses.push_back({addr.to_string(), port});
                         }
                     }
                     else if (server_suboption == "resolve-domains")
                     {
                         for (std::size_t j = 4; j < o.size(); j++)
                         {
-                            server.domains.push_back({o.ref(j)});
+                            server.domains.emplace_back(o.ref(j));
                         }
                     }
                     else if (server_suboption == "dnssec" && o.size() == 5)
                     {
-                        const auto &dnssec_value = o.ref(4);
-                        if (dnssec_value == "yes")
+                        try
                         {
-                            server.dnssec = DnsServer::Security::Yes;
+                            server.parse_dnssec_value(o.ref(4));
                         }
-                        else if (dnssec_value == "no")
+                        catch (const openvpn::Exception &error)
                         {
-                            server.dnssec = DnsServer::Security::No;
-                        }
-                        else if (dnssec_value == "optional")
-                        {
-                            server.dnssec = DnsServer::Security::Optional;
-                        }
-                        else
-                        {
-                            OPENVPN_THROW_ARG1(option_error, ERR_INVALID_OPTION_DNS, "dns server " << priority << " dnssec setting '" << dnssec_value << "' invalid");
+                            OPENVPN_THROW_ARG1(option_error,
+                                               ERR_INVALID_OPTION_DNS,
+                                               "dns server " << priority << " error: " << error.what());
                         }
                     }
                     else if (server_suboption == "transport" && o.size() == 5)
                     {
-                        const auto &transport_value = o.ref(4);
-                        if (transport_value == "plain")
+                        try
                         {
-                            server.transport = DnsServer::Transport::Plain;
+                            server.parse_transport_value(o.ref(4));
                         }
-                        else if (transport_value == "DoH")
+                        catch (const openvpn::Exception &error)
                         {
-                            server.transport = DnsServer::Transport::HTTPS;
-                        }
-                        else if (transport_value == "DoT")
-                        {
-                            server.transport = DnsServer::Transport::TLS;
-                        }
-                        else
-                        {
-                            OPENVPN_THROW_ARG1(option_error, ERR_INVALID_OPTION_DNS, "dns server " << priority << " transport '" << transport_value << "' invalid");
+                            OPENVPN_THROW_ARG1(option_error, ERR_INVALID_OPTION_DNS, "dns server " << priority << " error: " << error.what());
                         }
                     }
                     else if (server_suboption == "sni" && o.size() == 5)
@@ -226,7 +193,6 @@ struct DnsOptionsParser : public DnsOptions
         {
             try
             {
-
                 const Option &o = opt[i];
                 const std::string &type = o.get(1, 64);
                 if (type == "DNS" || type == "DNS6")
@@ -234,17 +200,22 @@ struct DnsOptionsParser : public DnsOptions
                     o.exact_args(3);
                     try
                     {
-                        const IP::Addr addr = IP::Addr::from_string(o.get(2, 256), "dns-server-ip");
                         if (!ignore_values)
                         {
                             auto &server = get_server(0);
-                            server.addresses.push_back({addr.to_string(), 0});
+                            server.addresses.emplace_back(DnsAddress(o.get(2, 256)));
                             from_dhcp_options = true;
                         }
                     }
                     catch (const IP::ip_exception &)
                     {
                         OPENVPN_THROW_ARG1(option_error, ERR_INVALID_OPTION_DNS, o.render(Option::RENDER_BRACKET) << " invalid address");
+                    }
+                    catch (const openvpn::Exception &error)
+                    {
+                        OPENVPN_THROW_ARG1(option_error,
+                                           ERR_INVALID_OPTION_DNS,
+                                           o.render(Option::RENDER_BRACKET) << "dhcp-option DNS error: " << error.what());
                     }
                 }
                 else if (type == "DOMAIN" || type == "DOMAIN-SEARCH")
@@ -264,11 +235,11 @@ struct DnsOptionsParser : public DnsOptions
                             if (use_search_as_split_domains)
                             {
                                 auto &server = get_server(0);
-                                server.domains.push_back({domain});
+                                server.domains.emplace_back(domain);
                             }
                             else
                             {
-                                search_domains.push_back({domain});
+                                search_domains.emplace_back(domain);
                             }
                         }
                     }
@@ -292,7 +263,7 @@ struct DnsOptionsParser : public DnsOptions
 
         if (!adapter_domain_suffix.empty())
         {
-            search_domains.insert(search_domains.begin(), {std::move(adapter_domain_suffix)});
+            search_domains.insert(search_domains.begin(), DnsDomain(std::move(adapter_domain_suffix)));
         }
 
         if (!ignore_values && servers.size() && servers[0].addresses.empty())
