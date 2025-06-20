@@ -2470,6 +2470,9 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
                 plaintext.write(&k_id, sizeof(k_id));
             }
 
+            if (plaintext.max_size() <= 2 + serverkey_id_size)
+                return Error::DECRYPT_ERROR;
+
             const size_t decrypt_bytes = tls_crypt_server.decrypt(wkc_raw,
                                                                   plaintext.data() + 2 + serverkey_id_size,
                                                                   plaintext.max_size() - 2 - serverkey_id_size,
