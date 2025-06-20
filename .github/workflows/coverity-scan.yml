@@ -18,7 +18,7 @@ jobs:
 
       - name: Install dependencies
         if: steps.check_submit.outputs.cache-hit != 'true'
-        run: sudo apt update && sudo apt install -y libcap-dev libjsoncpp-dev liblzo2-dev liblz4-dev libssl-dev swig
+        run: sudo apt update && sudo apt install -y libcap-dev libfmt-dev libjsoncpp-dev liblzo2-dev liblz4-dev libssl-dev swig
       - name: Checkout OpenVPN 3
         if: steps.check_submit.outputs.cache-hit != 'true'
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
