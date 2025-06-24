@@ -239,13 +239,17 @@ enum ovpn_netlink_packet_attrs {
 	OVPN_PACKET_ATTR_MAX = __OVPN_PACKET_ATTR_AFTER_LAST - 1,
 };
 
+/* the following enums exist starting from linux-6.16 */
+#ifndef IFLA_OVPN_MAX
+
 enum ovpn_ifla_attrs {
 	IFLA_OVPN_UNSPEC = 0,
 	IFLA_OVPN_MODE,
 
-	__IFLA_OVPN_AFTER_LAST,
-	IFLA_OVPN_MAX = __IFLA_OVPN_AFTER_LAST - 1,
+	__IFLA_OVPN_MAX,
 };
+
+#define IFLA_OVPN_MAX (__IFLA_OVPN_MAX - 1)
 
 enum ovpn_mode {
 	__OVPN_MODE_FIRST = 0,
@@ -254,6 +258,8 @@ enum ovpn_mode {
 
 	__OVPN_MODE_AFTER_LAST,
 };
+
+#endif /* ifndef IFLA_OVPN_MAX */
 
 /// \endcond
 
