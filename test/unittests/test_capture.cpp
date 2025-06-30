@@ -932,17 +932,18 @@ RC_GTEST_PROP(TunBuilderCapture, ExcludesRoute, (const std::string &address, con
     RC_ASSERT(excluded_route.ipv6 == ipv6);
 }
 
-RC_GTEST_PROP(TunBuilderCapture, SetsDNSOptions, (const std::string &address, const unsigned int port, const std::string &search_domain))
+RC_GTEST_PROP(TunBuilderCapture, SetsDNSOptions, (const std::string &search_domain))
 {
     DnsServer server = {};
-    server.addresses.push_back({address, port});
+    auto address = DnsAddress(*rc::genDnsAddressAsStr());
+    server.addresses.push_back(address);
     DnsOptions dns_options = {};
     dns_options.servers[0] = std::move(server);
-    dns_options.search_domains = {{search_domain}};
+    dns_options.search_domains = {DnsDomain(search_domain)};
     const TunBuilderCapture::Ptr tbc(new TunBuilderCapture);
     RC_ASSERT(tbc->tun_builder_set_dns_options(dns_options));
     RC_ASSERT(tbc->dns_options.search_domains.back().domain == search_domain);
-    RC_ASSERT(tbc->dns_options.servers.at(0).addresses.back().address == address);
+    RC_ASSERT(tbc->dns_options.servers.at(0).addresses.back().to_string() == address.to_string());
 }
 
 RC_GTEST_PROP(TunBuilderCapture, SetsLayer, ())
@@ -1040,13 +1041,14 @@ RC_GTEST_PROP(TunBuilderCapture, ResetsTunnelAddresses, (const std::string &addr
     RC_ASSERT(tbc->tunnel_address_index_ipv6 == -1);
 }
 
-RC_GTEST_PROP(TunBuilderCapture, ResetsDNSOptions, (const std::string &address, const unsigned int port, const std::string &search_domain))
+RC_GTEST_PROP(TunBuilderCapture, ResetsDNSOptions, (const std::string &search_domain))
 {
     DnsServer server = {};
-    server.addresses.push_back({address, port});
+    auto address = DnsAddress(*rc::genDnsAddressAsStr());
+    server.addresses.push_back(address);
     DnsOptions dns_options = {};
     dns_options.servers[0] = std::move(server);
-    dns_options.search_domains = {{search_domain}};
+    dns_options.search_domains = {DnsDomain(search_domain)};
     const TunBuilderCapture::Ptr tbc(new TunBuilderCapture);
     RC_ASSERT(tbc->tun_builder_set_dns_options(dns_options));
     RC_ASSERT_FALSE(tbc->dns_options.to_string().empty());

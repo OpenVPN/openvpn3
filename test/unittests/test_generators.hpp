@@ -809,6 +809,35 @@ inline auto genDnsAddress(const bool valid = true) -> Gen<openvpn::DnsAddress>
 }
 
 /**
+    @brief Generates a DNS address as a string.
+    @details This function creates a generator that produces instances of the @c openvpn::DnsAddress class,
+             where the address is represented as a string. The generator can create either valid or invalid
+             DNS addresses based on the provided parameter. It combines an IP address (either IPv4 or IPv6)
+             with an optional port number. The port is randomly included or excluded.
+    @param valid Flag indicating the address should be constrained to valid values.
+    @return Gen<openvpn::DnsAddress> A generator that produces std::string objects with either
+            valid or invalid address values.
+*/
+inline auto genDnsAddressAsStr(const bool valid = true) -> Gen<std::string>
+{
+    return gen::map(
+        gen::tuple(
+            gen::oneOf(IPv4Address(valid), IPv6Address(valid)),
+            gen::maybe(port(valid))),
+        [](const auto &params) -> std::string
+        {
+            const auto &[address, maybe_port] = params;
+            openvpn::DnsAddress result;
+            result.address = address;
+            if (maybe_port)
+            {
+                result.port = *maybe_port;
+            }
+            return result.to_string();
+        });
+}
+
+/**
  * @brief Generates a DNS server.
  * @details Creates a generator that produces random @c openvpn::DnsServer instances with populated fields.
  *          The generator creates:
