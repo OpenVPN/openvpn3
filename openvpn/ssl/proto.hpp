@@ -1105,7 +1105,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
 
         // generate a string summarizing information about the client
         // including capabilities
-        std::string peer_info_string(bool proto_v3_support) const
+        std::string peer_info_string(bool supports_epoch_data) const
         {
             std::ostringstream out;
             const char *compstr = nullptr;
@@ -1117,8 +1117,10 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
                                     | IV_PROTO_DNS_OPTION_V2
                                     | IV_PROTO_CC_EXIT_NOTIFY
                                     | IV_PROTO_AUTH_FAIL_TEMP
-                                    | IV_PROTO_DATA_EPOCH
                                     | IV_PROTO_PUSH_UPDATE;
+
+            if (supports_epoch_data)
+                iv_proto |= IV_PROTO_DATA_EPOCH;
 
             if (CryptoAlgs::lookup("SHA256") != CryptoAlgs::NONE && CryptoAlgs::lookup("AES-256-CTR") != CryptoAlgs::NONE)
                 iv_proto |= IV_PROTO_DYN_TLS_CRYPT;
