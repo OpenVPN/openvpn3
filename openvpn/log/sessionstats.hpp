@@ -211,15 +211,14 @@ class SessionStats : public RC<thread_safe_refcount>
                 update_last_packet_received(Time::now());
             }
 
-            // Not using += because volatile compound assignment has been deprecated.
-            stats_[BYTES_IN] = stats_[BYTES_IN] + data.transport_bytes_in;
-            stats_[BYTES_OUT] = stats_[BYTES_OUT] + data.transport_bytes_out;
-            stats_[TUN_BYTES_IN] = stats_[TUN_BYTES_IN] + data.tun_bytes_in;
-            stats_[TUN_BYTES_OUT] = stats_[TUN_BYTES_OUT] + data.tun_bytes_out;
-            stats_[PACKETS_IN] = stats_[PACKETS_IN] + data.transport_pkts_in;
-            stats_[PACKETS_OUT] = stats_[PACKETS_OUT] + data.transport_pkts_out;
-            stats_[TUN_PACKETS_IN] = stats_[TUN_PACKETS_IN] + data.tun_pkts_in;
-            stats_[TUN_PACKETS_OUT] = stats_[TUN_PACKETS_OUT] + data.tun_pkts_out;
+            inc_stat(BYTES_IN, data.transport_bytes_in);
+            inc_stat(BYTES_OUT, data.transport_bytes_out);
+            inc_stat(TUN_BYTES_IN, data.tun_bytes_in);
+            inc_stat(TUN_BYTES_OUT, data.tun_bytes_out);
+            inc_stat(PACKETS_IN, data.transport_pkts_in);
+            inc_stat(PACKETS_OUT, data.transport_pkts_out);
+            inc_stat(TUN_PACKETS_IN, data.tun_pkts_in);
+            inc_stat(TUN_PACKETS_OUT, data.tun_pkts_out);
 
             return true;
         }
