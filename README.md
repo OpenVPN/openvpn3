@@ -32,7 +32,7 @@ These instructions were tested on Ubuntu 24.04.
 Install essential dependencies:
 
     $ sudo apt install --no-install-recommends ca-certificates cmake g++ git iproute2 ninja-build pkg-config
-    $ sudo apt install --no-install-recommends libasio-dev libcap-dev liblz4-dev libjsoncpp-dev libssl-dev libxxhash-dev
+    $ sudo apt install --no-install-recommends libasio-dev libcap-dev libfmt-dev liblz4-dev libjsoncpp-dev libssl-dev libxxhash-dev
 
 Potentially install optional dependencies:
 
@@ -112,7 +112,7 @@ Install the dependencies:
 
 Ensure that [homebrew](<https://brew.sh/>) is set up.
 
-    $  brew install asio cmake jsoncpp lz4 openssl pkg-config xxhash fmt
+    $  brew install asio cmake fmt jsoncpp lz4 openssl pkg-config xxhash
 
 Now build the OpenVPN 3 client executable:
 
