@@ -239,22 +239,6 @@ enum ovpn_netlink_packet_attrs {
 	OVPN_PACKET_ATTR_MAX = __OVPN_PACKET_ATTR_AFTER_LAST - 1,
 };
 
-enum ovpn_ifla_attrs {
-	IFLA_OVPN_UNSPEC = 0,
-	IFLA_OVPN_MODE,
-
-	__IFLA_OVPN_AFTER_LAST,
-	IFLA_OVPN_MAX = __IFLA_OVPN_AFTER_LAST - 1,
-};
-
-enum ovpn_mode {
-	__OVPN_MODE_FIRST = 0,
-	OVPN_MODE_P2P = __OVPN_MODE_FIRST,
-	OVPN_MODE_MP,
-
-	__OVPN_MODE_AFTER_LAST,
-};
-
 /// \endcond
 
 #endif /* _UAPI_LINUX_OVPN_DCO_H_ */
