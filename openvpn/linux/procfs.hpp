@@ -6,13 +6,14 @@
 
 // #define OPENVPN_PROCFS_DEBUG
 
+#include <chrono>
 #include <filesystem>
 #include <string>
+#include <thread>
 
 #include <openvpn/common/string.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/fileunix.hpp>
-#include <openvpn/common/sleep.hpp>
 #include <openvpn/common/stat.hpp>
 #include <openvpn/common/format.hpp>
 #include <openvpn/common/action.hpp>
@@ -57,6 +58,8 @@ class ProcFS : public Action
 
     static void write_sys(const std::string &fn, const std::string &text, Stop *async_stop = nullptr)
     {
+        using namespace std::chrono_literals;
+
         const unsigned int n_retries = 200;
         const unsigned int milliseconds_per_retry = 100;
         volatile bool stop = false;
@@ -80,7 +83,7 @@ class ProcFS : public Action
                     OPENVPN_LOG("ProcFS exception: " << e.what());
                 }
 #ifdef OPENVPN_PROCFS_DEBUG
-                sleep_milliseconds(100);
+                std::this_thread::sleep_for(100ms);
                 std::string text_verify;
                 BufferAllocated buf(256);
                 const int status = read_binary_unix_fast(fn, buf);
@@ -97,7 +100,7 @@ class ProcFS : public Action
 #endif
                 return;
             }
-            sleep_milliseconds(milliseconds_per_retry);
+            std::this_thread::sleep_for(std::chrono::milliseconds(milliseconds_per_retry));
         }
         if (stop)
             OPENVPN_THROW(procfs_error, "file " << fn << " : aborting write attempt due to stop signal");

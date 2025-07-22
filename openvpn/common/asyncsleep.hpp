@@ -15,9 +15,10 @@
 #define OPENVPN_COMMON_ASYNCSLEEP_H
 
 #include <algorithm>
+#include <chrono>
+#include <thread>
 
 #include <openvpn/common/stop.hpp>
-#include <openvpn/common/sleep.hpp>
 
 namespace openvpn {
 
@@ -34,7 +35,7 @@ inline bool async_sleep_milliseconds(int milliseconds, Stop *async_stop)
     while (milliseconds > 0 && !stop)
     {
         const int ms = std::min(milliseconds, milliseconds_per_retry);
-        sleep_milliseconds(ms);
+        std::this_thread::sleep_for(std::chrono::milliseconds(ms));
         milliseconds -= ms;
     }
 
