@@ -424,7 +424,7 @@ class Route
                           "replace_create_route: unknown RouteTargetType " << (int)target_type);
         }
 
-        const std::string dest_cidr_block_name = ipv6 ? "DestinationCidrIpv6Block" : "DestinationCidrBlock";
+        const std::string dest_cidr_block_name = ipv6 ? "DestinationIpv6CidrBlock" : "DestinationCidrBlock";
 
         // create API query
         {
