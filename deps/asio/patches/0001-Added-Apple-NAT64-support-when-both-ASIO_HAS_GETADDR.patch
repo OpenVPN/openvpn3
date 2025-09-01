@@ -1,4 +1,4 @@
-From a010aecab8091de53193c456f9b5fde03a933f80 Mon Sep 17 00:00:00 2001
+From 3152d98dec56afe201a4055880632017e0d4d51e Mon Sep 17 00:00:00 2001
 From: James Yonan <james@openvpn.net>
 Date: Mon, 19 Mar 2018 11:24:10 +0800
 Subject: [PATCH 1/6] Added Apple NAT64 support when both ASIO_HAS_GETADDRINFO
@@ -18,7 +18,7 @@ Signed-off-by: Frank Lichtenheld <frank@lichtenheld.com>
  1 file changed, 17 insertions(+)
 
 diff --git a/asio/include/asio/detail/impl/socket_ops.ipp b/asio/include/asio/detail/impl/socket_ops.ipp
-index af895bd8d..c207e25cf 100644
+index e4699a6b1..e69775c0a 100644
 --- a/asio/include/asio/detail/impl/socket_ops.ipp
 +++ b/asio/include/asio/detail/impl/socket_ops.ipp
 @@ -3811,6 +3811,23 @@ asio::error_code getaddrinfo(const char* host,
