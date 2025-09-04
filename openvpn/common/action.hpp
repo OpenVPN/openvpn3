@@ -174,16 +174,14 @@ class ActionList : public std::vector<Action::Ptr>, public DestructorBase
      */
     void remove_marked(const std::unordered_set<std::string> &marks, std::ostream &os)
     {
-        erase(std::remove_if(
-                  begin(), end(), [&](const Action::Ptr &a) mutable
-                  {
+        std::erase_if(*this, [&](const Action::Ptr &a) mutable
+                      {
                                 auto remove = !a->mark.empty() && marks.count(a->mark) > 0;
                                 if (remove)
                                 {
                                     os << "Action '" << a->to_string() << "' will be removed\n";
                                 }
-                                return remove; }),
-              end());
+                                return remove; });
     }
 
   protected:

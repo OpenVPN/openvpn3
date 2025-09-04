@@ -53,12 +53,9 @@ inline void filter_by_ip_version(RESULTS &results, const IP::Addr::Version ip_ve
         return;
     }
 
-    // the "auto" lambda parameter makes this C++14 code
-    data->erase(std::remove_if(data->begin(),
-                               data->end(),
-                               [v4](auto &e)
-                               { return e.endpoint().address().is_v4() != v4; }),
-                data->end());
+    std::erase_if(*data,
+                  [v4](const auto &e)
+                  { return e.endpoint().address().is_v4() != v4; });
 }
 
 #elif defined(ASIO_RESOLVER_RESULTS_DATA_REQUIRED)

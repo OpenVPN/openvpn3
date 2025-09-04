@@ -213,11 +213,10 @@ class OptionListContinuation : public OptionList
         }
         opts.update_map();
 
-        erase(std::remove_if(begin(), end(), [&opts_to_remove](const Option &o)
-                             {
+        erase_if(*this, [&opts_to_remove](const Option &o)
+                 {
             const std::string &name = o.ref(0);
-            return opts_to_remove.contains(name); }),
-              end());
+            return opts_to_remove.contains(name); });
 
         // we need to remove only original options, not the ones from ongoing PUSH_UPDATE
         // make sure that options are considered for removal only once
