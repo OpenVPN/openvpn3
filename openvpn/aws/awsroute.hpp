@@ -578,7 +578,7 @@ class Route
         qb.host = ec2_host(ctx.instance_info);
         qb.uri = "/";
         qb.parms = std::move(q);
-        qb.parms.emplace_back("Version", "2015-10-01");
+        qb.parms.emplace_back("Version", "2016-11-15");
         qb.add_amz_parms(ctx.creds);
         qb.sort_parms();
         qb.add_amz_signature(ctx.http_context.digest_factory(), ctx.creds);
