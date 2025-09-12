@@ -16,6 +16,7 @@
 
 #include <string>
 
+#include <openssl/opensslv.h>
 /* The HMAC_* methods are deprecated in OpenSSL 3.0 and the EVP_MAC methods
  * do no exist in OpenSSL 1.1 yet. So use two distinct implementations */
 #if OPENSSL_VERSION_NUMBER < 0x30000000L

@@ -20,7 +20,6 @@
 #include <openvpn/common/base64.hpp>
 #include <openvpn/time/time.hpp>
 #include <openvpn/compress/compress.hpp>
-#include <openvpn/init/cryptoinit.hpp>
 #include <openvpn/init/engineinit.hpp>
 
 namespace openvpn::InitProcess {
@@ -48,10 +47,6 @@ class Init
         {
             base64_uninit_static();
         }
-
-      private:
-        // SSL library init happens when instantiated
-        crypto_init crypto_init_;
     };
 
     // process-wide singular instance

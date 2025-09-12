@@ -193,12 +193,9 @@
 #endif
 
 #if defined(USE_OPENSSL) || defined(USE_OPENSSL_SERVER)
-#include <openvpn/openssl/util/init.hpp>
-
 #include <openvpn/openssl/crypto/api.hpp>
 #include <openvpn/openssl/ssl/sslctx.hpp>
 #include <openvpn/openssl/util/rand.hpp>
-
 #endif
 
 #if defined(USE_APPLE_SSL) || defined(USE_MBEDTLS_APPLE_HYBRID)

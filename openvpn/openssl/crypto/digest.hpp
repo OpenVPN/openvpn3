@@ -17,6 +17,7 @@
 
 #include <string>
 
+#include <openssl/opensslv.h>
 #include <openssl/objects.h>
 #include <openssl/evp.h>
 #include <openssl/md4.h>

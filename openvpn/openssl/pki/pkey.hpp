@@ -16,8 +16,9 @@
 #include <string>
 #include <utility>
 
-#include <openssl/ssl.h>
 #include <openssl/bio.h>
+#include <openssl/opensslv.h>
+#include <openssl/ssl.h>
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/numeric_cast.hpp>

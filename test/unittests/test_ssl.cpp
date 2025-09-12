@@ -18,6 +18,10 @@ using namespace openvpn;
 #include <openvpn/ssl/sslchoose.hpp>
 #include <openvpn/ssl/sslapi.hpp>
 
+#ifdef USE_OPENSSL
+#include <openssl/opensslv.h>
+#endif
+
 TEST(ssl, sslciphersuites)
 {
     SSLFactoryAPI::Ptr sslfact;

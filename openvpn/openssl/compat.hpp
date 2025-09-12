@@ -12,6 +12,8 @@
 
 #pragma once
 
+#include <openssl/opensslv.h>
+
 #if OPENSSL_VERSION_NUMBER < 0x30000000L
 #include <cassert>
 #include <cstring>

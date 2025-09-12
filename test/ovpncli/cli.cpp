@@ -73,7 +73,8 @@
 #include <openvpn/mbedtls/util/pkcs1.hpp>
 #elif defined(USE_OPENSSL)
 #include <openssl/evp.h>
-#if (OPENSSL_VERSION_NUMBER >= 0x30000000L)
+#include <openssl/opensslv.h>
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
 #include <openssl/core_names.h>
 #endif
 #endif
@@ -576,7 +577,7 @@ class Client : public ClientBase
         OPENVPN_LOG("SIGNATURE[" << outlen << "]: " << signreq.sig);
     }
 
-#if (OPENSSL_VERSION_NUMBER < 0x30000000L)
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
     void doOpenSSLDigestSignature(ClientAPI::ExternalPKISignRequest &signreq)
     {
         /* technically implementing this without OpenSSL 3.0 is possible but

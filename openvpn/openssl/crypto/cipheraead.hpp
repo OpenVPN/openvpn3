@@ -15,8 +15,9 @@
 
 #include <string>
 
-#include <openssl/objects.h>
 #include <openssl/evp.h>
+#include <openssl/objects.h>
+#include <openssl/opensslv.h>
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>

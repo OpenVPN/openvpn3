@@ -32,6 +32,7 @@
 #include <openssl/bn.h>
 #include <openssl/rand.h>
 #include <openssl/evp.h>
+#include <openssl/opensslv.h>
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L
 #include <openssl/provider.h>
 #endif
