@@ -32,8 +32,6 @@ class ClientCreds : public RC<thread_unsafe_refcount>
   public:
     typedef RCPtr<ClientCreds> Ptr;
 
-    ClientCreds() = default;
-
     void set_username(const std::string &username_arg)
     {
         username = username_arg;

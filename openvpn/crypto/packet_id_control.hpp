@@ -180,9 +180,6 @@ class PacketIDControlReceiveType
 
     OPENVPN_SIMPLE_EXCEPTION(packet_id_not_initialized);
 
-    // TODO: [OVPN3-933] Consider RAII'ifying this code
-    PacketIDControlReceiveType() = default;
-
     void init(const char *name_arg,
               const int unit_arg,
               const SessionStats::Ptr &stats_arg)

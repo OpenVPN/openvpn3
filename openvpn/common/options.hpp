@@ -533,8 +533,6 @@ class OptionList : public std::vector<Option>, public RCCopyable<thread_unsafe_r
     class LexComment : public LexQuoteMixin
     {
       public:
-        LexComment() = default;
-
         void put(char c)
         {
             if (in_comment)

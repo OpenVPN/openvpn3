@@ -53,8 +53,6 @@ struct DCO : public virtual RC<thread_unsafe_refcount>
 
     struct TunConfig
     {
-        TunConfig() = default;
-
 #if defined(OPENVPN_PLATFORM_WIN)
         TunWin::SetupFactory::Ptr setup_factory;
 

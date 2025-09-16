@@ -28,8 +28,6 @@ class AppleRandom : public StrongRandomAPI
 
     typedef RCPtr<AppleRandom> Ptr;
 
-    AppleRandom() = default;
-
     std::string name() const override
     {
         return "AppleRandom";

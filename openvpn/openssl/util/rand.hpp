@@ -29,8 +29,6 @@ class OpenSSLRandom : public StrongRandomAPI
 
     typedef RCPtr<OpenSSLRandom> Ptr;
 
-    OpenSSLRandom() = default;
-
     std::string name() const override
     {
         return "OpenSSLRandom";

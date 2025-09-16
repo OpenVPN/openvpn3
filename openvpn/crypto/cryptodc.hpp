@@ -100,8 +100,6 @@ class CryptoDCSettingsData
   public:
     OPENVPN_SIMPLE_EXCEPTION(no_data_channel_factory);
 
-    CryptoDCSettingsData() = default;
-
     void set_cipher(CryptoAlgs::Type cipher)
     {
         cipher_ = cipher;
@@ -194,8 +192,6 @@ class CryptoDCSettings : public CryptoDCSettingsData
 {
   public:
     OPENVPN_SIMPLE_EXCEPTION(no_data_channel_factory);
-
-    CryptoDCSettings() = default;
 
     void set_factory(const CryptoDCFactory::Ptr &factory)
     {

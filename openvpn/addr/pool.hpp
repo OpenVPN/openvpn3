@@ -29,8 +29,6 @@ template <typename ADDR>
 class PoolType
 {
   public:
-    PoolType() = default;
-
     /**
      * @brief Adds range of addresses to pool (pool will own the addresses).
      * @param range RangeType of IP Addresses
