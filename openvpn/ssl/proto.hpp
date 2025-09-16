@@ -1702,9 +1702,6 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
         // for example if cipher/digest are pushed.
         struct DataChannelKey
         {
-            //! Default do-nothing constructor.
-            DataChannelKey() = default;
-
             OpenVPNStaticKey key;
             std::optional<CryptoDCInstance::RekeyType> rekey_type;
         };
