@@ -96,16 +96,16 @@ class Exception : public std::exception
     }
 
 // define a custom exception class that allows extra info
-#define OPENVPN_EXCEPTION(C)                                                           \
-    class C : public openvpn::Exception                                                \
-    {                                                                                  \
-      public:                                                                          \
-        C() : openvpn::Exception(#C OPENVPN_FILE_LINE)                                 \
-        {                                                                              \
-        }                                                                              \
-        C(const std::string err) : openvpn::Exception(#C OPENVPN_FILE_LINE ": " + err) \
-        {                                                                              \
-        }                                                                              \
+#define OPENVPN_EXCEPTION(C)                                                            \
+    class C : public openvpn::Exception                                                 \
+    {                                                                                   \
+      public:                                                                           \
+        C() : openvpn::Exception(#C OPENVPN_FILE_LINE)                                  \
+        {                                                                               \
+        }                                                                               \
+        C(const std::string &err) : openvpn::Exception(#C OPENVPN_FILE_LINE ": " + err) \
+        {                                                                               \
+        }                                                                               \
     }
 
 // define a custom exception class that allows extra info with error code
@@ -130,26 +130,26 @@ class Exception : public std::exception
         static std::string code2string(C##_##code code);                                \
     }
 // define a custom exception class that allows extra info, but does not emit a tag
-#define OPENVPN_UNTAGGED_EXCEPTION(C)                      \
-    class C : public openvpn::Exception                    \
-    {                                                      \
-      public:                                              \
-        C(const std::string err) : openvpn::Exception(err) \
-        {                                                  \
-        }                                                  \
+#define OPENVPN_UNTAGGED_EXCEPTION(C)                       \
+    class C : public openvpn::Exception                     \
+    {                                                       \
+      public:                                               \
+        C(const std::string &err) : openvpn::Exception(err) \
+        {                                                   \
+        }                                                   \
     }
 
 // define a custom exception class that allows extra info, and inherits from a custom base
-#define OPENVPN_EXCEPTION_INHERIT(B, C)                               \
-    class C : public B                                                \
-    {                                                                 \
-      public:                                                         \
-        C() : B(#C OPENVPN_FILE_LINE)                                 \
-        {                                                             \
-        }                                                             \
-        C(const std::string err) : B(#C OPENVPN_FILE_LINE ": " + err) \
-        {                                                             \
-        }                                                             \
+#define OPENVPN_EXCEPTION_INHERIT(B, C)                                \
+    class C : public B                                                 \
+    {                                                                  \
+      public:                                                          \
+        C() : B(#C OPENVPN_FILE_LINE)                                  \
+        {                                                              \
+        }                                                              \
+        C(const std::string &err) : B(#C OPENVPN_FILE_LINE ": " + err) \
+        {                                                              \
+        }                                                              \
     }
 
 // define a custom exception class that allows extra info, and inherits from a custom base,
