@@ -39,7 +39,7 @@ TEST(misc, creds1)
     validate(ValidateCreds::USERNAME, false, "\xFF\xFF\xFF\xFF", true);
 }
 
-void validate_creds(std::string username, std::string password, const bool expected_result, const bool strict)
+void validate_creds(std::string username, const std::string &password, const bool expected_result, const bool strict)
 {
     if (verbose)
         OPENVPN_LOG("VALIDATE username='" << username << "' password='" << password << "' expected res=" << expected_result);

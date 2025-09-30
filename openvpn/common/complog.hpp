@@ -12,7 +12,7 @@
 #pragma once
 
 namespace openvpn {
-inline void log_compress(const std::string prefix, const size_t orig_size, const size_t new_size)
+inline void log_compress(const std::string &prefix, const size_t orig_size, const size_t new_size)
 {
     OPENVPN_LOG(prefix
                 << ' ' << orig_size

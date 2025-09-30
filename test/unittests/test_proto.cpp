@@ -633,7 +633,7 @@ class TestProtoServer : public TestProto
 class NoisyWire
 {
   public:
-    NoisyWire(const std::string title_arg,
+    NoisyWire(const std::string &title_arg,
               TimePtr now_arg,
               RandomAPI &rand_arg,
               const unsigned int reorder_prob_arg,

@@ -1193,7 +1193,7 @@ class OpenSSLContext : public SSLFactoryAPI
     };
 
     /////// start of main class implementation
-    static std::string translate_cipher_list(std::string cipherlist)
+    static std::string translate_cipher_list(const std::string &cipherlist)
     {
         // OpenVPN 2.x accepts IANA ciphers instead in the cipher list, we need
         // to do the same

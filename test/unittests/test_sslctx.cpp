@@ -323,7 +323,7 @@ inline void do_read(T &obj, const bool server, char *msg, const size_t len, long
 #endif
 }
 
-static inline bool xfer_oneway(SSLAPI &sender, SSLAPI &recv, std::string out)
+static inline bool xfer_oneway(SSLAPI &sender, SSLAPI &recv, const std::string &out)
 {
     if (sender.read_ciphertext_ready())
     {

@@ -235,7 +235,7 @@ I/+4kAlXuAKdhsXohHeBhC2ijg/kTOMDxEbEVv+SkCIUyM+dB8UtlPKOH9HEL5Xi
 
 static constexpr int debug_output = 0;
 
-static inline bool xfer_oneway(SslApiBuilder &sender, SslApiBuilder &recv, std::string out)
+static inline bool xfer_oneway(SslApiBuilder &sender, SslApiBuilder &recv, const std::string &out)
 {
     if (sender.get().read_ciphertext_ready())
     {

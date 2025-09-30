@@ -253,7 +253,7 @@ class Session : ProtoContextCallbackInterface,
         set_housekeeping_timer();
     }
 
-    void post_app_control_message(const std::string proto, const std::string message)
+    void post_app_control_message(const std::string &proto, const std::string &message)
     {
         if (!proto_context.conf().app_control_config.supports_protocol(proto))
         {
@@ -991,7 +991,7 @@ class Session : ProtoContextCallbackInterface,
       for supported protocols to be handled later. It acts as the interface between the lower-level
       network code receiving the raw message, and the higher-level event handling logic.
     */
-    void recv_custom_control_message(const std::string msg)
+    void recv_custom_control_message(const std::string &msg)
     {
         bool fullmessage = proto_context.conf().app_control_recv.receive_message(msg);
         if (!fullmessage)

@@ -62,7 +62,7 @@ class TunBuilderMock : public openvpn::TunBuilderBase
     std::vector<std::string> routes;
     std::vector<openvpn::IP::Route> routesAddr;
 
-    bool containsIP(std::string ipaddr)
+    bool containsIP(const std::string &ipaddr)
     {
         return containsIP(openvpn::IP::Addr(ipaddr));
     }
@@ -132,7 +132,7 @@ class RouteEmulationTest : public testing::Test
         emu->add_route(include, openvpn::IP::Addr(ipstr), std::stoi(mask));
     }
 
-    void doEmulate(std::string serverip = "1.2.3.4")
+    void doEmulate(const std::string &serverip = "1.2.3.4")
     {
         emu->emulate(this->tb, *this->ipflags, openvpn::IP::Addr(serverip));
     }

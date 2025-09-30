@@ -424,7 +424,7 @@ class Client : public ClientBase
         }
     }
 
-    void open_url(std::string url_str)
+    void open_url(const std::string &url_str)
     {
         if (url_str.starts_with("http://") || url_str.starts_with("https://"))
         {
