@@ -116,22 +116,3 @@ inline std::string pfmt(const std::string &fmt, Args... args)
     pf.process(args...);
     return pf.str();
 }
-
-void perf()
-{
-    const MyObj seven(7);
-    // const double pi = 3.14159265;
-    size_t count = 0;
-    const std::string weather = "partly cloudy";
-    for (long i = 0; i < 1000000; ++i)
-    {
-        const std::string str = pfmt("the year is %s and the weather is %r", 2015, weather);
-        // const std::string str = pfmt("this program is brought to you by the number %s", seven);
-        // const std::string str = pfmt("foo %s", 69);
-        // const std::string str = pfmt("foo");
-        // const std::string str = pfmt("foo %s %s", 69, "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
-        // const std::string str = pfmt("pi is %s %s nor is it %s ; it is %s... (and has %s%% less %s!)", "not", 3, seven, pi, 99, std::string("fat"));
-        count += str.length();
-    }
-    std::cout << count << std::endl;
-}

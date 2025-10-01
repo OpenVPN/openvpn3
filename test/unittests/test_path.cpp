@@ -167,14 +167,3 @@ TEST(path, test2)
     test_contained("foo/../bar", false);
     test_contained("foo/.../bar", true);
 }
-
-void test_join_speed()
-{
-    size_t count = 0;
-    for (int i = 0; i < 10000000; ++i)
-    {
-        const std::string s = path::join("one", "two", "three", "four");
-        count += s.length();
-    }
-    std::cout << count << std::endl;
-}
