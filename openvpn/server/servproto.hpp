@@ -348,7 +348,7 @@ class ServerProto
             if (!Unicode::is_valid_utf8(msg, Unicode::UTF8_NO_CTRL))
             {
                 /* if we received invalid data from a client on the control channel terminate the connection */
-                const auto reason = "Control channel message with invalid characters received";
+                const std::string reason("Control channel message with invalid characters received");
                 auth_failed(reason, reason);
                 return;
             }
