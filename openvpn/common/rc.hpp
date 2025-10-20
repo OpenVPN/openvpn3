@@ -621,7 +621,7 @@ typename RCWeakPtr<T>::Strong RCWeakPtr<T>::move_strong() noexcept
 #if __GNUC__ == 12
 #pragma GCC diagnostic warning "-Wuse-after-free"
 #endif
-#if __GNUC__ == 13 || __GNUC__ == 14
+#if __GNUC__ == 13 || __GNUC__ == 14 || __GNUC__ == 15
 #pragma GCC diagnostic warning "-Wstringop-overflow"
 #endif
 #endif
