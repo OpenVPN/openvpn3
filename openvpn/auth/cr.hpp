@@ -40,7 +40,7 @@ namespace openvpn {
 class ChallengeResponse : public RC<thread_unsafe_refcount>
 {
   public:
-    typedef RCPtr<ChallengeResponse> Ptr;
+    using Ptr = RCPtr<ChallengeResponse>;
 
     OPENVPN_SIMPLE_EXCEPTION(dynamic_challenge_parse_error);
     OPENVPN_SIMPLE_EXCEPTION(static_challenge_parse_error);
@@ -70,7 +70,7 @@ class ChallengeResponse : public RC<thread_unsafe_refcount>
 
     void init(const std::string &cookie)
     {
-        typedef std::vector<std::string> StringList;
+        using StringList = std::vector<std::string>;
         StringList sl;
         sl.reserve(5);
         Split::by_char_void<StringList, NullLex, Split::NullLimit>(sl, cookie, ':', 0, 4);
@@ -140,7 +140,7 @@ class ChallengeResponse : public RC<thread_unsafe_refcount>
                                     std::string &password,
                                     std::string &response)
     {
-        typedef std::vector<std::string> StringList;
+        using StringList = std::vector<std::string>;
         StringList sl;
         sl.reserve(3);
         Split::by_char_void<StringList, NullLex, Split::NullLimit>(sl, cookie, ':');

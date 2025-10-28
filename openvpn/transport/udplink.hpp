@@ -41,7 +41,7 @@
 
 namespace openvpn::UDPTransport {
 
-typedef openvpn_io::ip::udp::endpoint AsioEndpoint;
+using AsioEndpoint = openvpn_io::ip::udp::endpoint;
 
 enum
 {
@@ -51,7 +51,7 @@ enum
 
 struct PacketFrom
 {
-    typedef std::unique_ptr<PacketFrom> SPtr;
+    using SPtr = std::unique_ptr<PacketFrom>;
     BufferAllocated buf;
     AsioEndpoint sender_endpoint;
 };
@@ -60,7 +60,7 @@ template <typename ReadHandler>
 class UDPLink : public RC<thread_unsafe_refcount>
 {
   public:
-    typedef RCPtr<UDPLink> Ptr;
+    using Ptr = RCPtr<UDPLink>;
 
     UDPLink(ReadHandler read_handler_arg,
             openvpn_io::ip::udp::socket &socket_arg,

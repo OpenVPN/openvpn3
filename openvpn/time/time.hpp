@@ -61,8 +61,8 @@ class TimeType
     {
         prec = 1024
     };
-    typedef ::time_t base_type;
-    typedef T type;
+    using base_type = ::time_t;
+    using type = T;
 
     class Duration
     {
@@ -489,8 +489,8 @@ class TimeType
     T time_;
 };
 
-typedef TimeType<oulong> Time;
+using Time = TimeType<oulong>;
 
-typedef Time *TimePtr;
+using TimePtr = Time *;
 
 } // namespace openvpn

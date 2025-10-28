@@ -27,7 +27,7 @@ class Signal
   public:
     OPENVPN_SIMPLE_EXCEPTION(signal_error);
 
-    typedef void (*handler_t)(int signum);
+    using handler_t = void (*)(int signum);
 
     enum
     {

@@ -32,7 +32,7 @@ using namespace openvpn::TunLinuxSetup;
 
 struct NetlinkLinkSet : public Action
 {
-    typedef RCPtr<NetlinkLinkSet> Ptr;
+    using Ptr = RCPtr<NetlinkLinkSet>;
 
     NetlinkLinkSet()
     {
@@ -91,7 +91,7 @@ struct NetlinkLinkSet : public Action
 
 struct NetlinkAddr4 : public Action
 {
-    typedef RCPtr<NetlinkAddr4> Ptr;
+    using Ptr = RCPtr<NetlinkAddr4>;
 
     NetlinkAddr4()
     {
@@ -164,7 +164,7 @@ struct NetlinkAddr4 : public Action
 
 struct NetlinkAddr6 : public Action
 {
-    typedef RCPtr<NetlinkAddr6> Ptr;
+    using Ptr = RCPtr<NetlinkAddr6>;
 
     NetlinkAddr6()
     {
@@ -232,7 +232,7 @@ struct NetlinkAddr6 : public Action
 
 struct NetlinkAddr4PtP : public Action
 {
-    typedef RCPtr<NetlinkAddr4PtP> Ptr;
+    using Ptr = RCPtr<NetlinkAddr4PtP>;
 
     NetlinkAddr4PtP()
     {
@@ -298,7 +298,7 @@ struct NetlinkAddr4PtP : public Action
 
 struct NetlinkRoute4 : public Action
 {
-    typedef RCPtr<NetlinkRoute4> Ptr;
+    using Ptr = RCPtr<NetlinkRoute4>;
 
     NetlinkRoute4()
     {
@@ -370,7 +370,7 @@ struct NetlinkRoute4 : public Action
 
 struct NetlinkRoute6 : public Action
 {
-    typedef RCPtr<NetlinkRoute6> Ptr;
+    using Ptr = RCPtr<NetlinkRoute6>;
 
     NetlinkRoute6()
     {

@@ -147,8 +147,8 @@ struct Packet
     BufferPtr buf;
 };
 
-typedef ReliableSendTemplate<Packet> ReliableSend;
-typedef ReliableRecvTemplate<Packet> ReliableRecv;
+using ReliableSend = ReliableSendTemplate<Packet>;
+using ReliableRecv = ReliableRecvTemplate<Packet>;
 
 struct Message
 {

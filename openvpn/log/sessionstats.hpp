@@ -27,7 +27,7 @@ namespace openvpn {
 class SessionStats : public RC<thread_safe_refcount>
 {
   public:
-    typedef RCPtr<SessionStats> Ptr;
+    using Ptr = RCPtr<SessionStats>;
     using inc_callback_t = std::function<void(const count_t value)>;
 
     enum Stats : unsigned int
@@ -120,7 +120,7 @@ class SessionStats : public RC<thread_safe_refcount>
 
     struct DCOTransportSource : public virtual RC<thread_unsafe_refcount>
     {
-        typedef RCPtr<DCOTransportSource> Ptr;
+        using Ptr = RCPtr<DCOTransportSource>;
 
         struct Data
         {

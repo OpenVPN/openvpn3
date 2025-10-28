@@ -24,7 +24,7 @@ namespace openvpn {
 class DigestInstance : public RC<thread_unsafe_refcount>
 {
   public:
-    typedef RCPtr<DigestInstance> Ptr;
+    using Ptr = RCPtr<DigestInstance>;
 
     virtual void update(const unsigned char *in, const size_t size) = 0;
     virtual size_t final(unsigned char *out) = 0;
@@ -34,7 +34,7 @@ class DigestInstance : public RC<thread_unsafe_refcount>
 class HMACInstance : public RC<thread_unsafe_refcount>
 {
   public:
-    typedef RCPtr<HMACInstance> Ptr;
+    using Ptr = RCPtr<HMACInstance>;
 
     virtual void reset() = 0;
     virtual void update(const unsigned char *in, const size_t size) = 0;
@@ -45,7 +45,7 @@ class HMACInstance : public RC<thread_unsafe_refcount>
 class DigestFactory : public RC<thread_unsafe_refcount>
 {
   public:
-    typedef RCPtr<DigestFactory> Ptr;
+    using Ptr = RCPtr<DigestFactory>;
 
     virtual DigestInstance::Ptr new_digest(const CryptoAlgs::Type digest_type) = 0;
 

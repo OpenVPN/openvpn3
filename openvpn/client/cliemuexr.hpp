@@ -24,7 +24,7 @@ class EmulateExcludeRouteImpl : public EmulateExcludeRoute
   public:
     OPENVPN_EXCEPTION(emulate_exclude_route_error);
 
-    typedef RCPtr<EmulateExcludeRouteImpl> Ptr;
+    using Ptr = RCPtr<EmulateExcludeRouteImpl>;
 
     explicit EmulateExcludeRouteImpl(const bool exclude_server_address)
         : exclude_server_address_(exclude_server_address)
@@ -148,7 +148,7 @@ class EmulateExcludeRouteImpl : public EmulateExcludeRoute
 class EmulateExcludeRouteFactoryImpl : public EmulateExcludeRouteFactory
 {
   public:
-    typedef RCPtr<EmulateExcludeRouteFactoryImpl> Ptr;
+    using Ptr = RCPtr<EmulateExcludeRouteFactoryImpl>;
 
     EmulateExcludeRouteFactoryImpl(const bool exclude_server_address)
         : exclude_server_address_(exclude_server_address)

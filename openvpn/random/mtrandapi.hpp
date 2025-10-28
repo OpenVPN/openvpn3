@@ -27,8 +27,8 @@ class MTRand : public WeakRandomAPI
   public:
     OPENVPN_EXCEPTION(mtrand_error);
 
-    typedef RCPtr<MTRand> Ptr;
-    typedef std::mt19937_64 rand_type;
+    using Ptr = RCPtr<MTRand>;
+    using rand_type = std::mt19937_64;
 
     MTRand(RandomAPI &seed)
         : rng(gen_seed(seed))

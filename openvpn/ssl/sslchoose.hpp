@@ -54,9 +54,9 @@ typedef AppleCryptoAPI CryptoAPI;
 typedef AppleSSLContext SSLAPI;
 #elif defined(USE_OPENSSL)
 #define SSL_LIB_NAME "OpenSSL"
-typedef OpenSSLCryptoAPI CryptoAPI;
-typedef OpenSSLContext SSLAPI;
-typedef OpenSSLPEM PEMAPI;
+using CryptoAPI = OpenSSLCryptoAPI;
+using SSLAPI = OpenSSLContext;
+using PEMAPI = OpenSSLPEM;
 #else
 #error no SSL library defined
 #endif

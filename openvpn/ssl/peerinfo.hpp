@@ -53,7 +53,7 @@ struct KeyValue
 
 struct Set : public std::vector<KeyValue>, public RCCopyable<thread_unsafe_refcount>
 {
-    typedef RCPtr<Set> Ptr;
+    using Ptr = RCPtr<Set>;
 
     template <typename SET>
     static Ptr new_from_foreign_set(const SET &other)

@@ -221,7 +221,7 @@ class Option
     template <typename T>
     T get_num(const size_t idx) const
     {
-        typedef typename std::remove_const<T>::type T_nonconst;
+        using T_nonconst = typename std::remove_const<T>::type;
         T_nonconst n(0); // we shouldn't need to initialize here, but some compilers complain "may be used uninitialized in this function"
         const std::string &numstr = get(idx, 64);
         if (numstr.length() >= 2 && numstr[0] == '0' && numstr[1] == 'x')
@@ -516,10 +516,10 @@ class Option
 class OptionList : public std::vector<Option>, public RCCopyable<thread_unsafe_refcount>
 {
   public:
-    typedef RCPtr<OptionList> Ptr;
-    typedef std::vector<unsigned int> IndexList;
-    typedef std::unordered_map<std::string, IndexList> IndexMap;
-    typedef std::pair<std::string, IndexList> IndexPair;
+    using Ptr = RCPtr<OptionList>;
+    using IndexList = std::vector<unsigned int>;
+    using IndexMap = std::unordered_map<std::string, IndexList>;
+    using IndexPair = std::pair<std::string, IndexList>;
 
     static bool is_comment(const char c)
     {
@@ -527,7 +527,7 @@ class OptionList : public std::vector<Option>, public RCCopyable<thread_unsafe_r
     }
 
     // standard lex filter that doesn't understand end-of-line comments
-    typedef StandardLex Lex;
+    using Lex = StandardLex;
 
     // special lex filter that recognizes end-of-line comments
     class LexComment : public LexQuoteMixin
@@ -665,14 +665,14 @@ class OptionList : public std::vector<Option>, public RCCopyable<thread_unsafe_r
     // Used by extend() to optionally control which options are copied.
     struct FilterBase : public RC<thread_unsafe_refcount>
     {
-        typedef RCPtr<FilterBase> Ptr;
+        using Ptr = RCPtr<FilterBase>;
         virtual bool filter(const Option &opt) = 0;
     };
 
     class KeyValue : public RC<thread_unsafe_refcount>
     {
       public:
-        typedef RCPtr<KeyValue> Ptr;
+        using Ptr = RCPtr<KeyValue>;
 
         KeyValue()
             : key_priority(0)
@@ -1413,7 +1413,7 @@ class OptionList : public std::vector<Option>, public RCCopyable<thread_unsafe_r
     template <typename T>
     T get_num(const std::string &name, const size_t idx, const T default_value) const
     {
-        typedef typename std::remove_const<T>::type T_nonconst;
+        using T_nonconst = typename std::remove_const<T>::type;
         T_nonconst n = default_value;
         const Option *o = get_ptr(name);
         if (o)
@@ -1428,7 +1428,7 @@ class OptionList : public std::vector<Option>, public RCCopyable<thread_unsafe_r
               const T min_value,
               const T max_value) const
     {
-        typedef typename std::remove_const<T>::type T_nonconst;
+        using T_nonconst = typename std::remove_const<T>::type;
         T_nonconst n = default_value;
         const Option *o = get_ptr(name);
         if (o)

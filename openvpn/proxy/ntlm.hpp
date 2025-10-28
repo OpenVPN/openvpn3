@@ -198,7 +198,7 @@ class NTLM
 
     static void split_domain_username(const std::string &combined, std::string &domain, std::string &username)
     {
-        typedef std::vector<std::string> StringList;
+        using StringList = std::vector<std::string>;
         StringList sl;
         sl.reserve(2);
         Split::by_char_void<StringList, NullLex, Split::NullLimit>(sl, combined, '\\', 1);

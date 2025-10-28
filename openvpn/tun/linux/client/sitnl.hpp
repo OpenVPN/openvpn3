@@ -86,7 +86,7 @@ class SITNL
         char buf[256];
     };
 
-    typedef int (*sitnl_parse_reply_cb)(struct nlmsghdr *msg, void *arg);
+    using sitnl_parse_reply_cb = int (*)(struct nlmsghdr *msg, void *arg);
 
     /**
      * Helper function used to easily add attributes to a rtnl message
@@ -407,7 +407,7 @@ class SITNL
     }
 
     /* store the route entry resulting from the query */
-    typedef struct
+    struct route_res_t
     {
         sa_family_t family;
         IP::Addr gw;
@@ -416,7 +416,7 @@ class SITNL
         int metric;
         IP::Route dst;
         int prefix_len;
-    } route_res_t;
+    };
 
     static int
     sitnl_route_save(struct nlmsghdr *n, void *arg)
@@ -626,12 +626,12 @@ class SITNL
     }
 
     /* state info for sitnl_iface_addr_save() */
-    typedef struct
+    struct iface_addr_res_t
     {
         sa_family_t family;
         __u32 ifindex;
         IP::Route route;
-    } iface_addr_res_t;
+    };
 
     static int
     sitnl_iface_addr_save(struct nlmsghdr *n, void *arg)

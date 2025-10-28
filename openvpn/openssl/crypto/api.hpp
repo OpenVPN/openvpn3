@@ -25,14 +25,14 @@ namespace openvpn {
 struct OpenSSLCryptoAPI
 {
     // cipher
-    typedef OpenSSLCrypto::CipherContext CipherContext;
-    typedef OpenSSLCrypto::CipherContextAEAD CipherContextAEAD;
+    using CipherContext = OpenSSLCrypto::CipherContext;
+    using CipherContextAEAD = OpenSSLCrypto::CipherContextAEAD;
 
     // digest
-    typedef OpenSSLCrypto::DigestContext DigestContext;
+    using DigestContext = OpenSSLCrypto::DigestContext;
 
     // HMAC
-    typedef OpenSSLCrypto::HMACContext HMACContext;
+    using HMACContext = OpenSSLCrypto::HMACContext;
 
     // TLS 1.0/1.1 PRF function
     using TLS1PRF = OpenSSLCrypto::TLS1PRF;

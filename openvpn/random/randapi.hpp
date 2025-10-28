@@ -42,7 +42,7 @@ class RandomAPI : public RC<thread_unsafe_refcount>
      * @typedef RCPtr<RandomAPI> Ptr
      * @brief Smart pointer type for managing the ownership of RandomAPI objects
      */
-    typedef RCPtr<RandomAPI> Ptr;
+    using Ptr = RCPtr<RandomAPI>;
 
     /**
      * @brief   Get the name of the random number generation algorithm
@@ -196,7 +196,7 @@ class RandomAPI : public RC<thread_unsafe_refcount>
      * See https://en.cppreference.com/w/cpp/named_req/UniformRandomBitGenerator
      */
     ///@{
-    typedef unsigned int result_type;
+    using result_type = unsigned int;
     static constexpr result_type min()
     {
         return result_type(0);
@@ -231,7 +231,7 @@ class StrongRandomAPI : public RandomAPI
      * @typedef RCPtr<StrongRandomAPI> Ptr
      * @brief Smart pointer type for managing the ownership of StrongRandomAPI objects
      */
-    typedef RCPtr<StrongRandomAPI> Ptr;
+    using Ptr = RCPtr<StrongRandomAPI>;
 };
 
 /**
@@ -248,7 +248,7 @@ class WeakRandomAPI : public RandomAPI
      * @typedef RCPtr<WeakRandomAPI> Ptr
      * @brief Smart pointer type for managing the ownership of WeakRandomAPI objects
      */
-    typedef RCPtr<WeakRandomAPI> Ptr;
+    using Ptr = RCPtr<WeakRandomAPI>;
 };
 
 } // namespace openvpn

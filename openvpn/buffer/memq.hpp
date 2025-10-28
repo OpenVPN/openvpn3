@@ -82,7 +82,7 @@ class MemQBase
     }
 
   protected:
-    typedef std::deque<BufferPtr> q_type;
+    using q_type = std::deque<BufferPtr>;
     size_t length;
     q_type q;
 };

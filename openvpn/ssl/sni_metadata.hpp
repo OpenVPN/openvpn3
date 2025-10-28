@@ -23,7 +23,7 @@ namespace SNI {
 class Metadata
 {
   public:
-    typedef std::unique_ptr<Metadata> UPtr;
+    using UPtr = std::unique_ptr<Metadata>;
 
     virtual std::string sni_client_name(const AuthCert &ac) const = 0;
 

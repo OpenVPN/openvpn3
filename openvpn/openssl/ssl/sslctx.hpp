@@ -106,8 +106,8 @@ class OpenSSLContext : public SSLFactoryAPI
     using SSL_CTX_unique_ptr = std::unique_ptr<::SSL_CTX, decltype(&::SSL_CTX_free)>;
 
   public:
-    typedef RCPtr<OpenSSLContext> Ptr;
-    typedef CertCRLListTemplate<OpenSSLPKI::X509List, OpenSSLPKI::CRLList> CertCRLList;
+    using Ptr = RCPtr<OpenSSLContext>;
+    using CertCRLList = CertCRLListTemplate<OpenSSLPKI::X509List, OpenSSLPKI::CRLList>;
 
     enum
     {
@@ -195,7 +195,7 @@ class OpenSSLContext : public SSLFactoryAPI
 #endif
 
       public:
-        typedef RCPtr<Config> Ptr;
+        using Ptr = RCPtr<Config>;
 
         /**
           @brief Return a pointer-like object that refers to a ssl factory
@@ -788,7 +788,7 @@ class OpenSSLContext : public SSLFactoryAPI
         friend class OpenSSLContext;
 
       public:
-        typedef RCPtr<SSL> Ptr;
+        using Ptr = RCPtr<SSL>;
 
         void start_handshake() override
         {

@@ -30,7 +30,7 @@ namespace openvpn {
 class ClientCreds : public RC<thread_unsafe_refcount>
 {
   public:
-    typedef RCPtr<ClientCreds> Ptr;
+    using Ptr = RCPtr<ClientCreds>;
 
     void set_username(const std::string &username_arg)
     {

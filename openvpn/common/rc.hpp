@@ -118,7 +118,7 @@ template <typename T>
 class RCPtr
 {
   public:
-    typedef T element_type;
+    using element_type = T;
 
     RCPtr() noexcept;
     RCPtr(T *p, const bool add_ref = true) noexcept;
@@ -449,10 +449,10 @@ RCPtr<U> RCPtr<T>::dynamic_pointer_cast() const noexcept
 template <typename T>
 class RCWeakPtr
 {
-    typedef RCPtr<T> Strong;
+    using Strong = RCPtr<T>;
 
   public:
-    typedef T element_type;
+    using element_type = T;
 
     RCWeakPtr() noexcept;
     RCWeakPtr(const Strong &p) noexcept;
@@ -911,7 +911,7 @@ template <typename RCImpl>
 class RC
 {
   public:
-    typedef RCPtr<RC> Ptr;
+    using Ptr = RCPtr<RC>;
 
     RC() noexcept = default;
     virtual ~RC() = default;
@@ -1105,8 +1105,8 @@ class RCWeak
     struct ControllerRef;
 
   public:
-    typedef RCPtr<RCWeak> Ptr;
-    typedef RCWeakPtr<RCWeak> WPtr;
+    using Ptr = RCPtr<RCWeak>;
+    using WPtr = RCWeakPtr<RCWeak>;
 
     RCWeak() noexcept
         : refcount_(this) {};
@@ -1184,7 +1184,7 @@ class RCWeak
 template <typename RCImpl>
 struct RCWeak<RCImpl>::Controller : public RC<RCImpl>
 {
-    typedef RCPtr<Controller> Ptr;
+    using Ptr = RCPtr<Controller>;
 
     Controller(RCWeak *parent_arg) noexcept;
 

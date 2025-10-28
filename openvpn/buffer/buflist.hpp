@@ -105,8 +105,8 @@ struct BufferCollection : public COLLECTION<BufferPtr>
     }
 };
 
-typedef BufferCollection<std::list> BufferList;
-typedef BufferCollection<std::vector> BufferVector;
+using BufferList = BufferCollection<std::list>;
+using BufferVector = BufferCollection<std::vector>;
 } // namespace openvpn
 
 #endif

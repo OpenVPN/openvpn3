@@ -21,7 +21,7 @@ namespace openvpn::IP {
 class AddrList : public std::vector<IP::Addr>, public RC<thread_unsafe_refcount>
 {
   public:
-    typedef RCPtr<AddrList> Ptr;
+    using Ptr = RCPtr<AddrList>;
 
     void add(const IP::Addr &a)
     {

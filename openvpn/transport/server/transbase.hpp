@@ -49,7 +49,7 @@ namespace openvpn {
 // Base class for server transport object.
 struct TransportServer : public RC<thread_unsafe_refcount>
 {
-    typedef RCPtr<TransportServer> Ptr;
+    using Ptr = RCPtr<TransportServer>;
 
     virtual void start() = 0;
     virtual void stop() = 0;
@@ -60,7 +60,7 @@ struct TransportServer : public RC<thread_unsafe_refcount>
 // Factory for server transport object.
 struct TransportServerFactory : public RC<thread_unsafe_refcount>
 {
-    typedef RCPtr<TransportServerFactory> Ptr;
+    using Ptr = RCPtr<TransportServerFactory>;
 
     virtual TransportServer::Ptr new_server_obj(openvpn_io::io_context &io_context) = 0;
 };
@@ -71,7 +71,7 @@ namespace TransportClientInstance {
 // Each client instance uses this class to send data to the transport layer.
 struct Send : public virtual RC<thread_unsafe_refcount>
 {
-    typedef RCPtr<Send> Ptr;
+    using Ptr = RCPtr<Send>;
 
     virtual bool defined() const = 0;
     virtual void stop() = 0;
@@ -93,7 +93,7 @@ struct Send : public virtual RC<thread_unsafe_refcount>
 struct Recv : public virtual RC<thread_unsafe_refcount>
 {
     // clang-format off
-    typedef RCPtr<Recv> Ptr;
+    using Ptr = RCPtr<Recv>;
 
     virtual bool defined() const = 0;
     virtual void stop() = 0;
@@ -146,7 +146,7 @@ struct Recv : public virtual RC<thread_unsafe_refcount>
 // Base class for factory used to create Recv objects.
 struct Factory : public RC<thread_unsafe_refcount>
 {
-    typedef RCPtr<Factory> Ptr;
+    using Ptr = RCPtr<Factory>;
 
     virtual Recv::Ptr new_client_instance() = 0;
     virtual bool validate_initial_packet(const BufferAllocated &net_buf) = 0;

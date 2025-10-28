@@ -77,7 +77,7 @@ class TunProp
 
     struct State : public RC<thread_unsafe_refcount>
     {
-        typedef RCPtr<State> Ptr;
+        using Ptr = RCPtr<State>;
 
         std::string iface_name;
         IP::Addr vpn_ip4_addr;
@@ -600,7 +600,7 @@ class TunProp
                         o.min_args(3);
                         for (size_t j = 2; j < o.size(); ++j)
                         {
-                            typedef std::vector<std::string> strvec;
+                            using strvec = std::vector<std::string>;
                             strvec v = Split::by_space<strvec, StandardLex, SpaceMatch, Split::NullLimit>(o.get(j, 256));
                             for (size_t k = 0; k < v.size(); ++k)
                             {

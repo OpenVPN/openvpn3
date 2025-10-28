@@ -25,14 +25,14 @@ template <typename RESOLVER_TYPE>
 class AsyncResolvable
 {
   private:
-    typedef RCPtr<AsyncResolvable> Ptr;
+    using Ptr = RCPtr<AsyncResolvable>;
 
     class ResolveThread : public RC<thread_safe_refcount>
     {
         friend class AsyncResolvable<RESOLVER_TYPE>;
 
       private:
-        typedef RCPtr<ResolveThread> Ptr;
+        using Ptr = RCPtr<ResolveThread>;
 
         openvpn_io::io_context &io_context;
         AsyncResolvable<RESOLVER_TYPE> *parent;

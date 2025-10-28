@@ -46,9 +46,9 @@ namespace openvpn {
  */
 struct PacketIDControl
 {
-    typedef std::uint32_t id_t;
-    typedef std::uint32_t net_time_t;
-    typedef Time::base_type time_t;
+    using id_t = std::uint32_t;
+    using net_time_t = std::uint32_t;
+    using time_t = Time::base_type;
 
     id_t id;     // legal values are 1 through 2^32-1
     time_t time; // converted to PacketID::net_time_t before transmission
@@ -365,6 +365,6 @@ class PacketIDControlReceiveType
 
 // Our standard packet ID window with order=8 (window size=2048).
 // and recv expire=30 seconds.
-typedef PacketIDControlReceiveType<8, 30> PacketIDControlReceive;
+using PacketIDControlReceive = PacketIDControlReceiveType<8, 30>;
 
 } // namespace openvpn

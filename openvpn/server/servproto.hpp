@@ -42,9 +42,9 @@ namespace openvpn {
 
 class ServerProto
 {
-    typedef Link<TransportClientInstance::Send, TransportClientInstance::Recv> TransportLink;
-    typedef Link<TunClientInstance::Send, TunClientInstance::Recv> TunLink;
-    typedef Link<ManClientInstance::Send, ManClientInstance::Recv> ManLink;
+    using TransportLink = Link<TransportClientInstance::Send, TransportClientInstance::Recv>;
+    using TunLink = Link<TunClientInstance::Send, TunClientInstance::Recv>;
+    using ManLink = Link<ManClientInstance::Send, ManClientInstance::Recv>;
 
   public:
     class Session;
@@ -52,8 +52,8 @@ class ServerProto
     class Factory : public TransportClientInstance::Factory
     {
       public:
-        typedef RCPtr<Factory> Ptr;
-        typedef ProtoContext::ProtoConfig ProtoConfig;
+        using Ptr = RCPtr<Factory>;
+        using ProtoConfig = ProtoContext::ProtoConfig;
 
         Factory(openvpn_io::io_context &io_context_arg,
                 const ProtoConfig &c)
@@ -109,7 +109,7 @@ class ServerProto
         friend class Factory; // calls constructor
 
       public:
-        typedef RCPtr<Session> Ptr;
+        using Ptr = RCPtr<Session>;
 
         bool defined() const override
         {

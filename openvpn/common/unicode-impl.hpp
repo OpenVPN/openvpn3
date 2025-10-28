@@ -92,9 +92,9 @@ namespace openvpn::Unicode {
        bit mask & shift operations.
        ------------------------------------------------------------------------ */
 
-    typedef unsigned int UTF32; /* at least 32 bits */
-    typedef unsigned short UTF16; /* at least 16 bits */
-    typedef unsigned char UTF8; /* typically 8 bits */
+    using UTF32 = unsigned int; /* at least 32 bits */
+    using UTF16 = unsigned short; /* at least 16 bits */
+    using UTF8 = unsigned char; /* typically 8 bits */
 
     /* Some fundamental constants */
     const UTF32 UNI_REPLACEMENT_CHAR = (UTF32)0x0000FFFD;
@@ -103,17 +103,17 @@ namespace openvpn::Unicode {
     const UTF32 UNI_MAX_UTF32 = (UTF32)0x7FFFFFFF;
     const UTF32 UNI_MAX_LEGAL_UTF32 = (UTF32)0x0010FFFF;
 
-    typedef enum {
+    enum ConversionResult {
       conversionOK,   /* conversion successful */
       sourceExhausted, /* partial character in source, but hit end */
       targetExhausted, /* insuff. room in target for conversion */
       sourceIllegal  /* source sequence is illegal/malformed */
-    } ConversionResult;
+    };
 
-    typedef enum {
+    enum ConversionFlags {
       strictConversion = 0,
       lenientConversion
-    } ConversionFlags;
+    };
 
     /* --------------------------------------------------------------------- */
     /*

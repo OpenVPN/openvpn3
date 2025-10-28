@@ -20,7 +20,7 @@ namespace openvpn {
 
 struct DestructorBase : public RC<thread_unsafe_refcount>
 {
-    typedef RCPtr<DestructorBase> Ptr;
+    using Ptr = RCPtr<DestructorBase>;
     virtual void destroy(std::ostream &os) = 0;
     virtual ~DestructorBase() = default;
 };

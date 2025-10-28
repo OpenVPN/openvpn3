@@ -19,7 +19,7 @@
 namespace openvpn {
 
 namespace reliable {
-typedef std::uint32_t id_t;
+using id_t = std::uint32_t;
 constexpr static std::size_t id_size = sizeof(id_t);
 
 } // namespace reliable
@@ -28,7 +28,7 @@ template <typename PACKET>
 class ReliableMessageBase
 {
   public:
-    typedef reliable::id_t id_t;
+    using id_t = reliable::id_t;
 
     ReliableMessageBase()
         : id_(0), erased_(false)

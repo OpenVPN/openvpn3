@@ -95,7 +95,7 @@ class Session : ProtoContextCallbackInterface,
     static inline const std::string certcheckProto = "cck1";
 
   public:
-    typedef RCPtr<Session> Ptr;
+    using Ptr = RCPtr<Session>;
 
     OPENVPN_EXCEPTION(client_exception);
     OPENVPN_EXCEPTION(client_halt_restart);
@@ -111,7 +111,7 @@ class Session : ProtoContextCallbackInterface,
 
     struct Config : public RC<thread_unsafe_refcount>
     {
-        typedef RCPtr<Config> Ptr;
+        using Ptr = RCPtr<Config>;
 
         Config()
             : pushed_options_limit("server-pushed options data too large",

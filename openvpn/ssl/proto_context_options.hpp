@@ -22,7 +22,7 @@
 namespace openvpn {
 struct ProtoContextCompressionOptions : public RC<thread_safe_refcount>
 {
-    typedef RCPtr<ProtoContextCompressionOptions> Ptr;
+    using Ptr = RCPtr<ProtoContextCompressionOptions>;
 
     enum CompressionMode
     {

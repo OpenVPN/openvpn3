@@ -23,7 +23,7 @@
 
 namespace openvpn {
 #if !defined(HAVE_LZO)
-typedef CompressLZOAsym CompressLZO;
+using CompressLZO = CompressLZOAsym;
 #endif
 } // namespace openvpn
 

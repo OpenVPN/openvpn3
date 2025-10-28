@@ -31,7 +31,7 @@ class MbedTLSContext;
 class TLSSessionTicketBase
 {
   public:
-    typedef std::unique_ptr<TLSSessionTicketBase> UPtr;
+    using UPtr = std::unique_ptr<TLSSessionTicketBase>;
 
     OPENVPN_EXCEPTION(sess_ticket_error);
 

@@ -27,7 +27,7 @@ class X509Store
   public:
     OPENVPN_EXCEPTION(x509_store_error);
 
-    typedef CertCRLListTemplate<X509List, CRLList> CertCRLList;
+    using CertCRLList = CertCRLListTemplate<X509List, CRLList>;
 
     X509Store()
         : x509_store_(nullptr)

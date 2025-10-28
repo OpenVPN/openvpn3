@@ -42,7 +42,7 @@ struct AltProxy : public RC<thread_unsafe_refcount>
         SocketProtect *socket_protect;
     };
 
-    typedef RCPtr<AltProxy> Ptr;
+    using Ptr = RCPtr<AltProxy>;
 
     // return proxy name
     virtual std::string name() const = 0;

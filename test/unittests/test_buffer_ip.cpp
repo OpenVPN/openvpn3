@@ -20,7 +20,7 @@ static std::string to_hex(const std::uint32_t value)
 
 TEST(buffer_ip, unsigned_decimal)
 {
-    typedef BufferFormat::UnsignedDecimal<std::uint32_t> Decimal;
+    using Decimal = BufferFormat::UnsignedDecimal<std::uint32_t>;
     for (int i = -1000; i < 1000; ++i)
     {
         StaticBuffer<Decimal::max_length()> buf;
@@ -31,7 +31,7 @@ TEST(buffer_ip, unsigned_decimal)
 
 TEST(buffer_ip, hex)
 {
-    typedef BufferFormat::Hex<std::uint32_t> Hex;
+    using Hex = BufferFormat::Hex<std::uint32_t>;
     for (int i = -1000; i < 1000; ++i)
     {
         StaticBuffer<10> buf;

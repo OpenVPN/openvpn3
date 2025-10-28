@@ -146,7 +146,7 @@ class TLSCrypt
 class TLSCryptInstance : public RC<thread_unsafe_refcount>
 {
   public:
-    typedef RCPtr<TLSCryptInstance> Ptr;
+    using Ptr = RCPtr<TLSCryptInstance>;
 
     virtual void init(SSLLib::Ctx libctx, const StaticKey &key_hmac, const StaticKey &key_crypt) = 0;
 
@@ -164,7 +164,7 @@ class TLSCryptInstance : public RC<thread_unsafe_refcount>
 class TLSCryptContext : public RC<thread_unsafe_refcount>
 {
   public:
-    typedef RCPtr<TLSCryptContext> Ptr;
+    using Ptr = RCPtr<TLSCryptContext>;
 
     virtual size_t digest_size() const = 0;
 
@@ -188,7 +188,7 @@ class TLSCryptContext : public RC<thread_unsafe_refcount>
 class TLSCryptFactory : public RC<thread_unsafe_refcount>
 {
   public:
-    typedef RCPtr<TLSCryptFactory> Ptr;
+    using Ptr = RCPtr<TLSCryptFactory>;
 
     virtual TLSCryptContext::Ptr new_obj(SSLLib::Ctx libctx, const CryptoAlgs::Type digest_type, const CryptoAlgs::Type cipher_type) = 0;
 };

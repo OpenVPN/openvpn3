@@ -34,7 +34,7 @@ struct TransportClientParent;
 // Base class for client transport object.
 struct TransportClient : public virtual RC<thread_unsafe_refcount>
 {
-    typedef RCPtr<TransportClient> Ptr;
+    using Ptr = RCPtr<TransportClient>;
 
     virtual void transport_start() = 0;
     virtual void stop() = 0;
@@ -99,7 +99,7 @@ struct TransportClientParent
 // Factory for client transport object.
 struct TransportClientFactory : public virtual RC<thread_unsafe_refcount>
 {
-    typedef RCPtr<TransportClientFactory> Ptr;
+    using Ptr = RCPtr<TransportClientFactory>;
 
     // clang-format off
     virtual TransportClient::Ptr new_transport_client_obj(openvpn_io::io_context &io_context,

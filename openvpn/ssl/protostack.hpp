@@ -71,9 +71,9 @@ class ProtoStackBase
     static constexpr size_t ovpn_sending_window = 6;
     static constexpr size_t ovpn_receiving_window = ReliableAck::maximum_acks_ack_v1;
 
-    typedef reliable::id_t id_t;
-    typedef ReliableSendTemplate<PACKET> ReliableSend;
-    typedef ReliableRecvTemplate<PACKET> ReliableRecv;
+    using id_t = reliable::id_t;
+    using ReliableSend = ReliableSendTemplate<PACKET>;
+    using ReliableRecv = ReliableRecvTemplate<PACKET>;
 
     OPENVPN_SIMPLE_EXCEPTION(proto_stack_invalidated);
     OPENVPN_SIMPLE_EXCEPTION(unknown_status_from_ssl_layer);

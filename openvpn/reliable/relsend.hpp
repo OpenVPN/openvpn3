@@ -26,7 +26,7 @@ template <typename PACKET>
 class ReliableSendTemplate
 {
   public:
-    typedef reliable::id_t id_t;
+    using id_t = reliable::id_t;
 
     class Message : public ReliableMessageBase<PACKET>
     {

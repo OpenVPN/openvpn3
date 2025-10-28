@@ -48,7 +48,7 @@ namespace openvpn::ManClientInstance {
 // The methods here are VPN protocol agnostic.
 struct SendBase : public virtual RC<thread_unsafe_refcount>
 {
-    typedef RCPtr<SendBase> Ptr;
+    using Ptr = RCPtr<SendBase>;
 
     // clang-format off
 
@@ -95,7 +95,7 @@ struct SendBase : public virtual RC<thread_unsafe_refcount>
 // protocol-specific methods.
 struct Send : public SendBase
 {
-    typedef RCPtr<Send> Ptr;
+    using Ptr = RCPtr<Send>;
 
     virtual void pre_stop() = 0;
     virtual void stop() = 0;
@@ -127,7 +127,7 @@ struct Send : public SendBase
 // object will inherit from multiple receivers.
 struct Recv : public virtual RC<thread_unsafe_refcount>
 {
-    typedef RCPtr<Recv> Ptr;
+    using Ptr = RCPtr<Recv>;
 
     virtual void stop() = 0;
 
@@ -167,7 +167,7 @@ struct Recv : public virtual RC<thread_unsafe_refcount>
 
 struct Factory : public RC<thread_unsafe_refcount>
 {
-    typedef RCPtr<Factory> Ptr;
+    using Ptr = RCPtr<Factory>;
 
     virtual void start() = 0;
     virtual void stop() = 0;

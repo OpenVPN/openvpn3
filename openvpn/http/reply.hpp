@@ -390,8 +390,8 @@ class ReplyParser
 
 struct ReplyType
 {
-    typedef Reply State;
-    typedef ReplyParser Parser;
+    using State = Reply;
+    using Parser = ReplyParser;
 };
 } // namespace openvpn::HTTP
 

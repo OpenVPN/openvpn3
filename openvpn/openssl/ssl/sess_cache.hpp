@@ -31,7 +31,7 @@ namespace openvpn {
 class OpenSSLSessionCache : public RC<thread_unsafe_refcount>
 {
   public:
-    typedef RCPtr<OpenSSLSessionCache> Ptr;
+    using Ptr = RCPtr<OpenSSLSessionCache>;
 
     OPENVPN_EXCEPTION(openssl_sess_cache_error);
 
@@ -92,7 +92,7 @@ class OpenSSLSessionCache : public RC<thread_unsafe_refcount>
     class Key
     {
       public:
-        typedef std::unique_ptr<Key> UPtr;
+        using UPtr = std::unique_ptr<Key>;
 
         Key(const std::string &key_arg,
             OpenSSLSessionCache::Ptr cache_arg)

@@ -11,9 +11,9 @@ template <typename BASE>
 class TestType : public BASE
 {
   public:
-    typedef RCPtr<TestType> Ptr;
-    typedef RCWeakPtr<TestType> WPtr;
-    typedef BASE Base;
+    using Ptr = RCPtr<TestType>;
+    using WPtr = RCWeakPtr<TestType>;
+    using Base = BASE;
 
     TestType(const std::string &name_arg)
         : name(name_arg)
@@ -38,8 +38,8 @@ template <typename Base>
 class TestParentType : public TestType<Base>
 {
   public:
-    typedef RCPtr<TestParentType> Ptr;
-    typedef RCWeakPtr<TestParentType> WPtr;
+    using Ptr = RCPtr<TestParentType>;
+    using WPtr = RCWeakPtr<TestParentType>;
 
     TestParentType(const std::string &name_arg)
         : TestType<Base>(name_arg)
@@ -80,7 +80,7 @@ template <typename Test>
 void test()
 {
     testLog->startCollecting();
-    typedef TestParentType<typename Test::Base> TestParent;
+    using TestParent = TestParentType<typename Test::Base>;
 
     {
         OPENVPN_LOG("*** TEST1");

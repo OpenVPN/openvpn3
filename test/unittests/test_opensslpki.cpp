@@ -12,7 +12,7 @@
 
 using namespace openvpn;
 
-typedef CertCRLListTemplate<OpenSSLPKI::X509List, OpenSSLPKI::CRLList> CertCRLList;
+using CertCRLList = CertCRLListTemplate<OpenSSLPKI::X509List, OpenSSLPKI::CRLList>;
 
 template <typename VEC>
 VEC move_contents(VEC &src)

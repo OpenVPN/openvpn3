@@ -145,7 +145,7 @@ class CRL
 class CRLList : public std::vector<CRL>
 {
   public:
-    typedef X509 CRL;
+    using CRL = X509;
 
     bool defined() const
     {

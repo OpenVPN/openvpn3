@@ -55,7 +55,7 @@ class SSLAPI : public RC<thread_unsafe_refcount>
         TLS_WARN_SIG_SHA1 = (1 << 1)
     };
 
-    typedef RCPtr<SSLAPI> Ptr;
+    using Ptr = RCPtr<SSLAPI>;
 
     virtual void start_handshake() = 0;
     virtual ssize_t write_cleartext_unbuffered(const void *data, const size_t size) = 0;
@@ -88,7 +88,7 @@ class SSLFactoryAPI : public RC<thread_unsafe_refcount>,
     OPENVPN_EXCEPTION(ssl_external_pki);
     OPENVPN_SIMPLE_EXCEPTION(ssl_ciphertext_in_overflow);
 
-    typedef RCPtr<SSLFactoryAPI> Ptr;
+    using Ptr = RCPtr<SSLFactoryAPI>;
 
     // create a new SSLAPI instance
     virtual SSLAPI::Ptr ssl() = 0;
@@ -107,7 +107,7 @@ class SSLFactoryAPI : public RC<thread_unsafe_refcount>,
 class SSLConfigAPI : public RC<thread_unsafe_refcount>
 {
   public:
-    typedef RCPtr<SSLConfigAPI> Ptr;
+    using Ptr = RCPtr<SSLConfigAPI>;
 
     enum LoadFlags
     {

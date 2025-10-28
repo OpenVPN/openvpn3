@@ -42,8 +42,8 @@ class Addr // NOTE: must be union-legal, so default constructor does not initial
   public:
     static constexpr unsigned int SIZE = 32;
 
-    typedef std::uint32_t base_type;
-    typedef std::int32_t signed_base_type;
+    using base_type = std::uint32_t;
+    using signed_base_type = std::int32_t;
 
     static constexpr int ip_version()
     {

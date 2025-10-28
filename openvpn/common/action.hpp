@@ -29,7 +29,7 @@ namespace openvpn {
 
 struct Action : public RC<thread_unsafe_refcount>
 {
-    typedef RCPtr<Action> Ptr;
+    using Ptr = RCPtr<Action>;
 
     virtual void execute(std::ostream &os) = 0;
     virtual std::string to_string() const = 0;
@@ -47,7 +47,7 @@ struct Action : public RC<thread_unsafe_refcount>
 class ActionList : public std::vector<Action::Ptr>, public DestructorBase
 {
   public:
-    typedef RCPtr<ActionList> Ptr;
+    using Ptr = RCPtr<ActionList>;
 
     ActionList()
     {
@@ -235,7 +235,7 @@ struct ActionListReversed : public ActionList
 
 struct ActionListFactory : public RC<thread_unsafe_refcount>
 {
-    typedef RCPtr<ActionListFactory> Ptr;
+    using Ptr = RCPtr<ActionListFactory>;
 
     virtual ActionList::Ptr new_action_list() = 0;
 };

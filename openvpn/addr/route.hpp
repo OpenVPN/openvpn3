@@ -32,7 +32,7 @@ template <typename ADDR>
 class RouteType
 {
   public:
-    typedef ADDR Addr;
+    using Addr = ADDR;
 
     ADDR addr;
     unsigned int prefix_len;
@@ -318,7 +318,7 @@ class RouteType
 template <typename ADDR>
 struct RouteTypeList : public std::vector<RouteType<ADDR>>
 {
-    typedef std::vector<RouteType<ADDR>> Base;
+    using Base = std::vector<RouteType<ADDR>>;
 
     OPENVPN_EXCEPTION(route_list_error);
 
@@ -354,13 +354,13 @@ struct RouteTypeList : public std::vector<RouteType<ADDR>>
     }
 };
 
-typedef RouteType<IP::Addr> Route;
-typedef RouteType<IPv4::Addr> Route4;
-typedef RouteType<IPv6::Addr> Route6;
+using Route = RouteType<IP::Addr>;
+using Route4 = RouteType<IPv4::Addr>;
+using Route6 = RouteType<IPv6::Addr>;
 
-typedef RouteTypeList<IP::Addr> RouteList;
-typedef RouteTypeList<IPv4::Addr> Route4List;
-typedef RouteTypeList<IPv6::Addr> Route6List;
+using RouteList = RouteTypeList<IP::Addr>;
+using Route4List = RouteTypeList<IPv4::Addr>;
+using Route6List = RouteTypeList<IPv6::Addr>;
 
 OPENVPN_OSTREAM(Route, to_string);
 OPENVPN_OSTREAM(Route4, to_string);

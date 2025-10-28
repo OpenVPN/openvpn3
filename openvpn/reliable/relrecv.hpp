@@ -27,7 +27,7 @@ class ReliableRecvTemplate
   public:
     OPENVPN_SIMPLE_EXCEPTION(rel_next_sequenced_not_ready);
 
-    typedef reliable::id_t id_t;
+    using id_t = reliable::id_t;
 
     class Message : public ReliableMessageBase<PACKET>
     {

@@ -24,7 +24,7 @@ namespace openvpn::HTTPProxy {
 class ProxyAuthenticate : public RC<thread_unsafe_refcount>
 {
   public:
-    typedef RCPtr<ProxyAuthenticate> Ptr;
+    using Ptr = RCPtr<ProxyAuthenticate>;
 
     ProxyAuthenticate()
     {

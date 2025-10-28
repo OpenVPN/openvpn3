@@ -180,8 +180,8 @@ class SessionIDType
 };
 
 // Create two concrete types: 64 and 128-bit Session IDs.
-typedef SessionIDType<8> SessionID64;
-typedef SessionIDType<16> SessionID128;
+using SessionID64 = SessionIDType<8>;
+using SessionID128 = SessionIDType<16>;
 
 OPENVPN_OSTREAM(SessionID64, to_string);
 OPENVPN_OSTREAM(SessionID128, to_string);

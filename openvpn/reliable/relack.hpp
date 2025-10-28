@@ -30,7 +30,7 @@ class ReliableAck
   public:
     static constexpr size_t maximum_acks_ack_v1 = 8;
     static constexpr size_t maximum_acks_control_v1 = 4;
-    typedef reliable::id_t id_t;
+    using id_t = reliable::id_t;
 
     explicit ReliableAck() = default;
     size_t size() const;

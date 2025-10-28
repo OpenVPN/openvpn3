@@ -72,7 +72,7 @@ class PsidCookieAddrInfoBase
 class PsidCookieTransportBase : public RC<thread_unsafe_refcount>
 {
   public:
-    typedef RCPtr<PsidCookieTransportBase> Ptr;
+    using Ptr = RCPtr<PsidCookieTransportBase>;
 
     virtual bool psid_cookie_send_const(Buffer &send_buf, const PsidCookieAddrInfoBase &pcaib) = 0;
 
@@ -85,7 +85,7 @@ class PsidCookieTransportBase : public RC<thread_unsafe_refcount>
 class PsidCookie : public RC<thread_unsafe_refcount>
 {
   public:
-    typedef RCPtr<PsidCookie> Ptr;
+    using Ptr = RCPtr<PsidCookie>;
 
     /**
      * @brief Values returned by the intercept() function

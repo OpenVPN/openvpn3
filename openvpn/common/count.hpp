@@ -13,7 +13,7 @@
 #define OPENVPN_COMMON_COUNT_H
 
 namespace openvpn {
-typedef long long count_t;
+using count_t = long long;
 }
 
 #endif

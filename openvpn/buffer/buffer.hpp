@@ -235,10 +235,10 @@ template <typename T>
 class ConstBufferType
 {
   public:
-    typedef T value_type;
-    typedef T *type;
-    typedef const T *const_type;
-    typedef typename std::remove_const_t<T> NCT;
+    using value_type = T;
+    using type = T *;
+    using const_type = const T *;
+    using NCT = typename std::remove_const_t<T>;
 
     /**
      * @brief Default constructor for ConstBufferType.

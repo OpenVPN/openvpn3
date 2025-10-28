@@ -25,7 +25,7 @@ template <typename SCOPED_OBJ, typename STATE = TunProp::State::Ptr>
 class TunPersistTemplate : public TunWrapTemplate<SCOPED_OBJ>
 {
   public:
-    typedef RCPtr<TunPersistTemplate> Ptr;
+    using Ptr = RCPtr<TunPersistTemplate>;
 
     TunPersistTemplate(const bool enable_persistence, const TunWrapObjRetain retain_obj, TunBuilderBase *tb)
         : TunWrapTemplate<SCOPED_OBJ>(retain_obj),

@@ -25,10 +25,10 @@
 namespace openvpn {
 struct AsioClock
 {
-    typedef olong rep;
-    typedef std::ratio<1, 1024> period; // time resolution of openvpn::Time, note 1024 instead of the usual 1000
-    typedef std::chrono::duration<rep, period> duration;
-    typedef std::chrono::time_point<AsioClock> time_point;
+    using rep = olong;
+    using period = std::ratio<1, 1024>; // time resolution of openvpn::Time, note 1024 instead of the usual 1000
+    using duration = std::chrono::duration<rep, period>;
+    using time_point = std::chrono::time_point<AsioClock>;
 
     static constexpr bool is_steady()
     {
@@ -54,7 +54,7 @@ struct AsioClock
 class AsioTimer : public openvpn_io::basic_waitable_timer<AsioClock>
 {
   public:
-    typedef std::unique_ptr<AsioTimer> UPtr;
+    using UPtr = std::unique_ptr<AsioTimer>;
 
     AsioTimer(openvpn_io::io_context &io_context)
         : openvpn_io::basic_waitable_timer<AsioClock>(io_context)

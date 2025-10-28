@@ -32,7 +32,7 @@ template <typename ReadHandler, typename PacketFrom, typename STREAM>
 class TunIO : public RC<thread_unsafe_refcount>
 {
   public:
-    typedef RCPtr<TunIO> Ptr;
+    using Ptr = RCPtr<TunIO>;
 
     TunIO(ReadHandler read_handler_arg,
           const Frame::Ptr &frame_arg,

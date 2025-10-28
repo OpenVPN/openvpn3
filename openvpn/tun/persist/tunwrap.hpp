@@ -43,7 +43,7 @@ template <typename SCOPED_OBJ>
 class TunWrapTemplate : public RC<thread_unsafe_refcount>
 {
   public:
-    typedef RCPtr<TunWrapTemplate> Ptr;
+    using Ptr = RCPtr<TunWrapTemplate>;
 
     TunWrapTemplate(const TunWrapObjRetain retain_obj)
         : retain_obj_(retain_obj)

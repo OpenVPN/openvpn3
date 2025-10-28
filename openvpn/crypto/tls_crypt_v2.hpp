@@ -160,7 +160,7 @@ class TLSCryptV2ClientKey
 class TLSCryptMetadata : public RC<thread_unsafe_refcount>
 {
   public:
-    typedef RCPtr<TLSCryptMetadata> Ptr;
+    using Ptr = RCPtr<TLSCryptMetadata>;
 
     // override this method with your own verification mechanism.
     //
@@ -176,7 +176,7 @@ class TLSCryptMetadata : public RC<thread_unsafe_refcount>
 class TLSCryptMetadataFactory : public RC<thread_unsafe_refcount>
 {
   public:
-    typedef RCPtr<TLSCryptMetadataFactory> Ptr;
+    using Ptr = RCPtr<TLSCryptMetadataFactory>;
 
     virtual TLSCryptMetadata::Ptr new_obj() = 0;
 };

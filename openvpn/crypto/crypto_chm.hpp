@@ -26,7 +26,7 @@ template <typename CRYPTO_API>
 class CryptoCHM : public CryptoDCInstance
 {
   public:
-    typedef CryptoDCInstance Base;
+    using Base = CryptoDCInstance;
 
     CryptoCHM(
         SSLLib::Ctx libctx_arg,
@@ -126,7 +126,7 @@ template <typename CRYPTO_API>
 class CryptoContextCHM : public CryptoDCContext
 {
   public:
-    typedef RCPtr<CryptoContextCHM> Ptr;
+    using Ptr = RCPtr<CryptoContextCHM>;
 
     CryptoContextCHM(
         SSLLib::Ctx libctx_arg,

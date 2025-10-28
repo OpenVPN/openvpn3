@@ -25,7 +25,7 @@ namespace openvpn {
 
 struct PushOptionsBase : public RC<thread_unsafe_refcount>
 {
-    typedef RCPtr<PushOptionsBase> Ptr;
+    using Ptr = RCPtr<PushOptionsBase>;
 
     OptionList merge;
     OptionList multi;
@@ -35,7 +35,7 @@ struct PushOptionsBase : public RC<thread_unsafe_refcount>
 // Used by OptionListContinuation::finalize() to merge static and pushed options
 struct PushOptionsMerger : public RC<thread_unsafe_refcount>
 {
-    typedef RCPtr<PushOptionsMerger> Ptr;
+    using Ptr = RCPtr<PushOptionsMerger>;
     virtual void merge(OptionList &pushed, const OptionList &config) const = 0;
 };
 

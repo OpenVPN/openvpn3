@@ -32,7 +32,7 @@ class ClientLifeCycle : public RC<thread_unsafe_refcount>
         virtual void cln_reconnect(int seconds) = 0;
     };
 
-    typedef RCPtr<ClientLifeCycle> Ptr;
+    using Ptr = RCPtr<ClientLifeCycle>;
 
     virtual bool network_available() = 0;
 

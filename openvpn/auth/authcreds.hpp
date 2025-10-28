@@ -28,7 +28,7 @@ namespace openvpn {
 class AuthCreds : public RC<thread_unsafe_refcount>
 {
   public:
-    typedef RCPtr<AuthCreds> Ptr;
+    using Ptr = RCPtr<AuthCreds>;
 
     AuthCreds(std::string &&username_arg,
               SafeString &&password_arg,

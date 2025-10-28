@@ -68,7 +68,7 @@ TEST(buffer, const_buffer_ref_2)
 // test ConstBufferType with an explicitly const type
 TEST(buffer, my_const_buffer_1)
 {
-    typedef ConstBufferType<const char> MyConstBuffer;
+    using MyConstBuffer = ConstBufferType<const char>;
     static const char hello[] = "hello world";
     MyConstBuffer cbuf(hello, sizeof(hello) - 1, true);
     EXPECT_EQ(cbuf.size(), 11U);

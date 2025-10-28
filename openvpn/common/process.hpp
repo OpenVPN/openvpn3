@@ -138,7 +138,7 @@ inline int system_cmd(const std::string &cmd,
 
 struct Command : public Action
 {
-    typedef RCPtr<Command> Ptr;
+    using Ptr = RCPtr<Command>;
 
     Command()
     {

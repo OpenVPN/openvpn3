@@ -31,7 +31,7 @@ constexpr std::uint32_t INVALID_ADAPTER_INDEX = static_cast<std::uint32_t>(-1);
 // Base class for objects that implement a client tun interface.
 struct TunClient : public virtual RC<thread_unsafe_refcount>
 {
-    typedef RCPtr<TunClient> Ptr;
+    using Ptr = RCPtr<TunClient>;
 
     virtual void tun_start(const OptionList &, TransportClient &, CryptoDCSettings &) = 0;
     virtual void stop() = 0;
@@ -99,7 +99,7 @@ struct TunClientParent
 // Factory for tun interface objects.
 struct TunClientFactory : public virtual RC<thread_unsafe_refcount>
 {
-    typedef RCPtr<TunClientFactory> Ptr;
+    using Ptr = RCPtr<TunClientFactory>;
 
     virtual TunClient::Ptr new_tun_client_obj(openvpn_io::io_context &io_context, TunClientParent &parent, TransportClient *transcli) = 0;
 

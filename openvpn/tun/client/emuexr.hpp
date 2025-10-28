@@ -21,7 +21,7 @@
 namespace openvpn {
 struct EmulateExcludeRoute : public RC<thread_unsafe_refcount>
 {
-    typedef RCPtr<EmulateExcludeRoute> Ptr;
+    using Ptr = RCPtr<EmulateExcludeRoute>;
 
     virtual void add_route(const bool add, const IP::Addr &addr, const int prefix_len) = 0;
     virtual bool enabled(const IPVerFlags &ipv) const = 0;
@@ -31,7 +31,7 @@ struct EmulateExcludeRoute : public RC<thread_unsafe_refcount>
 
 struct EmulateExcludeRouteFactory : public RC<thread_unsafe_refcount>
 {
-    typedef RCPtr<EmulateExcludeRouteFactory> Ptr;
+    using Ptr = RCPtr<EmulateExcludeRouteFactory>;
 
     virtual EmulateExcludeRoute::Ptr new_obj() const = 0;
 };

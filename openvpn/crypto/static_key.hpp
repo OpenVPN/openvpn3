@@ -30,7 +30,7 @@ namespace openvpn {
 class StaticKey
 {
     friend class OpenVPNStaticKey;
-    typedef BufferAllocated key_t;
+    using key_t = BufferAllocated;
 
   public:
     //! Default do-nothing constructor.
@@ -89,7 +89,7 @@ class StaticKey
 
 class OpenVPNStaticKey
 {
-    typedef StaticKey::key_t key_t;
+    using key_t = StaticKey::key_t;
 
   public:
     enum

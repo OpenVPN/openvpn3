@@ -35,7 +35,7 @@ class Compress : public RC<thread_unsafe_refcount>,
                  public logging::LoggingMixin<OPENVPN_DEBUG_COMPRESS, logging::LOG_LEVEL_TRACE, Compress>
 {
   public:
-    typedef RCPtr<Compress> Ptr;
+    using Ptr = RCPtr<Compress>;
 
     // Compressor name
     virtual const char *name() const = 0;

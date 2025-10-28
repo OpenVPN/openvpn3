@@ -156,7 +156,7 @@ class X509
 class X509List : public std::vector<X509>
 {
   public:
-    typedef X509 Item;
+    using Item = X509;
 
     bool defined() const
     {

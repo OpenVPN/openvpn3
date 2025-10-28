@@ -56,7 +56,7 @@ struct AddrPort
 
 struct PeerAddr : public RCCopyable<thread_unsafe_refcount>
 {
-    typedef RCPtr<PeerAddr> Ptr;
+    using Ptr = RCPtr<PeerAddr>;
 
     PeerAddr()
         : tcp(false)

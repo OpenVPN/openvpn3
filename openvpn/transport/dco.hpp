@@ -34,7 +34,7 @@
 namespace openvpn {
 struct DCO : public virtual RC<thread_unsafe_refcount>
 {
-    typedef RCPtr<DCO> Ptr;
+    using Ptr = RCPtr<DCO>;
 
     struct TransportConfig
     {

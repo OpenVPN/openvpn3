@@ -178,7 +178,7 @@ class PoolType
     }
 };
 
-typedef PoolType<IP::Addr> Pool;
+using Pool = PoolType<IP::Addr>;
 } // namespace openvpn::IP
 
 #endif

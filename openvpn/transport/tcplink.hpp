@@ -41,16 +41,15 @@ class TCPLink : public LinkCommon<Protocol,
                                   ReadHandler,
                                   RAW_MODE_ONLY>
 {
-    typedef std::deque<BufferPtr> Queue;
+    using Queue = std::deque<BufferPtr>;
 
   public:
-    typedef LinkCommon<Protocol,
-                       ReadHandler,
-                       RAW_MODE_ONLY>
-        Base;
-    typedef RCPtr<TCPLink> Ptr;
+    using Base = LinkCommon<Protocol,
+                            ReadHandler,
+                            RAW_MODE_ONLY>;
+    using Ptr = RCPtr<TCPLink>;
 
-    typedef Protocol protocol;
+    using protocol = Protocol;
 
     friend Base;
 

@@ -29,7 +29,7 @@ void testcase(PIDRecv &pr,
 
 void do_packet_id_recv_test_short_ids(bool usewide)
 {
-    typedef PacketIDDataReceiveType<3, 5> PIDRecv;
+    using PIDRecv = PacketIDDataReceiveType<3, 5>;
     SessionStats::Ptr stats(new SessionStats());
     PIDRecv pr;
     pr.init("test", 0, usewide);
@@ -62,7 +62,7 @@ void do_packet_id_recv_test_short_ids(bool usewide)
 
 TEST(misc, do_packet_id_recv_test_long_ids)
 {
-    typedef PacketIDDataReceiveType<3, 5> PIDRecv;
+    using PIDRecv = PacketIDDataReceiveType<3, 5>;
     PIDRecv pr;
     SessionStats::Ptr stats{new SessionStats()};
     pr.init("test", 0, true);
@@ -98,7 +98,7 @@ void perfiter(const long n,
               const long iter_per_step_pre,
               long &count)
 {
-    typedef PacketIDDataReceiveType<ORDER, EXPIRE> PIDRecv;
+    using PIDRecv = PacketIDDataReceiveType<ORDER, EXPIRE>;
 
     const long iter_per_step = iter_per_step_pre * step;
     // OPENVPN_LOG("ITER order=" << ORDER << " n=" << n << " range=" << range << " step=" << step << " iter_per_step="
@@ -146,7 +146,7 @@ void perfiter(const long n,
 template <unsigned int ORDER, unsigned int EXPIRE>
 void perf(long &count)
 {
-    typedef PacketIDDataReceiveType<ORDER, EXPIRE> PIDRecv;
+    using PIDRecv = PacketIDDataReceiveType<ORDER, EXPIRE>;
 
     perfiter<ORDER, EXPIRE>(20000, PIDRecv::REPLAY_WINDOW_SIZE * 3, 1, 10, count);
     perfiter<ORDER, EXPIRE>(20000, PIDRecv::REPLAY_WINDOW_SIZE * 3, PIDRecv::REPLAY_WINDOW_SIZE / 2, 10, count);

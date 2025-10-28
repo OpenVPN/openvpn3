@@ -17,7 +17,7 @@ namespace {
 struct Base : public RC<thread_unsafe_refcount>
 {
   public:
-    typedef RCPtr<Base> Ptr;
+    using Ptr = RCPtr<Base>;
 
     virtual std::string to_string() const = 0;
 
@@ -105,7 +105,7 @@ static Vec create_vec()
 // simple test of self()
 TEST(typeindex, test)
 {
-    typedef Wrapper<std::string> StringWrap;
+    using StringWrap = Wrapper<std::string>;
 
     const Vec vec = create_vec();
 
@@ -126,7 +126,7 @@ TEST(typeindex, test)
 // test performance of self() as alternative to dynamic_cast
 TEST(typeindex, perf_test_fast)
 {
-    typedef Wrapper<std::string> StringWrap;
+    using StringWrap = Wrapper<std::string>;
 
     const size_t N = 100000000;
 
@@ -149,7 +149,7 @@ TEST(typeindex, perf_test_fast)
 // as a control, test performance of dynamic_cast
 TEST(typeindex, perf_test_dynamic)
 {
-    typedef Wrapper<std::string> StringWrap;
+    using StringWrap = Wrapper<std::string>;
 
     const size_t N = 100000000;
 

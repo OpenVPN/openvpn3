@@ -12,7 +12,7 @@
 namespace openvpn::TCPTransport {
 struct PacketFrom
 {
-    typedef std::unique_ptr<PacketFrom> SPtr;
+    using SPtr = std::unique_ptr<PacketFrom>;
     BufferAllocated buf;
 };
 
@@ -24,7 +24,7 @@ class LinkBase : public RC<thread_unsafe_refcount>
     virtual void from_app_send_buffer(BufferPtr &buf) = 0;
 
   public:
-    typedef RCPtr<LinkBase> Ptr;
+    using Ptr = RCPtr<LinkBase>;
 
     virtual bool send_queue_empty() const = 0;
     virtual size_t send_queue_size() const = 0;

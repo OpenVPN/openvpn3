@@ -31,7 +31,7 @@ namespace openvpn::TCPTransport {
 class ClientConfig : public TransportClientFactory
 {
   public:
-    typedef RCPtr<ClientConfig> Ptr;
+    using Ptr = RCPtr<ClientConfig>;
 
     RemoteList::Ptr remote_list;
     size_t free_list_max_size;
@@ -72,9 +72,9 @@ class ClientConfig : public TransportClientFactory
 
 class Client : public TransportClient, AsyncResolvableTCP
 {
-    typedef RCPtr<Client> Ptr;
+    using Ptr = RCPtr<Client>;
 
-    typedef TCPLink<openvpn_io::ip::tcp, Client *, false> LinkImpl;
+    using LinkImpl = TCPLink<openvpn_io::ip::tcp, Client *, false>;
 #ifdef OPENVPN_TLS_LINK
     typedef TLSLink<openvpn_io::ip::tcp, Client *, false> LinkImplTLS;
 #endif

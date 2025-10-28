@@ -54,7 +54,7 @@ class RemoteList : public RC<thread_unsafe_refcount>
     // associated with a "remote" item.
     struct ResolvedAddr : public RC<thread_unsafe_refcount>
     {
-        typedef RCPtr<ResolvedAddr> Ptr;
+        using Ptr = RCPtr<ResolvedAddr>;
         IP::Addr addr;
 
         std::string to_string() const
@@ -66,7 +66,7 @@ class RemoteList : public RC<thread_unsafe_refcount>
     // The IP address list associated with a single "remote" item.
     struct ResolvedAddrList : public std::vector<ResolvedAddr::Ptr>, public RC<thread_unsafe_refcount>
     {
-        typedef RCPtr<ResolvedAddrList> Ptr;
+        using Ptr = RCPtr<ResolvedAddrList>;
 
         std::string to_string() const
         {
@@ -93,14 +93,14 @@ class RemoteList : public RC<thread_unsafe_refcount>
 
     struct ConnBlock : public RC<thread_unsafe_refcount>
     {
-        typedef RCPtr<ConnBlock> Ptr;
+        using Ptr = RCPtr<ConnBlock>;
 
         virtual void new_item(const Item &item) = 0;
     };
 
     struct ConnBlockFactory
     {
-        typedef RCPtr<ConnBlockFactory> Ptr;
+        using Ptr = RCPtr<ConnBlockFactory>;
 
         virtual ~ConnBlockFactory() = default;
 
@@ -110,7 +110,7 @@ class RemoteList : public RC<thread_unsafe_refcount>
     // A single "remote" item
     struct Item : public RC<thread_unsafe_refcount>
     {
-        typedef RCPtr<Item> Ptr;
+        using Ptr = RCPtr<Item>;
 
         // "remote" item parameters from config file
         std::string server_host;
@@ -291,7 +291,7 @@ class RemoteList : public RC<thread_unsafe_refcount>
     // (option_error used during initial options processing).
     OPENVPN_EXCEPTION(remote_list_error);
 
-    typedef RCPtr<RemoteList> Ptr;
+    using Ptr = RCPtr<RemoteList>;
 
     // Helper class used to resolve all items in remote list.
     // This is useful in tun_persist mode, where it may be necessary
@@ -301,7 +301,7 @@ class RemoteList : public RC<thread_unsafe_refcount>
     class BulkResolve : public virtual RC<thread_unsafe_refcount>, protected AsyncResolvableTCP
     {
       public:
-        typedef RCPtr<BulkResolve> Ptr;
+        using Ptr = RCPtr<BulkResolve>;
 
         struct NotifyCallback
         {

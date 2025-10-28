@@ -41,7 +41,7 @@ std::string minimalConfig = certconfig + "\n"
 class ValidConfigs : public testing::TestWithParam<std::string>
 {
 };
-typedef std::pair<std::string, std::string> config_error;
+using config_error = std::pair<std::string, std::string>;
 class InvalidConfigs : public testing::TestWithParam<config_error>
 {
 };

@@ -26,17 +26,17 @@ namespace openvpn::TunLinux {
 
 struct PacketFrom
 {
-    typedef std::unique_ptr<PacketFrom> SPtr;
+    using SPtr = std::unique_ptr<PacketFrom>;
     BufferAllocated buf;
 };
 
 template <typename ReadHandler>
 class Tun : public TunIO<ReadHandler, PacketFrom, openvpn_io::posix::stream_descriptor>
 {
-    typedef TunIO<ReadHandler, PacketFrom, openvpn_io::posix::stream_descriptor> Base;
+    using Base = TunIO<ReadHandler, PacketFrom, openvpn_io::posix::stream_descriptor>;
 
   public:
-    typedef RCPtr<Tun> Ptr;
+    using Ptr = RCPtr<Tun>;
 
     Tun(openvpn_io::io_context &io_context,
         ReadHandler read_handler_arg,
@@ -58,12 +58,12 @@ class Tun : public TunIO<ReadHandler, PacketFrom, openvpn_io::posix::stream_desc
     }
 };
 
-typedef TunPersistTemplate<ScopedFD> TunPersist;
+using TunPersist = TunPersistTemplate<ScopedFD>;
 
 class ClientConfig : public TunClientFactory
 {
   public:
-    typedef RCPtr<ClientConfig> Ptr;
+    using Ptr = RCPtr<ClientConfig>;
 
     std::string dev_name;
     int txqueuelen = 200;
@@ -128,7 +128,7 @@ class Client : public TunClient
     friend class ClientConfig;                                                      // calls constructor
     friend class TunIO<Client *, PacketFrom, openvpn_io::posix::stream_descriptor>; // calls tun_read_handler
 
-    typedef Tun<Client *> TunImpl;
+    using TunImpl = Tun<Client *>;
 
   public:
     void tun_start(const OptionList &opt, TransportClient &transcli, CryptoDCSettings &) override

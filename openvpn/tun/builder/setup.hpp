@@ -31,14 +31,14 @@ struct Config
 
 struct Base : public DestructorBase
 {
-    typedef RCPtr<Base> Ptr;
+    using Ptr = RCPtr<Base>;
 
     virtual int establish(const TunBuilderCapture &pull, Config *config, Stop *stop, std::ostream &os) = 0;
 };
 
 struct Factory : public RC<thread_unsafe_refcount>
 {
-    typedef RCPtr<Factory> Ptr;
+    using Ptr = RCPtr<Factory>;
 
     virtual Base::Ptr new_setup_obj() = 0;
 };

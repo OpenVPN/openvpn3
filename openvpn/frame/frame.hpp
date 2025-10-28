@@ -25,7 +25,7 @@ namespace openvpn {
 class Frame : public RC<thread_unsafe_refcount>
 {
   public:
-    typedef RCPtr<Frame> Ptr;
+    using Ptr = RCPtr<Frame>;
 
     // Frame context types -- we maintain a Context object for each context type
     enum

@@ -17,11 +17,11 @@
 
 namespace openvpn {
 #if defined(_MSC_VER) && (defined(_M_X64) || defined(_M_ARM64))
-typedef long long olong;
-typedef unsigned long long oulong;
+using olong = long long;
+using oulong = unsigned long long;
 #else
-typedef long olong;
-typedef unsigned long oulong;
+using olong = long;
+using oulong = unsigned long;
 #endif
 } // namespace openvpn
 

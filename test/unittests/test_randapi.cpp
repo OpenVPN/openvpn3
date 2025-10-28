@@ -11,7 +11,7 @@ class IntegralMin : public WeakRandomAPI
   public:
     OPENVPN_EXCEPTION(s_min_error);
 
-    typedef RCPtr<IntegralMin> Ptr;
+    using Ptr = RCPtr<IntegralMin>;
 
     // Random algorithm name
     std::string name() const override

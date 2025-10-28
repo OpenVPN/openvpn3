@@ -228,7 +228,7 @@ template <typename CRYPTO_API>
 class CryptoContext : public CryptoDCContext
 {
   public:
-    typedef RCPtr<CryptoContext> Ptr;
+    using Ptr = RCPtr<CryptoContext>;
 
     CryptoContext(SSLLib::Ctx libctx_arg,
                   CryptoDCSettingsData dc_settings_data,

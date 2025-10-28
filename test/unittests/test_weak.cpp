@@ -62,8 +62,8 @@ template <typename PARENT>
 class RefType : public RCWeak<thread_unsafe_refcount>
 {
   public:
-    typedef RCPtr<RefType> Ptr;
-    typedef RCWeakPtr<RefType> WPtr;
+    using Ptr = RCPtr<RefType>;
+    using WPtr = RCWeakPtr<RefType>;
 
     RefType(std::string name,
             typename PARENT::Ptr parent)
@@ -100,9 +100,9 @@ class RefType : public RCWeak<thread_unsafe_refcount>
 class Object : public RCWeak<thread_unsafe_refcount>
 {
   public:
-    typedef RCPtr<Object> Ptr;
-    typedef RCWeakPtr<Object> WPtr;
-    typedef RefType<Object> Ref;
+    using Ptr = RCPtr<Object>;
+    using WPtr = RCWeakPtr<Object>;
+    using Ref = RefType<Object>;
 
     std::string name() const
     {
@@ -126,7 +126,7 @@ class Object : public RCWeak<thread_unsafe_refcount>
     StaticCounter sc_;
 };
 
-typedef Object::Ref Ref;
+using Ref = Object::Ref;
 } // namespace A
 
 // Strategy B -- Ref declared inside Object, so Ref can make use
@@ -136,14 +136,14 @@ namespace B {
 class Object : public RCWeak<thread_unsafe_refcount>
 {
   public:
-    typedef RCPtr<Object> Ptr;
-    typedef RCWeakPtr<Object> WPtr;
+    using Ptr = RCPtr<Object>;
+    using WPtr = RCWeakPtr<Object>;
 
     class Ref : public RCWeak<thread_unsafe_refcount>
     {
       public:
-        typedef RCPtr<Ref> Ptr;
-        typedef RCWeakPtr<Ref> WPtr;
+        using Ptr = RCPtr<Ref>;
+        using WPtr = RCWeakPtr<Ref>;
 
         Ref(std::string name,
             typename Object::Ptr parent)
@@ -199,7 +199,7 @@ class Object : public RCWeak<thread_unsafe_refcount>
     StaticCounter sc_;
 };
 
-typedef Object::Ref Ref;
+using Ref = Object::Ref;
 } // namespace B
 
 /// @endcond

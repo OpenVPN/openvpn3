@@ -54,7 +54,7 @@ TEST(IPAddr, routeSet)
 template <typename LIST>
 void test_split(const LIST &rtlist, const std::string &expected)
 {
-    typedef typename LIST::value_type RT;
+    using RT = typename LIST::value_type;
     std::stringstream out;
     for (const auto &r : rtlist)
     {

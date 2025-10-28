@@ -50,7 +50,7 @@ class Addr
         V4_MASK = (1 << 0),
         V6_MASK = (1 << 1)
     };
-    typedef unsigned int VersionMask;
+    using VersionMask = unsigned int;
 
     enum VersionSize
     {

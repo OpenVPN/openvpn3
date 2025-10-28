@@ -171,7 +171,7 @@ class Crypto : public CryptoDCInstance
     };
 
   public:
-    typedef CryptoDCInstance Base;
+    using Base = CryptoDCInstance;
 
     Crypto(SSLLib::Ctx libctx_arg,
            CryptoDCSettingsData dc_settings_data,
@@ -356,7 +356,7 @@ template <typename CRYPTO_API>
 class CryptoContext : public CryptoDCContext
 {
   public:
-    typedef RCPtr<CryptoContext> Ptr;
+    using Ptr = RCPtr<CryptoContext>;
 
     CryptoContext(SSLLib::Ctx libctx_arg,
                   CryptoDCSettingsData dc_settings_data,

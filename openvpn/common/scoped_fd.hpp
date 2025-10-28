@@ -25,7 +25,7 @@ class ScopedFD
     ScopedFD &operator=(const ScopedFD &) = delete;
 
   public:
-    typedef int base_type;
+    using base_type = int;
 
     ScopedFD()
         : fd(undefined())

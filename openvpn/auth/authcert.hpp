@@ -42,7 +42,7 @@ class AuthCert : public RC<thread_unsafe_refcount>
     friend class OpenSSLContext;
     friend class MbedTLSContext;
 
-    typedef RCPtr<AuthCert> Ptr;
+    using Ptr = RCPtr<AuthCert>;
 
     class Fail
     {

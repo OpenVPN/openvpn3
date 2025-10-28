@@ -23,7 +23,7 @@ namespace openvpn {
 class CommonNameReject
 {
   public:
-    typedef std::unique_ptr<CommonNameReject> UPtr;
+    using UPtr = std::unique_ptr<CommonNameReject>;
 
     /**
      * Should a leaf certificate having Common Name cn

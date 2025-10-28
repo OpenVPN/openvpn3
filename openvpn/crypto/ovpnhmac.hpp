@@ -139,7 +139,7 @@ class OvpnHMAC
 class OvpnHMACInstance : public RC<thread_unsafe_refcount>
 {
   public:
-    typedef RCPtr<OvpnHMACInstance> Ptr;
+    using Ptr = RCPtr<OvpnHMACInstance>;
 
     virtual void init(const StaticKey &key) = 0;
 
@@ -161,7 +161,7 @@ class OvpnHMACInstance : public RC<thread_unsafe_refcount>
 class OvpnHMACContext : public RC<thread_unsafe_refcount>
 {
   public:
-    typedef RCPtr<OvpnHMACContext> Ptr;
+    using Ptr = RCPtr<OvpnHMACContext>;
 
     virtual size_t size() const = 0;
 
@@ -171,7 +171,7 @@ class OvpnHMACContext : public RC<thread_unsafe_refcount>
 class OvpnHMACFactory : public RC<thread_unsafe_refcount>
 {
   public:
-    typedef RCPtr<OvpnHMACFactory> Ptr;
+    using Ptr = RCPtr<OvpnHMACFactory>;
 
     virtual OvpnHMACContext::Ptr new_obj(const CryptoAlgs::Type digest_type) = 0;
 };

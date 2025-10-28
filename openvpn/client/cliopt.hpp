@@ -144,9 +144,9 @@ struct ClientConfigParsed : public ClientAPI::ConfigCommon
 class ClientOptions : public RC<thread_unsafe_refcount>
 {
   public:
-    typedef RCPtr<ClientOptions> Ptr;
+    using Ptr = RCPtr<ClientOptions>;
 
-    typedef ClientProto::Session Client;
+    using Client = ClientProto::Session;
 
     struct Config
     {

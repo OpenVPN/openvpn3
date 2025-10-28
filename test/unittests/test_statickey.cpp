@@ -51,7 +51,7 @@ TEST(statickey, key2)
 class StaticSinkBase : public RC<thread_unsafe_refcount>
 {
   public:
-    typedef RCPtr<StaticSinkBase> Ptr;
+    using Ptr = RCPtr<StaticSinkBase>;
 
     virtual void init(StaticKey &&key) = 0;
     virtual std::string dump() = 0;

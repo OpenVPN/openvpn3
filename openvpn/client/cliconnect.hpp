@@ -64,8 +64,8 @@ class ClientConnect : ClientProto::NotifyCallback,
                       public RC<thread_unsafe_refcount>
 {
   public:
-    typedef RCPtr<ClientConnect> Ptr;
-    typedef ClientOptions::Client Client;
+    using Ptr = RCPtr<ClientConnect>;
+    using Client = ClientOptions::Client;
 
     OPENVPN_SIMPLE_EXCEPTION(client_connect_unhandled_exception);
 

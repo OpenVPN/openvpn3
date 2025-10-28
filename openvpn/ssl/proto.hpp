@@ -336,7 +336,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
     class ProtoConfig : public RCCopyable<thread_unsafe_refcount>
     {
       public:
-        typedef RCPtr<ProtoConfig> Ptr;
+        using Ptr = RCPtr<ProtoConfig>;
 
         // master SSL context factory
         SSLFactoryAPI::Ptr ssl_factory;
@@ -1682,10 +1682,10 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
     // ProtoStackBase uses CRTP-based static polymorphism for method callbacks.
     class KeyContext : ProtoStackBase<Packet, KeyContext>, public RC<thread_unsafe_refcount>
     {
-        typedef ProtoStackBase<Packet, KeyContext> Base;
+        using Base = ProtoStackBase<Packet, KeyContext>;
         friend Base;
-        typedef Base::ReliableSend ReliableSend;
-        typedef Base::ReliableRecv ReliableRecv;
+        using ReliableSend = Base::ReliableSend;
+        using ReliableRecv = Base::ReliableRecv;
 
         // ProtoStackBase protected vars
         using Base::now;
@@ -1707,7 +1707,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
         };
 
       public:
-        typedef RCPtr<KeyContext> Ptr;
+        using Ptr = RCPtr<KeyContext>;
 
         // ProtoStackBase member functions
         using Base::export_key_material;
@@ -3739,7 +3739,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
     class TLSWrapPreValidate : public RC<thread_unsafe_refcount>
     {
       public:
-        typedef RCPtr<TLSWrapPreValidate> Ptr;
+        using Ptr = RCPtr<TLSWrapPreValidate>;
 
         virtual bool validate(const BufferAllocated &net_buf) = 0;
     };

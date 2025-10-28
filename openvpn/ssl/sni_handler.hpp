@@ -23,7 +23,7 @@ namespace openvpn::SNI {
 class HandlerBase
 {
   public:
-    typedef std::unique_ptr<HandlerBase> UPtr;
+    using UPtr = std::unique_ptr<HandlerBase>;
 
     // Return a new SSLFactoryAPI for this SNI name.
     // Implementation may also set sni_metadata.

@@ -33,7 +33,7 @@ class BaseSocketProtect
 #ifdef OPENVPN_PLATFORM_UWP
 typedef UWPSocketProtect SocketProtect;
 #else
-typedef BaseSocketProtect SocketProtect;
+using SocketProtect = BaseSocketProtect;
 #endif
 } // namespace openvpn
 

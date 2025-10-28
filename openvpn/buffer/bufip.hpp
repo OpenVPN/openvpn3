@@ -22,7 +22,7 @@ namespace openvpn::BufferFormat {
 
 static inline void ipv4(Buffer &buf, const std::uint32_t addr) // addr is big-endian
 {
-    typedef BufferFormat::UnsignedDecimal<std::uint32_t> Decimal;
+    using Decimal = BufferFormat::UnsignedDecimal<std::uint32_t>;
 
     Decimal::write(buf, addr & 0xff);
     buf.push_back('.');
@@ -35,7 +35,7 @@ static inline void ipv4(Buffer &buf, const std::uint32_t addr) // addr is big-en
 
 static inline void ipv6(Buffer &buf, const void *addr)
 {
-    typedef BufferFormat::Hex<std::uint16_t> Hex;
+    using Hex = BufferFormat::Hex<std::uint16_t>;
 
     // address the IPv6 address as an array of 8 hextets
     const std::uint16_t *a = static_cast<const std::uint16_t *>(addr);

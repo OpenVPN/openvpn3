@@ -65,7 +65,7 @@ Frame::Ptr frame_init(const size_t payload)
 class MySessionStats : public SessionStats
 {
   public:
-    typedef RCPtr<MySessionStats> Ptr;
+    using Ptr = RCPtr<MySessionStats>;
 
     MySessionStats()
     {

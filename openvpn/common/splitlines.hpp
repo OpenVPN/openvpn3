@@ -178,7 +178,7 @@ class SplitLinesType
     bool overflow = false;
 };
 
-typedef SplitLinesType<std::string> SplitLines;
+using SplitLines = SplitLinesType<std::string>;
 } // namespace openvpn
 
 #endif

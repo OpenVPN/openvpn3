@@ -229,7 +229,7 @@ class TLSPRF
 class TLSPRFInstance : public RC<thread_unsafe_refcount>
 {
   public:
-    typedef RCPtr<TLSPRFInstance> Ptr;
+    using Ptr = RCPtr<TLSPRFInstance>;
 
     virtual void self_randomize(StrongRandomAPI &rng) = 0;
     virtual void self_write(Buffer &buf) = 0;
@@ -247,7 +247,7 @@ class TLSPRFInstance : public RC<thread_unsafe_refcount>
 class TLSPRFFactory : public RC<thread_unsafe_refcount>
 {
   public:
-    typedef RCPtr<TLSPRFFactory> Ptr;
+    using Ptr = RCPtr<TLSPRFFactory>;
 
     virtual TLSPRFInstance::Ptr new_obj(const bool self_is_server) = 0;
 };

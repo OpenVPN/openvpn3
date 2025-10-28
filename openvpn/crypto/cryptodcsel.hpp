@@ -32,7 +32,7 @@ template <typename CRYPTO_API>
 class CryptoDCSelect : public CryptoDCFactory
 {
   public:
-    typedef RCPtr<CryptoDCSelect> Ptr;
+    using Ptr = RCPtr<CryptoDCSelect>;
 
     CryptoDCSelect(SSLLib::Ctx libctx_arg,
                    const Frame::Ptr &frame_arg,

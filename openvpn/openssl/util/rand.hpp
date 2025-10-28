@@ -27,7 +27,7 @@ class OpenSSLRandom : public StrongRandomAPI
   public:
     OPENVPN_EXCEPTION(rand_error_openssl);
 
-    typedef RCPtr<OpenSSLRandom> Ptr;
+    using Ptr = RCPtr<OpenSSLRandom>;
 
     std::string name() const override
     {

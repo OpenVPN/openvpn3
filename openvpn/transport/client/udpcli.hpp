@@ -31,7 +31,7 @@ namespace openvpn::UDPTransport {
 class ClientConfig : public TransportClientFactory
 {
   public:
-    typedef RCPtr<ClientConfig> Ptr;
+    using Ptr = RCPtr<ClientConfig>;
 
     RemoteList::Ptr remote_list;
     bool server_addr_float;
@@ -71,12 +71,12 @@ class ClientConfig : public TransportClientFactory
 
 class Client : public TransportClient, AsyncResolvableUDP
 {
-    typedef RCPtr<Client> Ptr;
+    using Ptr = RCPtr<Client>;
 
     friend class ClientConfig;      // calls constructor
     friend class UDPLink<Client *>; // calls udp_read_handler
 
-    typedef UDPLink<Client *> LinkImpl;
+    using LinkImpl = UDPLink<Client *>;
 
   public:
     void transport_start() override

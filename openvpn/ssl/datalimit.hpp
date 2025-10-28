@@ -22,7 +22,7 @@ namespace openvpn {
 class DataLimit
 {
   public:
-    typedef unsigned int size_type;
+    using size_type = unsigned int;
 
     enum Mode
     {

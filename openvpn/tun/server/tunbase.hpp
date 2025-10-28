@@ -25,7 +25,7 @@
 
 namespace openvpn::TunClientInstance {
 
-typedef Function<void(int fd)> PostCloseFunc;
+using PostCloseFunc = Function<void(int fd)>;
 
 // A native reference to a client instance
 struct NativeHandle
@@ -60,7 +60,7 @@ struct NativeHandle
 // object will inherit from multiple receivers.
 struct Recv : public virtual RC<thread_unsafe_refcount>
 {
-    typedef RCPtr<Recv> Ptr;
+    using Ptr = RCPtr<Recv>;
 
     // virtual bool defined() const = 0;
     virtual void stop() = 0;
@@ -80,7 +80,7 @@ struct Recv : public virtual RC<thread_unsafe_refcount>
 // Each client instance uses this class to send data to the tun layer.
 struct Send : public virtual RC<thread_unsafe_refcount>
 {
-    typedef RCPtr<Send> Ptr;
+    using Ptr = RCPtr<Send>;
 
     // virtual bool defined() const = 0;
     virtual void stop() = 0;
@@ -100,7 +100,7 @@ struct Send : public virtual RC<thread_unsafe_refcount>
 // Factory for server tun object.
 struct Factory : public RC<thread_unsafe_refcount>
 {
-    typedef RCPtr<Factory> Ptr;
+    using Ptr = RCPtr<Factory>;
 
     virtual Send::Ptr new_tun_obj(Recv *parent) = 0;
 };

@@ -28,7 +28,7 @@
 namespace openvpn {
 class ClientHalt
 {
-    typedef std::vector<std::string> StringList;
+    using StringList = std::vector<std::string>;
 
   public:
     OPENVPN_SIMPLE_EXCEPTION(client_halt_error);

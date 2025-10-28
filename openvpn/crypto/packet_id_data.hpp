@@ -49,7 +49,7 @@ namespace openvpn {
  */
 struct PacketIDData
 {
-    typedef std::uint64_t data_id_t;
+    using data_id_t = std::uint64_t;
 
     /* the part of the packet id that represents the PID, the first 16 bits
      * are used by the Epoch*/
@@ -495,6 +495,6 @@ class PacketIDDataReceiveType
 
 // Our standard packet ID window with order=8 (window size=2048).
 // and recv expire=30 seconds.
-typedef PacketIDDataReceiveType<8, 30> PacketIDDataReceive;
+using PacketIDDataReceive = PacketIDDataReceiveType<8, 30>;
 
 } // namespace openvpn

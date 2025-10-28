@@ -221,9 +221,9 @@ typedef MbedTLSCryptoAPI ServerCryptoAPI;
 typedef MbedTLSContext ServerSSLAPI;
 typedef MbedTLSRandom ServerRandomAPI;
 #elif defined(USE_OPENSSL_SERVER)
-typedef OpenSSLCryptoAPI ServerCryptoAPI;
-typedef OpenSSLContext ServerSSLAPI;
-typedef OpenSSLRandom ServerRandomAPI;
+using ServerCryptoAPI = OpenSSLCryptoAPI;
+using ServerSSLAPI = OpenSSLContext;
+using ServerRandomAPI = OpenSSLRandom;
 #else
 #error No server SSL implementation defined
 #endif
@@ -242,9 +242,9 @@ typedef AppleCryptoAPI ClientCryptoAPI;
 typedef AppleSSLContext ClientSSLAPI;
 typedef AppleRandom ClientRandomAPI;
 #elif defined(USE_OPENSSL)
-typedef OpenSSLCryptoAPI ClientCryptoAPI;
-typedef OpenSSLContext ClientSSLAPI;
-typedef OpenSSLRandom ClientRandomAPI;
+using ClientCryptoAPI = OpenSSLCryptoAPI;
+using ClientSSLAPI = OpenSSLContext;
+using ClientRandomAPI = OpenSSLRandom;
 #else
 #error No client SSL implementation defined
 #endif
@@ -576,7 +576,7 @@ class TestProto : public ProtoContextCallbackInterface
 
 class TestProtoClient : public TestProto
 {
-    typedef TestProto Base;
+    using Base = TestProto;
 
   public:
     TestProtoClient(const ProtoContext::ProtoConfig::Ptr &config,
@@ -817,7 +817,7 @@ class NoisyWire
 class MySessionStats : public SessionStats
 {
   public:
-    typedef RCPtr<MySessionStats> Ptr;
+    using Ptr = RCPtr<MySessionStats>;
 
     MySessionStats()
     {
@@ -893,7 +893,7 @@ static auto create_client_proto_context(ClientSSLAPI::Config::Ptr cc, Frame::Ptr
                                                     : read_text(TEST_KEYCERT_DIR + tls_crypt_v2_key_fn);
 
     // client ProtoContext config
-    typedef ProtoContext ClientProtoContext;
+    using ClientProtoContext = ProtoContext;
     ClientProtoContext::ProtoConfig::Ptr cp(new ClientProtoContext::ProtoConfig);
     cp->ssl_factory = cc->new_factory();
     CryptoAlgs::allow_default_dc_algs<ClientCryptoAPI>(cp->ssl_factory->libctx(), false, false);
@@ -1023,7 +1023,7 @@ int test(const int thread_num,
 #endif
 
         // server ProtoContext config
-        typedef ProtoContext ServerProtoContext;
+        using ServerProtoContext = ProtoContext;
         ServerProtoContext::ProtoConfig::Ptr sp(new ServerProtoContext::ProtoConfig);
         sp->ssl_factory = sc->new_factory();
         sp->dc.set_factory(new CryptoDCSelect<ServerCryptoAPI>(sp->ssl_factory->libctx(), frame, serv_stats, prng_serv));

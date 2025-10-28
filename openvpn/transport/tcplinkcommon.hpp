@@ -46,12 +46,12 @@ template <typename Protocol,
           bool RAW_MODE_ONLY>
 class LinkCommon : public LinkBase
 {
-    typedef std::deque<BufferPtr> Queue;
+    using Queue = std::deque<BufferPtr>;
 
   public:
-    typedef RCPtr<LinkCommon<Protocol, ReadHandler, RAW_MODE_ONLY>> Ptr;
-    typedef Protocol protocol;
-    typedef PacketStream<std::uint16_t> OpenVPNPacketStream;
+    using Ptr = RCPtr<LinkCommon<Protocol, ReadHandler, RAW_MODE_ONLY>>;
+    using protocol = Protocol;
+    using OpenVPNPacketStream = PacketStream<std::uint16_t>;
 
     // In raw mode, data is sent and received without any special encapsulation.
     // In non-raw mode, data is packetized by prepending a 16-bit length word

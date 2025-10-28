@@ -21,7 +21,7 @@ namespace openvpn::TunNull {
 class ClientConfig : public TunClientFactory
 {
   public:
-    typedef RCPtr<ClientConfig> Ptr;
+    using Ptr = RCPtr<ClientConfig>;
 
     Frame::Ptr frame;
     SessionStats::Ptr stats;

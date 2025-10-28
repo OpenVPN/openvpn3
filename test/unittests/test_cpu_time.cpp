@@ -68,7 +68,7 @@
     DEBUG_DUMP(msg, st, en, rt, chst, chen, chrt, md)
 
 
-typedef std::shared_ptr<std::thread> ThreadPtr;
+using ThreadPtr = std::shared_ptr<std::thread>;
 
 
 // For simplicty, keep the total thread runtime

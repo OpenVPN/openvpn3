@@ -102,7 +102,7 @@ OPENVPN_SIMPLE_EXCEPTION(app_expired);
 class MySessionStats : public SessionStats
 {
   public:
-    typedef RCPtr<MySessionStats> Ptr;
+    using Ptr = RCPtr<MySessionStats>;
 
     MySessionStats(OpenVPNClient *parent_arg)
         : parent(parent_arg)
@@ -181,7 +181,7 @@ class MySessionStats : public SessionStats
 class MyClientEvents : public ClientEvent::Queue
 {
   public:
-    typedef RCPtr<MyClientEvents> Ptr;
+    using Ptr = RCPtr<MyClientEvents>;
 
     MyClientEvents(OpenVPNClient *parent_arg)
         : parent(parent_arg)
