@@ -40,10 +40,7 @@ class Addr // NOTE: must be union-legal, so default constructor does not initial
     friend class IP::Addr;
 
   public:
-    enum
-    {
-        SIZE = 32
-    };
+    static constexpr unsigned int SIZE = 32;
 
     typedef std::uint32_t base_type;
     typedef std::int32_t signed_base_type;

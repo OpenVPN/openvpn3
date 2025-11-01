@@ -40,10 +40,7 @@ class Addr // NOTE: must be union-legal, so default constructor does not initial
     friend class IP::Addr;
 
   public:
-    enum
-    {
-        SIZE = 128
-    };
+    static constexpr unsigned int SIZE = 128;
 
     static constexpr int ip_version()
     {
