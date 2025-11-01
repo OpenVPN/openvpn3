@@ -127,17 +127,13 @@ class ChallengeResponse : public RC<thread_unsafe_refcount>
 
     std::string construct_dynamic_password(const std::string &response) const
     {
-        std::ostringstream os;
-        os << "CRV1::" << state_id << "::" << response;
-        return os.str();
+        return "CRV1::" + state_id + "::" + response;
     }
 
     static std::string construct_static_password(const std::string &password,
                                                  const std::string &response)
     {
-        std::ostringstream os;
-        os << "SCRV1:" << base64->encode(password) << ':' << base64->encode(response);
-        return os.str();
+        return "SCRV1:" + base64->encode(password) + ':' + base64->encode(response);
     }
 
     static void parse_static_cookie(const std::string &cookie,
