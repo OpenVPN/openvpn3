@@ -30,10 +30,10 @@ inline std::string render_options_sanitized(const OptionList &opt, const unsigne
         const Option &o = opt[i];
 #ifndef OPENVPN_SHOW_SESSION_TOKEN
         if (o.get_optional(0, 0) == "auth-token")
-            out << i << " [auth-token] ..." << std::endl;
+            out << i << " [auth-token] ...\n";
         else
 #endif
-            out << i << ' ' << o.render(render_flags) << std::endl;
+            out << i << ' ' << o.render(render_flags) << '\n';
     }
     return out.str();
 }

@@ -197,8 +197,8 @@ class Client : public TunClient
                     if (!po->mtu)
                         po->mtu = TUN_MTU_DEFAULT;
 
-                    OPENVPN_LOG("CAPTURED OPTIONS:" << std::endl
-                                                    << po->to_string());
+                    OPENVPN_LOG("CAPTURED OPTIONS:\n"
+                                << po->to_string());
 
                     // create new tun setup object
                     tun_setup = config->new_setup_obj();
@@ -224,8 +224,8 @@ class Client : public TunClient
                     state->iface_name = tsconf.iface_name;
                     state->tun_prefix = tsconf.tun_prefix;
                     if (tun_persist->persist_tun_state(ts, state))
-                        OPENVPN_LOG("TunPersist: saving tun context:" << std::endl
-                                                                      << tun_persist->options());
+                        OPENVPN_LOG("TunPersist: saving tun context:\n"
+                                    << tun_persist->options());
 
                     // enable tun_setup destructor
                     tun_persist->add_destructor(tun_setup);

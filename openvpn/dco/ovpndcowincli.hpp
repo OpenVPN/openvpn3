@@ -95,8 +95,8 @@ class OvpnDcoWinClient : public Client,
                                        opt,
                                        nullptr,
                                        false);
-            OPENVPN_LOG("CAPTURED OPTIONS:" << std::endl
-                                            << po->to_string());
+            OPENVPN_LOG("CAPTURED OPTIONS:\n"
+                        << po->to_string());
 
             tun_setup_->establish(*po, Win::module_name(), NULL, os, NULL);
             OPENVPN_LOG_STRING(os.str());
@@ -105,8 +105,8 @@ class OvpnDcoWinClient : public Client,
             if (tun_persist->persist_tun_state(handle_(),
                                                {state, tun_setup_->get_adapter_state()},
                                                is_tun_start))
-                OPENVPN_LOG("TunPersist: saving tun context:" << std::endl
-                                                              << tun_persist->options());
+                OPENVPN_LOG("TunPersist: saving tun context:\n"
+                            << tun_persist->options());
 
             state->vpn_interface_index = tun_setup_->vpn_interface_index();
 

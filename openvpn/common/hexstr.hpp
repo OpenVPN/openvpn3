@@ -267,7 +267,7 @@ inline std::string dump_hex(const unsigned char *data, size_t size)
         {
             if (i)
             {
-                os << "  " << chars << std::endl;
+                os << "  " << chars << '\n';
                 chars.clear();
             }
             os << std::setfill(' ') << std::setw(8) << i << ":";
@@ -280,7 +280,7 @@ inline std::string dump_hex(const unsigned char *data, size_t size)
             chars += '.';
     }
     if (i)
-        os << string::spaces(clamp_to_typerange<int>(2 + (((i - 1) & mask) ^ mask) * 3)) << chars << std::endl;
+        os << string::spaces(clamp_to_typerange<int>(2 + (((i - 1) & mask) ^ mask) * 3)) << chars << '\n';
     return os.str();
 }
 

@@ -44,10 +44,10 @@ struct Reply
     std::string to_string() const
     {
         std::ostringstream out;
-        out << "HTTP Reply" << std::endl;
-        out << "version=" << http_version_major << '/' << http_version_minor << std::endl;
-        out << "status_code=" << status_code << std::endl;
-        out << "status_text=" << status_text << std::endl;
+        out << "HTTP Reply\n";
+        out << "version=" << http_version_major << '/' << http_version_minor << '\n';
+        out << "status_code=" << status_code << '\n';
+        out << "status_text=" << status_text << '\n';
         out << headers.to_string();
         return out.str();
     }

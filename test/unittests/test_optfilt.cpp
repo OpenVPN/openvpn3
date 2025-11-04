@@ -66,13 +66,13 @@ TEST(PushedOptionsFilter, RouteNopullEnabled)
     std::string filter_output(testLog->stopCollecting());
 
     ASSERT_EQ(1U, dst.size())
-        << "Too few options have been filtered by --route-nopull" << std::endl
+        << "Too few options have been filtered by --route-nopull\n"
         << filter_output;
 
     dst.update_map();
     ASSERT_TRUE(dst.exists(extra_option))
-        << "The wrong options have been filtered by --route-nopull:" << std::endl
-        << "expected: " << extra_option << " got: " << dst[0].ref(0) << std::endl
+        << "The wrong options have been filtered by --route-nopull:\n"
+        << "expected: " << extra_option << " got: " << dst[0].ref(0) << '\n'
         << filter_output;
 }
 
@@ -92,7 +92,7 @@ TEST(PushedOptionsFilter, RouteNopullDisabled)
     std::string filter_output(testLog->stopCollecting());
 
     ASSERT_EQ(src.size(), dst.size())
-        << "Too many options have been filtered by --route-nopull" << std::endl
+        << "Too many options have been filtered by --route-nopull\n"
         << filter_output;
 }
 
@@ -113,7 +113,7 @@ TEST(PushedOptionsFilter, PullFilterAcceptAll)
     std::string filter_output(testLog->stopCollecting());
 
     ASSERT_EQ(src.size(), dst.size())
-        << "Not all options have been accepted by --pull-filter" << std::endl
+        << "Not all options have been accepted by --pull-filter\n"
         << filter_output;
 }
 
@@ -162,7 +162,7 @@ TEST(PushedOptionsFilter, PullFilterSingleQuote)
     std::string filter_output(testLog->stopCollecting());
 
     ASSERT_EQ(2U, dst.size())
-        << "Too many options have been accepted by --pull-filter" << std::endl
+        << "Too many options have been accepted by --pull-filter\n"
         << filter_output;
 }
 
@@ -192,7 +192,7 @@ TEST(PushedOptionsFilter, PullFilterIgnoreAll)
     std::string filter_output(testLog->stopCollecting());
 
     ASSERT_EQ(0U, dst.size())
-        << "Not all options have been ignored by --pull-filter" << std::endl
+        << "Not all options have been ignored by --pull-filter\n"
         << filter_output;
 }
 
@@ -233,7 +233,7 @@ TEST(PushedOptionsFilter, PullFilterAcceptWhitespace)
     std::string filter_output(testLog->stopCollecting());
 
     ASSERT_EQ(2U, dst.size())
-        << "Not all option3's have been accepted by --pull-filter" << std::endl
+        << "Not all option3's have been accepted by --pull-filter\n"
         << filter_output;
 }
 
@@ -257,12 +257,12 @@ TEST(PushedOptionsFilter, PullFilterIgnoreQuotedWhitespace)
     std::string filter_output(testLog->stopCollecting());
 
     ASSERT_EQ(1U, dst.size())
-        << "Too many options have been accepted by --pull-filter" << std::endl
+        << "Too many options have been accepted by --pull-filter\n"
         << filter_output;
 
     dst.update_map();
     ASSERT_EQ(dst[0].ref(1), "arg with space")
-        << "Too many options have been accepted by --pull-filter" << std::endl
+        << "Too many options have been accepted by --pull-filter\n"
         << filter_output;
 }
 
@@ -288,21 +288,21 @@ TEST(PushedOptionsFilter, PullFilterOverrideRouteNopull)
     std::string filter_output(testLog->stopCollecting());
 
     ASSERT_EQ(2U, dst.size())
-        << "Expected two route option to be accepted" << std::endl
+        << "Expected two route option to be accepted\n"
         << filter_output;
 
     dst.update_map();
     ASSERT_EQ(dst[0].ref(0), "route")
-        << dst[0].ref(0) << " instead of route option has been accepted" << std::endl
+        << dst[0].ref(0) << " instead of route option has been accepted\n"
         << filter_output;
     ASSERT_EQ(dst[1].ref(0), "route")
-        << dst[1].ref(0) << " instead of route option has been accepted" << std::endl
+        << dst[1].ref(0) << " instead of route option has been accepted\n"
         << filter_output;
     ASSERT_EQ(3U, dst[0].size())
-        << "The host route option has been accepted, expected network route" << std::endl
+        << "The host route option has been accepted, expected network route\n"
         << filter_output;
     ASSERT_EQ(3U, dst[1].size())
-        << "The host route option has been accepted, expected network route" << std::endl
+        << "The host route option has been accepted, expected network route\n"
         << filter_output;
 }
 

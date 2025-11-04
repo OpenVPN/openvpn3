@@ -56,7 +56,7 @@ class LogReopen : public LogSetup
         }
         catch (const std::exception &e)
         {
-            std::cerr << "LogReopen: " << e.what() << std::endl;
+            std::cerr << "LogReopen: " << e.what() << "\n";
         }
     }
 

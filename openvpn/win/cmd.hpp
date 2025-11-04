@@ -37,7 +37,7 @@ class WinCmd : public Action
 
     virtual void execute(std::ostream &os) override
     {
-        os << cmd << std::endl;
+        os << cmd << "\n";
         std::string out = Win::call(cmd);
         os << out;
     }

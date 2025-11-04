@@ -55,7 +55,7 @@ class MacDNSWatchdog : public RC<thread_unsafe_refcount>
 
         void execute(std::ostream &os) override
         {
-            os << to_string() << std::endl;
+            os << to_string() << "\n";
             if (parent)
                 parent->setdns(config, flags);
         }

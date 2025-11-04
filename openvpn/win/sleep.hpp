@@ -33,7 +33,7 @@ class WinSleep : public Action
 
     virtual void execute(std::ostream &os) override
     {
-        os << to_string() << std::endl;
+        os << to_string() << "\n";
         ::Sleep(dwMilliseconds);
     }
 

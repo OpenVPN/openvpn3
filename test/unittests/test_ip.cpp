@@ -37,13 +37,13 @@ TEST(IPAddr, icmp6csum)
 
     if (verbose)
     {
-        std::cout << "From : " << IPv6::Addr::from_in6_addr(&icmp->head.saddr).to_string() << std::endl;
-        std::cout << "To   : " << IPv6::Addr::from_in6_addr(&icmp->head.daddr).to_string() << std::endl;
+        std::cout << "From : " << IPv6::Addr::from_in6_addr(&icmp->head.saddr).to_string() << '\n';
+        std::cout << "To   : " << IPv6::Addr::from_in6_addr(&icmp->head.daddr).to_string() << '\n';
     }
     const std::uint16_t csum = Ping6::csum_icmp(icmp, len);
     if (verbose)
     {
-        std::cout << "Checksum: " << csum << std::endl;
+        std::cout << "Checksum: " << csum << '\n';
     }
     ASSERT_TRUE(csum == 0) << "checksum=" << csum << " but should be zero";
 }
@@ -74,7 +74,7 @@ TEST(IPAddr, pool)
         {
             if (pool.acquire_addr(addr))
             {
-                s << addr << " (" << pool.n_in_use() << ")" << std::endl;
+                s << addr << " (" << pool.n_in_use() << ")\n";
             }
             else
                 break;
@@ -163,7 +163,7 @@ void do_shift_tests(const std::vector<test_case> &test_vectors, bool leftshift)
         }
 
         if (memcmp(&cmp, &ret, sizeof(sockaddr_in6)) != 0)
-            std::cout << "BROKEN " << std::to_string(t.shift) << std::endl;
+            std::cout << "BROKEN " << std::to_string(t.shift) << '\n';
 
         EXPECT_EQ(memcmp(&cmp, &ret, sizeof(sockaddr_in6)), 0);
     }

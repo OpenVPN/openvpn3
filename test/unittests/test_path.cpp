@@ -12,43 +12,43 @@ static std::stringstream out;
 void test_basename(const std::string &path)
 {
     const std::string res = path::basename(path);
-    out << "basename('" << path << "') = '" << res << "'" << std::endl;
+    out << "basename('" << path << "') = '" << res << "'\n";
 }
 
 void dirname(const std::string &path)
 {
     const std::string res = path::dirname(path);
-    out << "dirname('" << path << "') = '" << res << "'" << std::endl;
+    out << "dirname('" << path << "') = '" << res << "'\n";
 }
 
 void ext(const std::string &path)
 {
     const std::string res = path::ext(path);
-    out << "ext('" << path << "') = '" << res << "'" << std::endl;
+    out << "ext('" << path << "') = '" << res << "'\n";
 }
 
 void is_flat(const std::string &path)
 {
     const bool res = path::is_flat(path);
-    out << "is_flat('" << path << "') = " << res << std::endl;
+    out << "is_flat('" << path << "') = " << res << '\n';
 }
 
 void join(const std::string &p1, const std::string &p2)
 {
     const std::string res = path::join(p1, p2);
-    out << "join('" << p1 << "', '" << p2 << "') = '" << res << "'" << std::endl;
+    out << "join('" << p1 << "', '" << p2 << "') = '" << res << "'\n";
 }
 
 void join3(const std::string &p1, const std::string &p2, const std::string &p3)
 {
     const std::string res = path::join(p1, p2, p3);
-    out << "join('" << p1 << "', '" << p2 << "', '" << p3 << "') = '" << res << "'" << std::endl;
+    out << "join('" << p1 << "', '" << p2 << "', '" << p3 << "') = '" << res << "'\n";
 }
 
 void join4(const std::string &p1, const std::string &p2, const std::string &p3, const std::string &p4)
 {
     const std::string res = path::join(p1, p2, p3, p4);
-    out << "join('" << p1 << "', '" << p2 << "', '" << p3 << "', '" << p4 << "') = '" << res << "'" << std::endl;
+    out << "join('" << p1 << "', '" << p2 << "', '" << p3 << "', '" << p4 << "') = '" << res << "'\n";
 }
 
 void splitjoin(const std::string &p1)
@@ -56,7 +56,7 @@ void splitjoin(const std::string &p1)
     const std::string d = path::dirname(p1);
     const std::string b = path::basename(p1);
     const std::string p2 = path::join(d, b);
-    out << "splitjoin p1='" << p1 << "' dir='" << d << "' bn='" << b << "' p2='" << p2 << "'" << std::endl;
+    out << "splitjoin p1='" << p1 << "' dir='" << d << "' bn='" << b << "' p2='" << p2 << "'\n";
 }
 
 TEST(path, test1)

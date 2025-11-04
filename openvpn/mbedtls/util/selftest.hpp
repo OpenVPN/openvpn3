@@ -32,14 +32,14 @@ inline std::string crypto_self_test_mbedtls()
     std::ostringstream os;
 #ifdef MBEDTLS_SELF_TEST
     const int verbose = 1;
-    os << "mbed TLS self test (tests return 0 if successful):" << std::endl;
-    os << "  mbedlts_aes_self_test status=" << mbedtls_aes_self_test(verbose) << std::endl;
-    os << "  mbedtls_sha1_self_test status=" << mbedtls_sha1_self_test(verbose) << std::endl;
-    os << "  mbedtls_sha256_self_test status=" << mbedtls_sha256_self_test(verbose) << std::endl;
-    os << "  mbedtls_sha512_self_test status=" << mbedtls_sha512_self_test(verbose) << std::endl;
-    os << "  mbedtls_mpi_self_test status=" << mbedtls_mpi_self_test(verbose) << std::endl;
+    os << "mbed TLS self test (tests return 0 if successful):\n";
+    os << "  mbedlts_aes_self_test status=" << mbedtls_aes_self_test(verbose) << "\n";
+    os << "  mbedtls_sha1_self_test status=" << mbedtls_sha1_self_test(verbose) << "\n";
+    os << "  mbedtls_sha256_self_test status=" << mbedtls_sha256_self_test(verbose) << "\n";
+    os << "  mbedtls_sha512_self_test status=" << mbedtls_sha512_self_test(verbose) << "\n";
+    os << "  mbedtls_mpi_self_test status=" << mbedtls_mpi_self_test(verbose) << "\n";
 #else
-    os << "mbed TLS self test: not compiled" << std::endl;
+    os << "mbed TLS self test: not compiled\n";
 #endif
     return os.str();
 }

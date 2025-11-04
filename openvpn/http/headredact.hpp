@@ -39,15 +39,15 @@ inline std::string headers_redact(const std::string &headers)
             {
                 authtype = argument.substr(0, arg1);
             }
-            result << line.substr(0, authpos) << "Authorization: " << authtype << " [REDACTED]\r" << std::endl;
+            result << line.substr(0, authpos) << "Authorization: " << authtype << " [REDACTED]\r\n";
         }
         else if ((authpos = line.find("authorization=basic ")) != std::string::npos)
         {
-            result << line.substr(0, authpos) << "authorization=basic [REDACTED]\r" << std::endl;
+            result << line.substr(0, authpos) << "authorization=basic [REDACTED]\r\n";
         }
         else
         {
-            result << line << std::endl;
+            result << line << '\n';
         }
     }
     return result.str();

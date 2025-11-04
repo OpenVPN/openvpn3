@@ -1400,7 +1400,7 @@ template <typename R>
 inline void intrusive_ptr_add_ref(R *rcptr) noexcept
 {
 #ifdef OPENVPN_RC_DEBUG
-    std::cout << "ADD REF " << cxx_demangle(typeid(rcptr).name()) << std::endl;
+    std::cout << "ADD REF " << cxx_demangle(typeid(rcptr).name()) << "\n";
 #endif
     ++rcptr->refcount_;
 }
@@ -1420,7 +1420,7 @@ inline void intrusive_ptr_release(R *rcptr) noexcept
     if (--rcptr->refcount_ == 0)
     {
 #ifdef OPENVPN_RC_DEBUG
-        std::cout << "DEL OBJ " << cxx_demangle(typeid(rcptr).name()) << std::endl;
+        std::cout << "DEL OBJ " << cxx_demangle(typeid(rcptr).name()) << "\n";
 #endif
 #ifdef OPENVPN_RC_NOTIFY
         rcptr->refcount_.notify_release();
@@ -1430,7 +1430,7 @@ inline void intrusive_ptr_release(R *rcptr) noexcept
     else
     {
 #ifdef OPENVPN_RC_DEBUG
-        std::cout << "REL REF " << cxx_demangle(typeid(rcptr).name()) << std::endl;
+        std::cout << "REL REF " << cxx_demangle(typeid(rcptr).name()) << "\n";
 #endif
     }
 }

@@ -63,8 +63,8 @@ class WintunClient : public TunClient
                                            opt,
                                            nullptr,
                                            false);
-                OPENVPN_LOG("CAPTURED OPTIONS:" << std::endl
-                                                << po->to_string());
+                OPENVPN_LOG("CAPTURED OPTIONS:\n"
+                            << po->to_string());
 
                 // create new tun setup object
                 tun_setup = config->new_setup_obj(io_context);
@@ -85,8 +85,8 @@ class WintunClient : public TunClient
 
                 // persist tun settings state
                 if (tun_persist->persist_tun_state(ts, {state, ring_buffer}))
-                    OPENVPN_LOG("TunPersist: saving tun context:" << std::endl
-                                                                  << tun_persist->options());
+                    OPENVPN_LOG("TunPersist: saving tun context:\n"
+                                << tun_persist->options());
 
                 // enable tun_setup destructor
                 tun_persist->add_destructor(tun_setup);

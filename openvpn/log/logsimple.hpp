@@ -19,7 +19,8 @@
 #define OPENVPN_LOG_STREAM std::cout
 #endif
 
-#define OPENVPN_LOG(args) OPENVPN_LOG_STREAM << args << std::endl
+#define OPENVPN_LOG(args) OPENVPN_LOG_STREAM << args << "\n" \
+                                             << std::flush
 
 // like OPENVPN_LOG but no trailing newline
 #define OPENVPN_LOG_NTNL(args) OPENVPN_LOG_STREAM << args << std::flush

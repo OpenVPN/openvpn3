@@ -99,8 +99,8 @@ class Setup : public SetupBase
 
         // enumerate available TAP adapters
         Util::TapNameGuidPairList guids(tun_type_);
-        os << "TAP ADAPTERS:" << std::endl
-           << guids.to_string() << std::endl;
+        os << "TAP ADAPTERS:\n"
+           << guids.to_string() << "\n";
 
         // open TAP device handle
         std::string path_opened;
@@ -108,15 +108,15 @@ class Setup : public SetupBase
         os << "Open TAP device \"" + tap_.name + "\" PATH=\"" + path_opened + '\"';
         if (!th.defined())
         {
-            os << " FAILED" << std::endl;
+            os << " FAILED\n";
             throw ErrorCode(Error::TUN_IFACE_CREATE, true, "cannot acquire TAP handle");
         }
 
-        os << " SUCCEEDED" << std::endl;
+        os << " SUCCEEDED\n";
         if (tun_type_ == TapWindows6)
         {
             Util::TAPDriverVersion version(th());
-            os << version.to_string() << std::endl;
+            os << version.to_string() << "\n";
         }
 
         return th.release();
@@ -609,10 +609,10 @@ class Setup : public SetupBase
                     }
                 }
                 if (ipv6_error)
-                    os << "NOTE: exclude IPv6 routes not currently supported" << std::endl;
+                    os << "NOTE: exclude IPv6 routes not currently supported\n";
             }
             else
-                os << "NOTE: exclude routes error: cannot detect default gateway" << std::endl;
+                os << "NOTE: exclude routes error: cannot detect default gateway\n";
         }
 
         // Process IPv4 redirect-gateway
@@ -885,7 +885,7 @@ class Setup : public SetupBase
             const Util::IPAdaptersInfo ai;
             if (!ai.is_dhcp_enabled(tap.index))
             {
-                os << "TAP: DHCP is disabled, attempting to enable" << std::endl;
+                os << "TAP: DHCP is disabled, attempting to enable\n";
                 ActionList::Ptr cmds(new ActionList());
                 cmds->add(new Util::ActionEnableDHCP(tap));
                 cmds->execute(os);

@@ -161,16 +161,16 @@ struct Command : public Action
     {
         if (!argv.empty())
         {
-            os << to_string() << std::endl;
+            os << to_string() << '\n';
 #ifdef OPENVPN_PROCESS_AVOID_PIPES
             const int status = system_cmd(argv[0], argv);
             if (status < 0)
-                os << "Error: command failed to execute" << std::endl;
+                os << "Error: command failed to execute\n";
 #else
             RedirectPipe::InOut inout;
             const int status = system_cmd(argv[0], argv, nullptr, inout, RedirectPipe::COMBINE_OUT_ERR, nullptr);
             if (status < 0)
-                os << "Error: command failed to execute" << std::endl;
+                os << "Error: command failed to execute\n";
             os << inout.out;
 
             /* if route already exists, we got "File exists" in output */
@@ -179,7 +179,7 @@ struct Command : public Action
 #endif
         }
         else
-            os << "Error: command called with empty argv" << std::endl;
+            os << "Error: command called with empty argv\n";
     }
 
     virtual std::string to_string() const override

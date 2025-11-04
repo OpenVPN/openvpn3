@@ -95,7 +95,7 @@ struct HeaderList : public std::vector<Header>
     {
         std::ostringstream out;
         for (size_t i = 0; i < size(); ++i)
-            out << '[' << i << "] " << (*this)[i].to_string() << std::endl;
+            out << '[' << i << "] " << (*this)[i].to_string() << '\n';
         return out.str();
     }
 };

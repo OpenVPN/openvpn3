@@ -32,7 +32,7 @@ void realign_test(BufferAllocated &buf, std::size_t headroom)
     EXPECT_EQ(ptr->i, 42);
     EXPECT_EQ(buf.offset(), at_align_ex); // Nearest aligned offset
 
-    std::cout << "Aligning buffer: " << at_misalign << " -> " << at_align_ex << std::endl;
+    std::cout << "Aligning buffer: " << at_misalign << " -> " << at_align_ex << '\n';
 }
 
 TEST(buffer, buffer_alignas)

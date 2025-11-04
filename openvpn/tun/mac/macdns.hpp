@@ -256,7 +256,7 @@ class MacDNS : public RC<thread_unsafe_refcount>
 
             prev = info;
             if (mod)
-                OPENVPN_LOG("MacDNS: SETDNS " << ver.to_string() << std::endl
+                OPENVPN_LOG("MacDNS: SETDNS " << ver.to_string() << "\n"
                                               << info->to_string());
         }
         catch (const std::exception &e)
@@ -289,7 +289,7 @@ class MacDNS : public RC<thread_unsafe_refcount>
                 mod |= info->info.remove_from_store();
 
             if (mod)
-                OPENVPN_LOG("MacDNS: RESETDNS " << ver.to_string() << std::endl
+                OPENVPN_LOG("MacDNS: RESETDNS " << ver.to_string() << "\n"
                                                 << info->to_string());
         }
         catch (const std::exception &e)

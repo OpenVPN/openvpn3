@@ -369,7 +369,7 @@ struct TapNameGuidPairList : public std::vector<TapNameGuidPair>
                 os << " index=" << pair.index;
             if (!pair.name.empty())
                 os << " name='" << pair.name << '\'';
-            os << std::endl;
+            os << "\n";
         }
         return os.str();
     }
@@ -712,9 +712,9 @@ inline void dhcp_release(const InterfaceInfoList &ii,
     {
         const DWORD status = ::IpReleaseAddress(iface);
         if (status == NO_ERROR)
-            os << "TAP: DHCP release succeeded" << std::endl;
+            os << "TAP: DHCP release succeeded\n";
         else
-            os << "TAP: DHCP release failed" << std::endl;
+            os << "TAP: DHCP release failed\n";
     }
 }
 
@@ -727,9 +727,9 @@ inline void dhcp_renew(const InterfaceInfoList &ii,
     {
         const DWORD status = ::IpRenewAddress(iface);
         if (status == NO_ERROR)
-            os << "TAP: DHCP renew succeeded" << std::endl;
+            os << "TAP: DHCP renew succeeded\n";
         else
-            os << "TAP: DHCP renew failed" << std::endl;
+            os << "TAP: DHCP renew failed\n";
     }
 }
 
@@ -738,9 +738,9 @@ inline void flush_arp(const DWORD adapter_index,
 {
     const DWORD status = ::FlushIpNetTable2(AF_INET, adapter_index);
     if (status == NO_ERROR)
-        os << "TAP: ARP flush succeeded" << std::endl;
+        os << "TAP: ARP flush succeeded\n";
     else
-        os << "TAP: ARP flush failed" << std::endl;
+        os << "TAP: ARP flush failed\n";
 }
 
 struct IPNetmask4
@@ -911,7 +911,7 @@ class ActionSetAdapterDomainSuffix : public Action
 
     virtual void execute(std::ostream &os) override
     {
-        os << to_string() << std::endl;
+        os << to_string() << "\n";
 
         LONG status;
         Win::Reg::Key key;
@@ -1211,7 +1211,7 @@ class ActionDeleteAllRoutesOnInterface : public Action
 
     virtual void execute(std::ostream &os) override
     {
-        os << to_string() << std::endl;
+        os << to_string() << "\n";
 
         ActionList::Ptr actions = new ActionList();
         remove_all_ipv4_routes_on_iface(iface_index, *actions);
@@ -1414,14 +1414,14 @@ class AddRoute4Cmd : public Action
 
     void execute(std::ostream &os) override
     {
-        os << os_.str() << std::endl;
+        os << os_.str() << "\n";
         DWORD res;
         if (add)
             res = CreateIpForwardEntry2(&fwd_row);
         else
             res = DeleteIpForwardEntry2(&fwd_row);
         if (res)
-            os << "cannot modify route: error " << res << std::endl;
+            os << "cannot modify route: error " << res << "\n";
     }
 
     std::string to_string() const override

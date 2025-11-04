@@ -64,26 +64,26 @@ TEST(misc, format)
     const std::string weather = "partly cloudy";
     char *nc = const_cast<char *>("non const");
 
-    os << to_string(seven) << std::endl;
-    os << to_string(foo) << std::endl;
-    os << to_string(bar) << std::endl;
-    os << to_string(pi) << std::endl;
-    os << to_string(three) << std::endl;
-    os << to_string(true) << std::endl;
-    os << to_string(false) << std::endl;
-    os << prints("pi", "is", std::string("not"), 3, "nor is it", seven, ';', "it", "is", pi, "...") << std::endl;
-    os << printfmt("pi is %r %s nor is it %s ; it is %s... (and has %s%% less %s!)", "not", 3, seven, pi, 99, std::string("fat")) << std::endl;
-    os << printfmt("the year is %s and the weather is %R", 2015, weather) << std::endl;
-    os << printfmt("where am %s? is it still %s?", 'I', 2015) << std::endl;
-    os << printfmt("no, it's %s... bring out yer dedd%s", 1666) << std::endl;
-    os << printfmt("save 20%%!") << std::endl;
-    os << printfmt("no wait... save%s 99.9999%%!") << std::endl;
-    os << printfmt("extra argument is here", 1) << std::endl;
-    os << printfmt("is the question %s or %s?", true, false) << std::endl;
-    os << printfmt("more extra arguments are here", 1, 2, 3, 4) << std::endl;
-    os << printfmt("null string '%s'", static_cast<const char *>(nullptr)) << std::endl;
-    os << printfmt("nullptr '%s'", nullptr) << std::endl;
-    os << printfmt("%s=%s %s", foo, bar, nc) << std::endl;
+    os << to_string(seven) << '\n';
+    os << to_string(foo) << '\n';
+    os << to_string(bar) << '\n';
+    os << to_string(pi) << '\n';
+    os << to_string(three) << '\n';
+    os << to_string(true) << '\n';
+    os << to_string(false) << '\n';
+    os << prints("pi", "is", std::string("not"), 3, "nor is it", seven, ';', "it", "is", pi, "...") << '\n';
+    os << printfmt("pi is %r %s nor is it %s ; it is %s... (and has %s%% less %s!)", "not", 3, seven, pi, 99, std::string("fat")) << '\n';
+    os << printfmt("the year is %s and the weather is %R", 2015, weather) << '\n';
+    os << printfmt("where am %s? is it still %s?", 'I', 2015) << '\n';
+    os << printfmt("no, it's %s... bring out yer dedd%s", 1666) << '\n';
+    os << printfmt("save 20%%!") << '\n';
+    os << printfmt("no wait... save%s 99.9999%%!") << '\n';
+    os << printfmt("extra argument is here", 1) << '\n';
+    os << printfmt("is the question %s or %s?", true, false) << '\n';
+    os << printfmt("more extra arguments are here", 1, 2, 3, 4) << '\n';
+    os << printfmt("null string '%s'", static_cast<const char *>(nullptr)) << '\n';
+    os << printfmt("nullptr '%s'", nullptr) << '\n';
+    os << printfmt("%s=%s %s", foo, bar, nc) << '\n';
     try
     {
         const std::string exstr = "bad foo";
@@ -91,7 +91,7 @@ TEST(misc, format)
     }
     catch (const std::exception &e)
     {
-        os << prints("EX1:", e.what()) << std::endl;
+        os << prints("EX1:", e.what()) << '\n';
     }
     try
     {
@@ -99,7 +99,7 @@ TEST(misc, format)
     }
     catch (const std::exception &e)
     {
-        os << prints("EX2:", e.what()) << std::endl;
+        os << prints("EX2:", e.what()) << '\n';
     }
     const std::string actual = os.str();
     ASSERT_EQ(expected, actual);

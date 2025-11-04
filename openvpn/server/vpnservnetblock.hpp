@@ -232,9 +232,9 @@ class VPNServerNetblock
     std::string to_string() const
     {
         std::ostringstream os;
-        os << "IPv4: " << snb4.to_string() << std::endl;
+        os << "IPv4: " << snb4.to_string() << "\n";
         if (snb6.defined())
-            os << "IPv6: " << snb6.to_string() << std::endl;
+            os << "IPv6: " << snb6.to_string() << "\n";
         for (size_t i = 0; i < thr.size(); ++i)
         {
             const PerThread &pt = thr[i];
@@ -242,7 +242,7 @@ class VPNServerNetblock
             os << " v4=" << pt.range4().to_string();
             if (pt.range6_defined())
                 os << " v6=" << pt.range6().to_string();
-            os << std::endl;
+            os << "\n";
         }
         return os.str();
     }

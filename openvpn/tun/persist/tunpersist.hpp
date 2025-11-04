@@ -81,8 +81,8 @@ class TunPersistTemplate : public TunWrapTemplate<SCOPED_OBJ>
             try
             {
                 TunProp::configure_builder(capture.get(), nullptr, nullptr, server_addr, tun_prop, opt, nullptr, true);
-                OPENVPN_LOG("*** TUN BUILDER CAPTURE" << std::endl
-                                                      << capture->to_string());
+                OPENVPN_LOG("*** TUN BUILDER CAPTURE\n"
+                            << capture->to_string());
             }
             catch (const std::exception &e)
             {

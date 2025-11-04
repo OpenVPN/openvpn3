@@ -308,7 +308,7 @@ class DroughtMeasure
                 {
                     const unsigned int r = drought.raw();
 #if defined(VERBOSE)
-                    std::cout << "*** Drought " << name << " has reached " << r << std::endl;
+                    std::cout << "*** Drought " << name << " has reached " << r << "\n";
 #endif
 #ifdef DROUGHT_LIMIT
                     if (r > DROUGHT_LIMIT)
@@ -516,7 +516,7 @@ class TestProto : public ProtoContextCallbackInterface
         {
             const ssize_t trunc = 64;
             const std::string show((char *)work->data(), trunc);
-            std::cout << now().raw() << " " << mode().str() << " " << show << std::endl;
+            std::cout << now().raw() << " " << mode().str() << " " << show << "\n";
         }
 #endif
 #if FEEDBACK
@@ -620,7 +620,7 @@ class TestProtoServer : public TestProto
                      const AuthCert::Ptr &auth_cert) override
     {
 #ifdef VERBOSE
-        std::cout << "**** AUTHENTICATE " << username << '/' << password << " PEER INFO:" << std::endl;
+        std::cout << "**** AUTHENTICATE " << username << '/' << password << " PEER INFO:\n";
         std::cout << peer_info;
 #endif
         if (username != "foo" || password != "bar")
@@ -661,7 +661,7 @@ class NoisyWire
         if (a.do_housekeeping())
         {
 #ifdef VERBOSE
-            std::cout << now->raw() << " " << title << " Housekeeping" << std::endl;
+            std::cout << now->raw() << " " << title << " Housekeeping\n";
 #endif
         }
 
@@ -680,7 +680,7 @@ class NoisyWire
         {
             BufferPtr bp = a.net_out.front();
 #ifdef VERBOSE
-            std::cout << now->raw() << " " << title << " " << a.dump_packet(*bp) << std::endl;
+            std::cout << now->raw() << " " << title << " " << a.dump_packet(*bp) << "\n";
 #endif
             a.net_out.pop_front();
             wire.push_back(bp);
@@ -697,7 +697,7 @@ class NoisyWire
             {
 #ifdef VERBOSE
                 if (!b.control_net_validate(pt, *bp)) // not strictly necessary since control_net_recv will also validate
-                    std::cout << now->raw() << " " << title << " CONTROL PACKET VALIDATION FAILED" << std::endl;
+                    std::cout << now->raw() << " " << title << " CONTROL PACKET VALIDATION FAILED\n";
 #endif
                 b.proto_context.control_net_recv(pt, std::move(bp));
             }
@@ -710,21 +710,21 @@ class NoisyWire
                     if (bp->size())
                     {
                         const std::string show((char *)bp->data(), std::min(bp->size(), size_t(40)));
-                        std::cout << now->raw() << " " << title << " DATA CHANNEL DECRYPT: " << show << std::endl;
+                        std::cout << now->raw() << " " << title << " DATA CHANNEL DECRYPT: " << show << "\n";
                     }
 #endif
                 }
                 catch ([[maybe_unused]] const std::exception &e)
                 {
 #ifdef VERBOSE
-                    std::cout << now->raw() << " " << title << " Exception on data channel decrypt: " << e.what() << std::endl;
+                    std::cout << now->raw() << " " << title << " Exception on data channel decrypt: " << e.what() << "\n";
 #endif
                 }
             }
             else
             {
 #ifdef VERBOSE
-                std::cout << now->raw() << " " << title << " KEY_STATE_ERROR" << std::endl;
+                std::cout << now->raw() << " " << title << " KEY_STATE_ERROR\n";
 #endif
                 b.proto_context.stat().error(Error::KEY_STATE_ERROR);
             }
@@ -734,7 +734,7 @@ class NoisyWire
             {
                 b.disable_xmit();
 #ifdef VERBOSE
-                std::cout << now->raw() << " " << title << " SIMULATE_UDP_AMPLIFY_ATTACK disable client xmit" << std::endl;
+                std::cout << now->raw() << " " << title << " SIMULATE_UDP_AMPLIFY_ATTACK disable client xmit\n";
 #endif
             }
 #endif
@@ -751,7 +751,7 @@ class NoisyWire
         {
             const size_t i = random.randrange(wire.size() - 1) + 1;
 #ifdef VERBOSE
-            std::cout << now->raw() << " " << title << " Simulating packet reordering " << i << " -> 0" << std::endl;
+            std::cout << now->raw() << " " << title << " Simulating packet reordering " << i << " -> 0\n";
 #endif
             std::swap(wire[0], wire[i]);
         }
@@ -763,7 +763,7 @@ class NoisyWire
             wire.pop_front();
 
 #ifdef VERBOSE
-            std::cout << now->raw() << " " << title << " Received packet, size=" << bp->size() << std::endl;
+            std::cout << now->raw() << " " << title << " Received packet, size=" << bp->size() << "\n";
 #endif
 
 #ifdef SIMULATE_DROPPED
@@ -771,7 +771,7 @@ class NoisyWire
             if (!rand(drop_prob))
             {
 #ifdef VERBOSE
-                std::cout << now->raw() << " " << title << " Simulating a dropped packet" << std::endl;
+                std::cout << now->raw() << " " << title << " Simulating a dropped packet\n";
 #endif
                 return BufferPtr();
             }
@@ -782,7 +782,7 @@ class NoisyWire
             if (!bp->empty() && !rand(corrupt_prob))
             {
 #ifdef VERBOSE
-                std::cout << now->raw() << " " << title << " Simulating a corrupted packet" << std::endl;
+                std::cout << now->raw() << " " << title << " Simulating a corrupted packet\n";
 #endif
                 const size_t pos = random.randrange(bp->size());
                 const unsigned char value = random.randrange(std::numeric_limits<unsigned char>::max());
@@ -844,7 +844,7 @@ class MySessionStats : public SessionStats
         {
             count_t c = errors[i];
             if (c)
-                std::cerr << Error::name(i) << " : " << c << std::endl;
+                std::cerr << Error::name(i) << " : " << c << '\n';
         }
     }
 
@@ -960,8 +960,8 @@ static auto create_client_proto_context(ClientSSLAPI::Config::Ptr cc, Frame::Ptr
     cp->keepalive_timeout_early = cp->keepalive_timeout;
 
 #ifdef VERBOSE
-    std::cout << "CLIENT OPTIONS: " << cp->options_string() << std::endl;
-    std::cout << "CLIENT PEER INFO:" << std::endl;
+    std::cout << "CLIENT OPTIONS: " << cp->options_string() << "\n";
+    std::cout << "CLIENT PEER INFO:\n";
     std::cout << cp->peer_info_string();
 #endif
     return cp;
@@ -1109,8 +1109,8 @@ int test(const int thread_num,
         sp->keepalive_timeout_early = Time::Duration::seconds(10);
 
 #ifdef VERBOSE
-        std::cout << "SERVER OPTIONS: " << sp->options_string() << std::endl;
-        std::cout << "SERVER PEER INFO:" << std::endl;
+        std::cout << "SERVER OPTIONS: " << sp->options_string() << "\n";
+        std::cout << "SERVER PEER INFO:\n";
         std::cout << sp->peer_info_string();
 #endif
 
@@ -1120,7 +1120,7 @@ int test(const int thread_num,
         for (int i = 0; i < SITER; ++i)
         {
 #ifdef VERBOSE
-            std::cout << "***** SITER " << i << std::endl;
+            std::cout << "***** SITER " << i << "\n";
 #endif
             cli_proto.reset();
             serv_proto.reset();
@@ -1150,7 +1150,7 @@ int test(const int thread_num,
             }
             catch (const std::exception &e)
             {
-                std::cerr << "Exception[" << i << '/' << j << "]: " << e.what() << std::endl;
+                std::cerr << "Exception[" << i << '/' << j << "]: " << e.what() << '\n';
                 return 1;
             }
         }
@@ -1173,22 +1173,22 @@ int test(const int thread_num,
                   << " N=" << cli_proto.proto_context.negotiations() << '/' << serv_proto.proto_context.negotiations()
                   << " SH=" << cli_proto.proto_context.slowest_handshake().raw() << '/' << serv_proto.proto_context.slowest_handshake().raw()
                   << " HE=" << cli_stats->get_error_count(Error::HANDSHAKE_TIMEOUT) << '/' << serv_stats->get_error_count(Error::HANDSHAKE_TIMEOUT)
-                  << std::endl;
+                  << '\n';
 
 #ifdef STATS
-        std::cerr << "-------- CLIENT STATS --------" << std::endl;
+        std::cerr << "-------- CLIENT STATS --------\n";
         cli_stats->show_error_counts();
-        std::cerr << "-------- SERVER STATS --------" << std::endl;
+        std::cerr << "-------- SERVER STATS --------\n";
         serv_stats->show_error_counts();
 #endif
 #ifdef OPENVPN_MAX_DATALIMIT_BYTES
-        std::cerr << "------------------------------" << std::endl;
-        std::cerr << "MAX_DATALIMIT_BYTES=" << DataLimit::max_bytes() << std::endl;
+        std::cerr << "------------------------------\n";
+        std::cerr << "MAX_DATALIMIT_BYTES=" << DataLimit::max_bytes() << "\n";
 #endif
     }
     catch (const std::exception &e)
     {
-        std::cerr << "Exception: " << e.what() << std::endl;
+        std::cerr << "Exception: " << e.what() << '\n';
         return 1;
     }
     return 0;
@@ -1207,9 +1207,9 @@ int test_retry(const int thread_num,
         ret = test(thread_num, use_tls_ekm, tls_version_mismatch, tls_crypt_v2_key_fn, use_tls_auth_with_tls_crypt_v2);
         if (!ret)
             return 0;
-        std::cout << "Retry " << (i + 1) << '/' << n_retries << std::endl;
+        std::cout << "Retry " << (i + 1) << '/' << n_retries << '\n';
     }
-    std::cout << "Failed" << std::endl;
+    std::cout << "Failed\n";
     return ret;
 }
 

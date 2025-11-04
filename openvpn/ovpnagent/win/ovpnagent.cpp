@@ -99,7 +99,7 @@ class MySessionStats : public SessionStats
     std::string dump() const
     {
         std::ostringstream os;
-        os << "OpenVPN Agent Stats" << std::endl;
+        os << "OpenVPN Agent Stats\n";
         return os.str();
     }
 };
@@ -180,18 +180,18 @@ class MyListener : public WS::Server::Listener
                                       FALSE,
                                       DUPLICATE_SAME_ACCESS | DUPLICATE_CLOSE_SOURCE))
                 {
-                    os << "destroy_tun: no client confirm, DuplicateHandle (close) succeeded" << std::endl;
+                    os << "destroy_tun: no client confirm, DuplicateHandle (close) succeeded\n";
                 }
                 else
                 {
                     const Win::LastError err;
-                    os << "destroy_tun: no client confirm, DuplicateHandle (close) failed: " << err.message() << std::endl;
+                    os << "destroy_tun: no client confirm, DuplicateHandle (close) failed: " << err.message() << "\n";
                 }
             }
         }
         catch (const std::exception &e)
         {
-            os << "destroy_tun: exception in remote tap handle close: " << e.what() << std::endl;
+            os << "destroy_tun: exception in remote tap handle close: " << e.what() << "\n";
         }
 
         try
@@ -207,7 +207,7 @@ class MyListener : public WS::Server::Listener
         }
         catch (const std::exception &e)
         {
-            os << "destroy_tun: exception in tun teardown: " << e.what() << std::endl;
+            os << "destroy_tun: exception in tun teardown: " << e.what() << "\n";
         }
 
         try
@@ -220,7 +220,7 @@ class MyListener : public WS::Server::Listener
         }
         catch (const std::exception &e)
         {
-            os << "destroy_tun: exception in cleanup: " << e.what() << std::endl;
+            os << "destroy_tun: exception in cleanup: " << e.what() << "\n";
         }
         vpn_interface_index = DWORD(-1);
         return ret;
@@ -577,7 +577,7 @@ class MyClientInstance : public WS::Server::Listener::Client
                     // destroy previous instance
                     if (parent()->destroy_tun(os))
                     {
-                        os << "Destroyed previous TAP instance" << std::endl;
+                        os << "Destroyed previous TAP instance\n";
                         ::Sleep(1000);
                     }
 
@@ -646,7 +646,7 @@ class MyClientInstance : public WS::Server::Listener::Client
                     // destroy previous instance
                     if (tun_type != TunWin::OvpnDco && parent()->destroy_tun(os))
                     {
-                        os << "Destroyed previous TAP instance" << std::endl;
+                        os << "Destroyed previous TAP instance\n";
                         ::Sleep(1000);
                     }
 
@@ -771,7 +771,7 @@ class MyClientInstance : public WS::Server::Listener::Client
         catch (const std::exception &e)
         {
             if (parent()->destroy_tun(os))
-                os << "Destroyed previous TAP instance due to exception" << std::endl;
+                os << "Destroyed previous TAP instance due to exception\n";
 
             const std::string error_msg = string::remove_blanks(os.str() + e.what() + '\n');
             OPENVPN_LOG_NTNL("EXCEPTION\n"
@@ -887,7 +887,7 @@ class MyService : public Win::Service
             }
             catch (const std::exception &e)
             {
-                std::cerr << e.what() << std::endl;
+                std::cerr << e.what() << "\n";
             }
         }
         if (!log)
@@ -998,20 +998,20 @@ int main(int argc, char *argv[])
             else if (arg == "remove")
                 serv.remove();
             else if (arg == "modname")
-                std::wcout << Win::module_name() << std::endl;
+                std::wcout << Win::module_name() << "\n";
             else if (arg == "help")
             {
-                std::cout << "usage: ovpnagent [options]" << std::endl;
-                std::cout << "  run       -- run in foreground (for debugging)" << std::endl;
-                std::cout << "  install   -- install as service" << std::endl;
-                std::cout << "  remove    -- uninstall" << std::endl;
-                std::cout << "  modname   -- show module name" << std::endl;
-                std::cout << "  help      -- show help message" << std::endl;
-                std::cout << "  [default] -- start as service" << std::endl;
+                std::cout << "usage: ovpnagent [options]\n";
+                std::cout << "  run       -- run in foreground (for debugging)\n";
+                std::cout << "  install   -- install as service\n";
+                std::cout << "  remove    -- uninstall\n";
+                std::cout << "  modname   -- show module name\n";
+                std::cout << "  help      -- show help message\n";
+                std::cout << "  [default] -- start as service\n";
             }
             else
             {
-                std::cout << "unrecognized option, use 'help' for more info" << std::endl;
+                std::cout << "unrecognized option, use 'help' for more info\n";
                 ret = 2;
             }
         }
@@ -1020,7 +1020,7 @@ int main(int argc, char *argv[])
     }
     catch (const std::exception &e)
     {
-        std::cout << "ovpnagent: " << e.what() << std::endl;
+        std::cout << "ovpnagent: " << e.what() << "\n";
         ret = 1;
     }
 

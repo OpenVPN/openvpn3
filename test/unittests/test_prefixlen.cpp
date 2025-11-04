@@ -56,7 +56,7 @@ TEST(IPAddr, test32)
         ASSERT_EQ(pl, (int)i);
 
         // IPv4::Addr a = IPv4::Addr::from_uint32(mask);
-        // std::cout << i << ' ' << pl << ' ' << a << std::endl;
+        // std::cout << i << ' ' << pl << ' ' << a << "\n";
     }
 }
 
@@ -67,7 +67,7 @@ TEST(IPAddr, prefixlen)
         IPv4::Addr mask = IPv4::Addr::netmask_from_prefix_len(i);
         const unsigned int pl = mask.prefix_len();
         ASSERT_EQ(pl, i);
-        // std::cout << i << ' ' << pl << ' ' << mask << std::endl;
+        // std::cout << i << ' ' << pl << ' ' << mask << "\n";
     }
 }
 
@@ -78,7 +78,7 @@ void testbig() // exhaustive test of all 2^32 possible netmask values
     {
         const int pl = prefix_len(mask);
         if (pl != -1)
-            std::cout << pl << ' ' << IPv4::Addr::from_uint32(mask) << std::endl;
+            std::cout << pl << ' ' << IPv4::Addr::from_uint32(mask) << '\n';
         if (++mask == 0)
             break;
     }

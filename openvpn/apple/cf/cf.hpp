@@ -180,7 +180,7 @@ class Wrap
         if (obj_)
             CFShow(obj_);
         else
-            std::cerr << "CF_UNDEFINED" << std::endl;
+            std::cerr << "CF_UNDEFINED\n";
     }
 
     virtual ~Wrap()

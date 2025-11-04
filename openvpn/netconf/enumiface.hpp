@@ -47,7 +47,7 @@ class EnumIface
     std::string to_string() const
     {
         std::ostringstream os;
-        os << "INTERFACES:" << std::endl;
+        os << "INTERFACES:\n";
         for (const ifaddrs *i = ifinfo.get(); i->ifa_next; i = i->ifa_next)
             render(i, os);
         return os.str();
@@ -104,7 +104,7 @@ class EnumIface
         {
             os << " ERROR";
         }
-        os << std::endl;
+        os << "\n";
     }
 
     static std::string render_flags(const u_int flags)

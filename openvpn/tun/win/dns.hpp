@@ -428,7 +428,7 @@ class Dns
          */
         void execute(std::ostream &log) override
         {
-            log << to_string() << std::endl;
+            log << to_string() << "\n";
             set_search_domains(itf_name_, search_domains_);
         }
 
@@ -466,7 +466,7 @@ class Dns
          */
         void execute(std::ostream &log) override
         {
-            log << to_string() << std::endl;
+            log << to_string() << "\n";
             remove_search_domains(itf_name_, search_domains_);
         }
 
@@ -507,7 +507,7 @@ class Dns
             }
 
             const char *status = apply_dns_settings() ? "successful" : "failed";
-            log << to_string() << ": " << status << gpol_status << std::endl;
+            log << to_string() << ": " << status << gpol_status << "\n";
         }
 
         /**

@@ -20,7 +20,7 @@
 namespace unittests {
 #define DEBUG_PRINT_ROUTES      \
     for (auto &rt : tb->routes) \
-        std::cout << rt << std::endl;
+        std::cout << rt << "\n";
 
 /* Helper function for quick result comparision */
 std::string join_string_vector_sorted(std::vector<std::string> vec, const char *const delim = ", ")

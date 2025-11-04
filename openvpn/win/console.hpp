@@ -78,7 +78,7 @@ class Input
         std::cout << prompt;
         std::string s;
         std::getline(std::cin, s);
-        std::cout << std::endl;
+        std::cout << "\n";
 
         return s;
     }

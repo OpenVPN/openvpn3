@@ -1365,7 +1365,7 @@ class MbedTLSContext : public SSLFactoryAPI
         os << "VERIFY "
            << status_str
            << " : depth=" << depth
-           << std::endl
+           << "\n"
            << cert_info(cert);
         return os.str();
     }

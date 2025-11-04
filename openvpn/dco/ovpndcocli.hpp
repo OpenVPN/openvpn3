@@ -589,8 +589,8 @@ class OvpnDcoClient : public Client,
                                    false);
 
         if (po)
-            OPENVPN_LOG("CAPTURED OPTIONS:" << std::endl
-                                            << po->to_string());
+            OPENVPN_LOG("CAPTURED OPTIONS:\n"
+                        << po->to_string());
 
         if (config->builder)
         {

@@ -180,8 +180,8 @@ class Client : public TunClient
 
                 // persist state
                 if (tun_persist->persist_tun_state(sd, state))
-                    OPENVPN_LOG("TunPersist: saving tun context:" << std::endl
-                                                                  << tun_persist->options());
+                    OPENVPN_LOG("TunPersist: saving tun context:\n"
+                                << tun_persist->options());
 
                 impl.reset(new TunImpl(io_context,
                                        sd,

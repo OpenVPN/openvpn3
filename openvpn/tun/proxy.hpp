@@ -34,7 +34,7 @@ class ProxySettings : public RC<thread_unsafe_refcount>
 
         virtual void execute(std::ostream &os) override
         {
-            os << to_string() << std::endl;
+            os << to_string() << "\n";
             if (parent)
                 parent->set_proxy(del);
         }

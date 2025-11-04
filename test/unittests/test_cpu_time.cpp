@@ -38,17 +38,17 @@
 #include <algorithm>
 
 #ifdef DEBUG
-#define DEBUG_DUMP(msg, st, en, rt, chst, chen, chrt, md)              \
-    std::cout << msg << std::endl                                      \
-              << "start = " << std::to_string(st) << std::endl         \
-              << "end = " << std::to_string(en) << std::endl           \
-              << "runtime = " << std::to_string(rt) << std::endl       \
-              << "chk_start = " << std::to_string(chst) << std::endl   \
-              << "chk_end = " << std::to_string(chen) << std::endl     \
-              << "chk_runtime = " << std::to_string(chrt) << std::endl \
-              << "measurement difference = "                           \
-              << std::to_string(md) << std::endl                       \
-              << "--------------------------------------" << std::endl
+#define DEBUG_DUMP(msg, st, en, rt, chst, chen, chrt, md)         \
+    std::cout << msg << "\n"                                      \
+              << "start = " << std::to_string(st) << "\n"         \
+              << "end = " << std::to_string(en) << "\n"           \
+              << "runtime = " << std::to_string(rt) << "\n"       \
+              << "chk_start = " << std::to_string(chst) << "\n"   \
+              << "chk_end = " << std::to_string(chen) << "\n"     \
+              << "chk_runtime = " << std::to_string(chrt) << "\n" \
+              << "measurement difference = "                      \
+              << std::to_string(md) << "\n"                       \
+              << "--------------------------------------\n"
 
 #else
 #define DEBUG_DUMP(msg, st, en, rt, chst, chen, chrt, md) \
@@ -219,7 +219,7 @@ TEST(CPUTime, cpu_time_thread_numcores)
               chk_runtime,
               parent_diff);
 #ifdef DEBUG
-    std::cout << "Total thread runtime: " << std::to_string(thread_runtime) << std::endl;
+    std::cout << "Total thread runtime: " << std::to_string(thread_runtime) << "\n";
 #endif
 
     // The main process (this PID) will have a total runtime

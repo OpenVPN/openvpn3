@@ -111,7 +111,7 @@ class ActionList : public std::vector<Action::Ptr>, public DestructorBase
             }
             catch (const std::exception &e)
             {
-                os << "action exception: " << e.what() << std::endl;
+                os << "action exception: " << e.what() << '\n';
                 failed_actions.insert(action->mark);
             }
         }

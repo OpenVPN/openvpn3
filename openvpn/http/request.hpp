@@ -44,10 +44,10 @@ struct Request
     std::string to_string() const
     {
         std::ostringstream out;
-        out << "HTTP Request" << std::endl;
-        out << "method=" << method << std::endl;
-        out << "uri=" << uri << std::endl;
-        out << "version=" << http_version_major << '/' << http_version_minor << std::endl;
+        out << "HTTP Request\n";
+        out << "method=" << method << "\n";
+        out << "uri=" << uri << "\n";
+        out << "version=" << http_version_major << '/' << http_version_minor << "\n";
         out << headers.to_string();
         return out.str();
     }

@@ -326,7 +326,7 @@ struct RouteTypeList : public std::vector<RouteType<ADDR>>
     {
         std::ostringstream os;
         for (auto &r : *this)
-            os << r.to_string() << std::endl;
+            os << r.to_string() << "\n";
         return os.str();
     }
 

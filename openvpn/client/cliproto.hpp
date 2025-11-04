@@ -1072,8 +1072,8 @@ class Session : ProtoContextCallbackInterface,
             if (received_options.complete())
             {
                 // show options
-                OPENVPN_LOG("OPTIONS:" << std::endl
-                                       << render_options_sanitized(received_options, Option::RENDER_PASS_FMT | Option::RENDER_NUMBER | Option::RENDER_BRACKET));
+                OPENVPN_LOG("OPTIONS:\n"
+                            << render_options_sanitized(received_options, Option::RENDER_PASS_FMT | Option::RENDER_NUMBER | Option::RENDER_BRACKET));
 
                 // relay servers are not allowed to establish a tunnel with us
                 if (proto_context.conf().relay_mode)

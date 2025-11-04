@@ -209,7 +209,7 @@ class WFP : public RC<thread_unsafe_refcount>
          */
         void execute(std::ostream &log) override
         {
-            log << to_string() << std::endl;
+            log << to_string() << "\n";
             if (block_)
                 ctx_->block(openvpn_app_path_, itf_index_, block_type_, log);
             else
@@ -360,13 +360,13 @@ class WFP : public RC<thread_unsafe_refcount>
         filter.numFilterConditions = 1;
         condition[0] = match_openvpn;
         add_filter(&filter, NULL, &filterid);
-        log << "permit IPv4 requests from OpenVPN app" << std::endl;
+        log << "permit IPv4 requests from OpenVPN app\n";
 
 
         // Filter #2 -- permit IPv6 requests from OpenVPN app
         filter.layerKey = FWPM_LAYER_ALE_AUTH_CONNECT_V6;
         add_filter(&filter, NULL, &filterid);
-        log << "permit IPv6 requests from OpenVPN app" << std::endl;
+        log << "permit IPv6 requests from OpenVPN app\n";
 
 
         // Filter #3 -- block IPv4 (DNS) requests, except to loopback, from other apps
@@ -383,13 +383,13 @@ class WFP : public RC<thread_unsafe_refcount>
             dns_str = "DNS ";
         }
         add_filter(&filter, NULL, &filterid);
-        log << "block IPv4 " << dns_str << "requests from other apps" << std::endl;
+        log << "block IPv4 " << dns_str << "requests from other apps\n";
 
 
         // Filter #4 -- block IPv6 (DNS) requests, except to loopback, from other apps
         filter.layerKey = FWPM_LAYER_ALE_AUTH_CONNECT_V6;
         add_filter(&filter, NULL, &filterid);
-        log << "block IPv6 " << dns_str << "requests from other apps" << std::endl;
+        log << "block IPv6 " << dns_str << "requests from other apps\n";
 
 
         // Filter #5 -- allow IPv4 traffic from VPN interface
@@ -398,13 +398,13 @@ class WFP : public RC<thread_unsafe_refcount>
         filter.numFilterConditions = 1;
         condition[0] = match_interface;
         add_filter(&filter, NULL, &filterid);
-        log << "allow IPv4 traffic from TAP" << std::endl;
+        log << "allow IPv4 traffic from TAP\n";
 
 
         // Filter #6 -- allow IPv6 traffic from VPN interface
         filter.layerKey = FWPM_LAYER_ALE_AUTH_CONNECT_V6;
         add_filter(&filter, NULL, &filterid);
-        log << "allow IPv6 traffic from TAP" << std::endl;
+        log << "allow IPv6 traffic from TAP\n";
 
         if (block_type != Block::AllButLocalDns && block_type != Block::DnsButAllowLocal)
         {
@@ -416,13 +416,13 @@ class WFP : public RC<thread_unsafe_refcount>
             condition[0] = match_loopback;
             condition[1] = match_port_53;
             add_filter(&filter, NULL, &filterid);
-            log << "block IPv4 DNS requests to loopback from other apps" << std::endl;
+            log << "block IPv4 DNS requests to loopback from other apps\n";
 
 
             // Filter #8 -- block IPv6 DNS requests to loopback from other apps
             filter.layerKey = FWPM_LAYER_ALE_AUTH_CONNECT_V6;
             add_filter(&filter, NULL, &filterid);
-            log << "block IPv6 DNS requests to loopback from other apps" << std::endl;
+            log << "block IPv6 DNS requests to loopback from other apps\n";
         }
     }
 
@@ -473,9 +473,9 @@ class WFP : public RC<thread_unsafe_refcount>
                 if (log)
                 {
                     if (status != ERROR_SUCCESS)
-                        *log << "FwpmEngineClose0 failed, status=" << status << std::endl;
+                        *log << "FwpmEngineClose0 failed, status=" << status << "\n";
                     else
-                        *log << "WFP Engine closed" << std::endl;
+                        *log << "WFP Engine closed\n";
                 }
             }
         }

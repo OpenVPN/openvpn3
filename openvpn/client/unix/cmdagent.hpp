@@ -52,7 +52,7 @@ class UnixCommandAgent : public TunBuilderSetup::Factory
         Config config;
 
         std::ostringstream os;
-        os << "UnixCommandAgent: transmitting bypass route to " << config.uds_name << std::endl;
+        os << "UnixCommandAgent: transmitting bypass route to " << config.uds_name << "\n";
 
         // Build JSON request
         Json::Value jreq(Json::objectValue);
@@ -143,7 +143,7 @@ class UnixCommandAgent : public TunBuilderSetup::Factory
                       Stop *stop,
                       std::ostream &os) override
         {
-            os << "SetupClient: transmitting tun setup list to " << config->uds_name << std::endl;
+            os << "SetupClient: transmitting tun setup list to " << config->uds_name << "\n";
 
             // Build JSON request
             Json::Value jreq(Json::objectValue);
@@ -215,7 +215,7 @@ class UnixCommandAgent : public TunBuilderSetup::Factory
 
         void destroy(std::ostream &os) override // defined by DestructorBase
         {
-            os << "SetupClient: transmitting tun destroy request to " << config->uds_name << std::endl;
+            os << "SetupClient: transmitting tun destroy request to " << config->uds_name << "\n";
 
             // Create HTTP transaction container
             WS::ClientSet::TransactionSet::Ptr ts = new_transaction_set(config->uds_name, config->debug_level);
@@ -246,7 +246,7 @@ class UnixCommandAgent : public TunBuilderSetup::Factory
                 throw ovpnagent("unexpected transaction set size");
             WS::ClientSet::Transaction &t = *ts.transactions[0];
             const std::string content = t.content_in.to_string();
-            os << t.format_status(ts) << std::endl;
+            os << t.format_status(ts) << "\n";
             if (!t.comm_status_success())
             {
                 os << content;

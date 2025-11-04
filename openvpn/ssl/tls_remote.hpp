@@ -25,10 +25,9 @@ inline bool test(const std::string &tls_remote, const std::string &subject, cons
 
 inline void log(const std::string &tls_remote, const std::string &subject, const std::string &common_name)
 {
-    OPENVPN_LOG("tls-remote validation"
-                << std::endl
-                << "  tls-remote: '" << tls_remote << '\'' << std::endl
-                << "  Subj: '" << subject << '\'' << std::endl
+    OPENVPN_LOG("tls-remote validation\n"
+                << "  tls-remote: '" << tls_remote << "'\n"
+                << "  Subj: '" << subject << "'\n"
                 << "  CN: '" << common_name << '\'');
 }
 

@@ -35,14 +35,14 @@ class ProcFS : public Action
 
     virtual void execute(std::ostream &os) override
     {
-        os << to_string() << std::endl;
+        os << to_string() << "\n";
         try
         {
             write_sys(fn, text);
         }
         catch (const std::exception &e)
         {
-            os << "ProcFS exception: " << e.what() << std::endl;
+            os << "ProcFS exception: " << e.what() << "\n";
         }
     }
 

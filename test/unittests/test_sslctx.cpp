@@ -301,7 +301,7 @@ inline void do_write(T &obj, const bool server, char *msg, const size_t len, lon
     if (status > 0)
         count += status;
 #if ITER <= ITER_OUT_LIMIT
-    std::cout << (server ? "SERVER" : "CLIENT") << " WRITE #" << iter << " status=" << status << std::endl;
+    std::cout << (server ? "SERVER" : "CLIENT") << " WRITE #" << iter << " status=" << status << '\n';
 #endif
 }
 
@@ -314,11 +314,11 @@ inline void do_read(T &obj, const bool server, char *msg, const size_t len, long
 
 #if ITER <= ITER_OUT_LIMIT
     const ssize_t trunc = 64;
-    std::cout << (server ? "SERVER" : "CLIENT") << " READ #" << iter << " status=" << status << std::endl;
+    std::cout << (server ? "SERVER" : "CLIENT") << " READ #" << iter << " status=" << status << '\n';
     if (status >= trunc)
     {
         msg[trunc] = 0;
-        std::cout << "GOT IT: " << msg << std::endl;
+        std::cout << "GOT IT: " << msg << '\n';
     }
 #endif
 }
@@ -329,7 +329,7 @@ static inline bool xfer_oneway(SSLAPI &sender, SSLAPI &recv, const std::string &
     {
         BufferPtr buf = sender.read_ciphertext();
         recv.write_ciphertext(buf);
-        std::cout << out << buf->size() << " bytes" << std::endl;
+        std::cout << out << buf->size() << " bytes\n";
         return true;
     }
 
@@ -338,9 +338,9 @@ static inline bool xfer_oneway(SSLAPI &sender, SSLAPI &recv, const std::string &
         /* this can also indicate an error */
         uint8_t cleartext[1024];
 
-        std::cout << out << " read ready?" << std::endl;
+        std::cout << out << " read ready?\n";
         auto ctsize = sender.read_cleartext(cleartext, sizeof(cleartext));
-        std::cout << ctsize << std::endl;
+        std::cout << ctsize << '\n';
 
         EXPECT_FALSE(ctsize > 0);
         /* TODO: capture output for tests with data */
@@ -511,7 +511,7 @@ TEST(sslctx_ut, clienthello)
     uint8_t cleartext[1024];
 
     auto ctsize = server->read_cleartext(cleartext, sizeof(cleartext));
-    std::cout << ctsize << std::endl;
+    std::cout << ctsize << '\n';
 
     EXPECT_TRUE(server->read_ciphertext_ready());
     auto buf = server->read_ciphertext();

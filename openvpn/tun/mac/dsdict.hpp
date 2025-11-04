@@ -129,15 +129,15 @@ class DSDict
     std::string to_string() const
     {
         std::ostringstream os;
-        os << "*** DSDict " << dskey << std::endl;
+        os << "*** DSDict " << dskey << "\n";
         std::string orig = CF::description(dict());
         string::trim_crlf(orig);
-        os << "ORIG " << orig << std::endl;
+        os << "ORIG " << orig << "\n";
         if (dirty())
         {
             std::string modstr = CF::description(mod());
             string::trim_crlf(modstr);
-            os << "MODIFIED " << modstr << std::endl;
+            os << "MODIFIED " << modstr << "\n";
         }
         return os.str();
     }

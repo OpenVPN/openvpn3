@@ -14,7 +14,7 @@ TEST(sessid, test1)
     // test 1
     {
         const SessionID64 sid1(rng);
-        // std::cout << "SID1: " << sid1 << std::endl;
+        // std::cout << "SID1: " << sid1 << "\n";
 
         const SessionID64 sid2(sid1.to_string());
         ASSERT_TRUE(sid1.defined() && sid2.defined()) << "FAIL sid1 or sid2 is undefined";
@@ -26,13 +26,13 @@ TEST(sessid, test1)
 
         for (int i = 1; i <= 4; ++i)
         {
-            // std::cout << "---- " << i << " ----" << std::endl;
+            // std::cout << "---- " << i << " ----\n";
             const TokenEncrypt::Key key(rng);
             TokenEncryptDecrypt ted(key);
             const SessionID128 sid3_enc(sid3, ted.encrypt);
-            // std::cout << "SID3 (enc): " << sid3_enc << std::endl;
+            // std::cout << "SID3 (enc): " << sid3_enc << "\n";
             const SessionID128 sid3_dec(sid3_enc, ted.decrypt);
-            // std::cout << "SID3 (dec): " << sid3_dec << std::endl;
+            // std::cout << "SID3 (dec): " << sid3_dec << "\n";
         }
     }
 }
@@ -41,14 +41,14 @@ TEST(sessid, test2)
     SSLLib::RandomAPI rng;
     {
         const SessionID64 sid1(rng);
-        // std::cout << "SID1: " << sid1 << std::endl;
+        // std::cout << "SID1: " << sid1 << "\n";
         const SessionID128 sid2(rng);
-        // std::cout << "SID2: " << sid2 << std::endl;
+        // std::cout << "SID2: " << sid2 << "\n";
 
         const SessionID128 sid1_exp(sid1);
-        // std::cout << "SID1_EXP: " << sid1_exp << std::endl;
+        // std::cout << "SID1_EXP: " << sid1_exp << "\n";
         const SessionID64 sid2_trunc(sid2);
-        // std::cout << "SID2_TRUNC: " << sid2_trunc << std::endl;
+        // std::cout << "SID2_TRUNC: " << sid2_trunc << "\n";
     }
 }
 
@@ -130,7 +130,7 @@ struct SessionID : public SessionID128
 
     void dump(const char *prefix) const
     {
-        std::cout << prefix << " : " << to_string() << std::endl;
+        std::cout << prefix << " : " << to_string() << '\n';
     }
 };
 

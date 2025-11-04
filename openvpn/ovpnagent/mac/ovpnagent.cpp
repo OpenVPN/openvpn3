@@ -62,7 +62,7 @@ void log_version()
 #ifdef OPENVPN_DEBUG
               << " built on " __DATE__ " " __TIME__
 #endif
-              << std::endl;
+              << "\n";
 }
 
 using namespace openvpn;
@@ -80,7 +80,7 @@ class MySessionStats : public SessionStats
     std::string dump() const
     {
         std::ostringstream os;
-        os << "OpenVPN Agent Stats" << std::endl;
+        os << "OpenVPN Agent Stats\n";
         return os.str();
     }
 };
@@ -753,17 +753,17 @@ int main(int argc, char *argv[])
     catch (const usage &)
     {
         log_version();
-        std::cout << "usage: ovpnagent [options]" << std::endl;
-        std::cout << "  --daemon <file>, -d       : daemonize, log to file" << std::endl;
-        std::cout << "  --append, -a              : append to log file" << std::endl;
-        std::cout << "  --pidfile <file>, -p      : write pid to file" << std::endl;
-        std::cout << "  --user <user>, -u         : set UID to user" << std::endl;
-        std::cout << "  --group <group>, -g       : set group" << std::endl;
+        std::cout << "usage: ovpnagent [options]\n";
+        std::cout << "  --daemon <file>, -d       : daemonize, log to file\n";
+        std::cout << "  --append, -a              : append to log file\n";
+        std::cout << "  --pidfile <file>, -p      : write pid to file\n";
+        std::cout << "  --user <user>, -u         : set UID to user\n";
+        std::cout << "  --group <group>, -g       : set group\n";
         ret = 2;
     }
     catch (const std::exception &e)
     {
-        std::cout << "Main thread exception: " << e.what() << std::endl;
+        std::cout << "Main thread exception: " << e.what() << "\n";
         ret = 1;
     }
 

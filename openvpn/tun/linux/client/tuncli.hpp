@@ -181,8 +181,8 @@ class Client : public TunClient
                                                nullptr,
                                                false);
 
-                    OPENVPN_LOG("CAPTURED OPTIONS:" << std::endl
-                                                    << po->to_string());
+                    OPENVPN_LOG("CAPTURED OPTIONS:\n"
+                                << po->to_string());
 
                     // create new tun setup object
                     tun_setup = config->new_setup_obj();

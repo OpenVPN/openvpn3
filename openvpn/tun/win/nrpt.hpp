@@ -433,7 +433,7 @@ class Nrpt
 
             const std::string id = rule_id(process_id_);
             const std::wstring servers = wstring::from_utf8(string::join(dns_servers_, ";"));
-            log << to_string() << " id=[" << id << "]" << std::endl;
+            log << to_string() << " id=[" << id << "]\n";
             create_rule(id, domains, servers, dnssec_);
         }
 
@@ -479,7 +479,7 @@ class Nrpt
          */
         void execute(std::ostream &log) override
         {
-            log << to_string() << std::endl;
+            log << to_string() << "\n";
             delete_rules(process_id_);
         }
 

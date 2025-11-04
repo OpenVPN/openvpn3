@@ -199,7 +199,7 @@ class ClientBase : public ClientAPI::OpenVPNClient
   public:
     bool socket_protect(openvpn_io::detail::socket_type socket, std::string remote, bool ipv6) override
     {
-        std::cout << "NOT IMPLEMENTED: *** socket_protect " << socket << " " << remote << std::endl;
+        std::cout << "NOT IMPLEMENTED: *** socket_protect " << socket << " " << remote << "\n";
         return true;
     }
 };
@@ -254,12 +254,12 @@ class Client : public ClientBase
         const int n = stats_n();
         std::vector<long long> stats = stats_bundle();
 
-        std::cout << "STATS:" << std::endl;
+        std::cout << "STATS:\n";
         for (int i = 0; i < n; ++i)
         {
             const long long value = stats[i];
             if (value)
-                std::cout << "  " << stats_name(i) << " : " << value << std::endl;
+                std::cout << "  " << stats_name(i) << " : " << value << "\n";
         }
     }
 
@@ -286,7 +286,7 @@ class Client : public ClientBase
             std::cout << " [FATAL-ERR]";
         else if (ev.error)
             std::cout << " [ERR]";
-        std::cout << std::endl;
+        std::cout << "\n";
         if (ev.name == "DYNAMIC_CHALLENGE")
         {
             dc_cookie = ev.info;
@@ -294,16 +294,16 @@ class Client : public ClientBase
             ClientAPI::DynamicChallenge dc;
             if (ClientAPI::OpenVPNClientHelper::parse_dynamic_challenge(ev.info, dc))
             {
-                std::cout << "DYNAMIC CHALLENGE" << std::endl;
-                std::cout << "challenge: " << dc.challenge << std::endl;
-                std::cout << "echo: " << dc.echo << std::endl;
-                std::cout << "responseRequired: " << dc.responseRequired << std::endl;
-                std::cout << "stateID: " << dc.stateID << std::endl;
+                std::cout << "DYNAMIC CHALLENGE\n";
+                std::cout << "challenge: " << dc.challenge << "\n";
+                std::cout << "echo: " << dc.echo << "\n";
+                std::cout << "responseRequired: " << dc.responseRequired << "\n";
+                std::cout << "stateID: " << dc.stateID << "\n";
             }
         }
         else if (ev.name == "PROXY_NEED_CREDS")
         {
-            std::cout << "PROXY_NEED_CREDS " << ev.info << std::endl;
+            std::cout << "PROXY_NEED_CREDS " << ev.info << "\n";
         }
         else if (ev.name == "INFO")
         {
@@ -330,12 +330,12 @@ class Client : public ClientBase
             }
             else
             {
-                std::cout << "Unrecognized INFO/INFO_PRE message: " << ev.info << std::endl;
+                std::cout << "Unrecognized INFO/INFO_PRE message: " << ev.info << "\n";
             }
         }
         else
         {
-            std::cout << "Received event " << ev.name << " " << ev.info << std::endl;
+            std::cout << "Received event " << ev.name << " " << ev.info << "\n";
         }
     }
 
@@ -343,7 +343,7 @@ class Client : public ClientBase
     {
         if (acev.payload.starts_with("{\"dpc_request\"") && acev.payload.find("certificate") != std::string::npos)
         {
-            std::cout << "ACC CERTCHECK challenge initiated" << std::endl;
+            std::cout << "ACC CERTCHECK challenge initiated\n";
             handle_certcheck_request();
         }
         else if (acev.payload.starts_with("{\"dpc_request\"") && acev.payload.find("client_info") != std::string::npos)
@@ -355,16 +355,16 @@ class Client : public ClientBase
                         }
                     }})"};
 
-            std::cout << "ACC DPC1: sending fake client info:" << fakeResponse << std::endl;
+            std::cout << "ACC DPC1: sending fake client info:" << fakeResponse << "\n";
             send_app_control_channel_msg("dpc1", fakeResponse);
         }
         else if (acev.payload.starts_with("{\"dpc_request\""))
         {
-            std::cout << "Cannot parse dpc request message:" << acev.payload << std::endl;
+            std::cout << "Cannot parse dpc request message:" << acev.payload << "\n";
         }
         else
         {
-            std::cout << "Cannot parse device posture message:" << acev.payload << std::endl;
+            std::cout << "Cannot parse device posture message:" << acev.payload << "\n";
         }
     }
 
@@ -376,7 +376,7 @@ class Client : public ClientBase
     {
         if (acev.protocol == "internal:supported_protocols")
         {
-            std::cout << "Client/server common app custom control protocols: " << acev.payload << std::endl;
+            std::cout << "Client/server common app custom control protocols: " << acev.payload << "\n";
         }
         else if (acev.protocol == certcheck_init_verb)
         {
@@ -385,7 +385,7 @@ class Client : public ClientBase
         else
         {
             std::cout << "received unhandled app custom control message for protocol " << acev.protocol
-                      << " msg payload: " << acev.payload << std::endl;
+                      << " msg payload: " << acev.payload << "\n";
         }
     }
 
@@ -396,7 +396,7 @@ class Client : public ClientBase
     {
         if (certcheck_cert.empty() || !certcheck_pkey.defined())
         {
-            std::cout << "ACC CERTCHECK FAILED: MISSING PARAMETERS" << std::endl;
+            std::cout << "ACC CERTCHECK FAILED: MISSING PARAMETERS\n";
             return;
         }
 
@@ -434,7 +434,7 @@ class Client : public ClientBase
                 return;
             }
 #ifdef OPENVPN_PLATFORM_MAC
-            std::cout << "Trying to launch " << url_str << std::endl;
+            std::cout << "Trying to launch " << url_str << "\n";
             std::thread thr([url_str]()
                             {
 			    CFURLRef url = CFURLCreateWithBytes(
@@ -459,7 +459,7 @@ class Client : public ClientBase
             argv.emplace_back(url_str);
             system_cmd(argv);
 #else
-            std::cout << "No implementation to launch " << url_str << std::endl;
+            std::cout << "No implementation to launch " << url_str << "\n";
 #endif
         }
     }
@@ -478,23 +478,23 @@ class Client : public ClientBase
         switch (action)
         {
         case CT_STOP:
-            std::cout << "signal: CT_STOP" << std::endl;
+            std::cout << "signal: CT_STOP\n";
             stop();
             break;
         case CT_RECONNECT:
-            std::cout << "signal: CT_RECONNECT" << std::endl;
+            std::cout << "signal: CT_RECONNECT\n";
             reconnect(0);
             break;
         case CT_PAUSE:
-            std::cout << "signal: CT_PAUSE" << std::endl;
+            std::cout << "signal: CT_PAUSE\n";
             pause("clock-tick pause");
             break;
         case CT_RESUME:
-            std::cout << "signal: CT_RESUME" << std::endl;
+            std::cout << "signal: CT_RESUME\n";
             resume();
             break;
         case CT_STATS:
-            std::cout << "signal: CT_STATS" << std::endl;
+            std::cout << "signal: CT_STATS\n";
             print_stats();
             break;
         default:
@@ -826,21 +826,21 @@ static void worker_thread()
 #endif
     try
     {
-        std::cout << "Thread starting..." << std::endl;
+        std::cout << "Thread starting...\n";
         ClientAPI::Status connect_status = the_client->connect();
         if (connect_status.error)
         {
             std::cout << "connect error: ";
             if (!connect_status.status.empty())
-                std::cout << connect_status.status << ": " << std::endl;
-            std::cout << connect_status.message << std::endl;
+                std::cout << connect_status.status << ": \n";
+            std::cout << connect_status.message << "\n";
         }
     }
     catch (const std::exception &e)
     {
-        std::cout << "Connect thread exception: " << e.what() << std::endl;
+        std::cout << "Connect thread exception: " << e.what() << "\n";
     }
-    std::cout << "Thread finished" << std::endl;
+    std::cout << "Thread finished\n";
 }
 
 static std::string read_profile(const char *fn, const std::string *profile_content)
@@ -964,12 +964,12 @@ static void handler(int signum)
     {
     case SIGTERM:
     case SIGINT:
-        std::cout << "received stop signal " << signum << std::endl;
+        std::cout << "received stop signal " << signum << "\n";
         if (the_client)
             the_client->stop();
         break;
     case SIGHUP:
-        std::cout << "received reconnect signal " << signum << std::endl;
+        std::cout << "received reconnect signal " << signum << "\n";
         if (the_client)
             the_client->reconnect(0);
         break;
@@ -981,7 +981,7 @@ static void handler(int signum)
         {
             // toggle pause/resume
             static bool hup = false;
-            std::cout << "received pause/resume toggle signal " << signum << std::endl;
+            std::cout << "received pause/resume toggle signal " << signum << "\n";
             if (the_client)
             {
                 if (hup)
@@ -993,7 +993,7 @@ static void handler(int signum)
         }
         break;
     default:
-        std::cout << "received unknown signal " << signum << std::endl;
+        std::cout << "received unknown signal " << signum << "\n";
         break;
     }
 }
@@ -1318,9 +1318,9 @@ int openvpn_client(int argc, char *argv[], const std::string *profile_content)
 
             if (version)
             {
-                std::cout << "OpenVPN cli 1.0" << std::endl;
-                std::cout << ClientAPI::OpenVPNClientHelper::platform() << std::endl;
-                std::cout << ClientAPI::OpenVPNClientHelper::copyright() << std::endl;
+                std::cout << "OpenVPN cli 1.0\n";
+                std::cout << ClientAPI::OpenVPNClientHelper::platform() << "\n";
+                std::cout << ClientAPI::OpenVPNClientHelper::copyright() << "\n";
             }
             else if (self_test)
             {
@@ -1420,26 +1420,26 @@ int openvpn_client(int argc, char *argv[], const std::string *profile_content)
                     {
                         ClientAPI::OpenVPNClientHelper clihelper;
                         const ClientAPI::EvalConfig cfg_eval = clihelper.eval_config(config);
-                        std::cout << "EVAL PROFILE" << std::endl;
-                        std::cout << "error=" << cfg_eval.error << std::endl;
-                        std::cout << "message=" << cfg_eval.message << std::endl;
-                        std::cout << "userlockedUsername=" << cfg_eval.userlockedUsername << std::endl;
-                        std::cout << "profileName=" << cfg_eval.profileName << std::endl;
-                        std::cout << "friendlyName=" << cfg_eval.friendlyName << std::endl;
-                        std::cout << "autologin=" << cfg_eval.autologin << std::endl;
-                        std::cout << "externalPki=" << cfg_eval.externalPki << std::endl;
-                        std::cout << "staticChallenge=" << cfg_eval.staticChallenge << std::endl;
-                        std::cout << "staticChallengeEcho=" << cfg_eval.staticChallengeEcho << std::endl;
-                        std::cout << "privateKeyPasswordRequired=" << cfg_eval.privateKeyPasswordRequired << std::endl;
-                        std::cout << "allowPasswordSave=" << cfg_eval.allowPasswordSave << std::endl;
+                        std::cout << "EVAL PROFILE\n";
+                        std::cout << "error=" << cfg_eval.error << "\n";
+                        std::cout << "message=" << cfg_eval.message << "\n";
+                        std::cout << "userlockedUsername=" << cfg_eval.userlockedUsername << "\n";
+                        std::cout << "profileName=" << cfg_eval.profileName << "\n";
+                        std::cout << "friendlyName=" << cfg_eval.friendlyName << "\n";
+                        std::cout << "autologin=" << cfg_eval.autologin << "\n";
+                        std::cout << "externalPki=" << cfg_eval.externalPki << "\n";
+                        std::cout << "staticChallenge=" << cfg_eval.staticChallenge << "\n";
+                        std::cout << "staticChallengeEcho=" << cfg_eval.staticChallengeEcho << "\n";
+                        std::cout << "privateKeyPasswordRequired=" << cfg_eval.privateKeyPasswordRequired << "\n";
+                        std::cout << "allowPasswordSave=" << cfg_eval.allowPasswordSave << "\n";
 
                         if (!config.serverOverride.empty())
-                            std::cout << "server=" << config.serverOverride << std::endl;
+                            std::cout << "server=" << config.serverOverride << "\n";
 
                         for (size_t i = 0; i < cfg_eval.serverList.size(); ++i)
                         {
                             const ClientAPI::ServerEntry &se = cfg_eval.serverList[i];
-                            std::cout << '[' << i << "] " << se.server << '/' << se.friendlyName << std::endl;
+                            std::cout << '[' << i << "] " << se.server << '/' << se.friendlyName << "\n";
                         }
                     }
                     else
@@ -1456,7 +1456,7 @@ int openvpn_client(int argc, char *argv[], const std::string *profile_content)
                         if (eval.autologin)
                         {
                             if (!username.empty() || !password.empty())
-                                std::cout << "NOTE: creds were not needed" << std::endl;
+                                std::cout << "NOTE: creds were not needed\n";
 
                             // still provide proxy credentials if given
                             if (!proxyUsername.empty())
@@ -1531,7 +1531,7 @@ int openvpn_client(int argc, char *argv[], const std::string *profile_content)
 
                         client.set_write_url_fn(write_url_fn);
 
-                        std::cout << "CONNECTING..." << std::endl;
+                        std::cout << "CONNECTING...\n";
 
                         // start the client thread
                         start_thread(client);
@@ -1539,7 +1539,7 @@ int openvpn_client(int argc, char *argv[], const std::string *profile_content)
                         // Get dynamic challenge response
                         if (client.is_dynamic_challenge())
                         {
-                            std::cout << "ENTER RESPONSE" << std::endl;
+                            std::cout << "ENTER RESPONSE\n";
                             std::getline(std::cin, response);
                             if (!response.empty())
                             {
@@ -1570,65 +1570,65 @@ int openvpn_client(int argc, char *argv[], const std::string *profile_content)
     }
     catch (const usage &)
     {
-        std::cout << "OpenVPN Client (ovpncli)" << std::endl;
-        std::cout << "usage: cli [options] <config-file> [extra-config-directives...]" << std::endl;
-        std::cout << "--version, -v         : show version info" << std::endl;
-        std::cout << "--eval, -e            : evaluate profile only (standalone)" << std::endl;
-        std::cout << "--merge, -m           : merge profile into unified format (standalone)" << std::endl;
-        std::cout << "--username, -u        : username" << std::endl;
-        std::cout << "--password, -p        : password" << std::endl;
-        std::cout << "--response, -r        : static response" << std::endl;
-        std::cout << "--dc, -D              : dynamic challenge/response cookie" << std::endl;
-        std::cout << "--proto, -P           : protocol override (udp|tcp)" << std::endl;
-        std::cout << "--server, -s          : server override" << std::endl;
-        std::cout << "--port, -R            : port override" << std::endl;
+        std::cout << "OpenVPN Client (ovpncli)\n";
+        std::cout << "usage: cli [options] <config-file> [extra-config-directives...]\n";
+        std::cout << "--version, -v         : show version info\n";
+        std::cout << "--eval, -e            : evaluate profile only (standalone)\n";
+        std::cout << "--merge, -m           : merge profile into unified format (standalone)\n";
+        std::cout << "--username, -u        : username\n";
+        std::cout << "--password, -p        : password\n";
+        std::cout << "--response, -r        : static response\n";
+        std::cout << "--dc, -D              : dynamic challenge/response cookie\n";
+        std::cout << "--proto, -P           : protocol override (udp|tcp)\n";
+        std::cout << "--server, -s          : server override\n";
+        std::cout << "--port, -R            : port override\n";
 #ifdef OPENVPN_REMOTE_OVERRIDE
-        std::cout << "--remote-override     : command to run to generate next remote (returning host,ip,port,proto)" << std::endl;
+        std::cout << "--remote-override     : command to run to generate next remote (returning host,ip,port,proto)\n";
 #endif
-        std::cout << "--allowAF, -6         : Allow unused address families (yes|no|default)" << std::endl;
-        std::cout << "--timeout, -t         : timeout" << std::endl;
-        std::cout << "--compress, -c        : compression mode (yes|no|asym)" << std::endl;
-        std::cout << "--pk-password, -z     : private key password" << std::endl;
-        std::cout << "--tvm-override, -M    : tls-version-min override (disabled, default, tls_1_x)" << std::endl;
-        std::cout << "--legacy-algorithms, -L: Enable legacy algorithm (OpenSSL legacy provider)" << std::endl;
-        std::cout << "--non-preferred-algorithms, -Q: Enables non preferred data channel algorithms" << std::endl;
+        std::cout << "--allowAF, -6         : Allow unused address families (yes|no|default)\n";
+        std::cout << "--timeout, -t         : timeout\n";
+        std::cout << "--compress, -c        : compression mode (yes|no|asym)\n";
+        std::cout << "--pk-password, -z     : private key password\n";
+        std::cout << "--tvm-override, -M    : tls-version-min override (disabled, default, tls_1_x)\n";
+        std::cout << "--legacy-algorithms, -L: Enable legacy algorithm (OpenSSL legacy provider)\n";
+        std::cout << "--non-preferred-algorithms, -Q: Enables non preferred data channel algorithms\n";
         std::cout << "--tcprof-override, -X : tls-cert-profile override ("
                   <<
 #ifdef OPENVPN_ALLOW_INSECURE_CERTPROFILE
             "insecure, "
                   <<
 #endif
-            "legacy, preferred, etc.)" << std::endl;
-        std::cout << "--proxy-host, -h           : HTTP proxy hostname/IP" << std::endl;
-        std::cout << "--proxy-port, -q           : HTTP proxy port" << std::endl;
-        std::cout << "--proxy-username, -U       : HTTP proxy username" << std::endl;
-        std::cout << "--proxy-password, -W       : HTTP proxy password" << std::endl;
-        std::cout << "--proxy-basic, -B          : allow HTTP basic auth" << std::endl;
-        std::cout << "--alt-proxy, -A            : enable alternative proxy module" << std::endl;
+            "legacy, preferred, etc.)\n";
+        std::cout << "--proxy-host, -h           : HTTP proxy hostname/IP\n";
+        std::cout << "--proxy-port, -q           : HTTP proxy port\n";
+        std::cout << "--proxy-username, -U       : HTTP proxy username\n";
+        std::cout << "--proxy-password, -W       : HTTP proxy password\n";
+        std::cout << "--proxy-basic, -B          : allow HTTP basic auth\n";
+        std::cout << "--alt-proxy, -A            : enable alternative proxy module\n";
 #if defined(ENABLE_KOVPN) || defined(ENABLE_OVPNDCO) || defined(ENABLE_OVPNDCOWIN)
-        std::cout << "--no-dco, -d               : disable data channel offload" << std::endl;
+        std::cout << "--no-dco, -d               : disable data channel offload\n";
 #endif
-        std::cout << "--cache-password, -C       : cache password" << std::endl;
-        std::cout << "--no-cert, -x              : disable client certificate" << std::endl;
-        std::cout << "--def-keydir, -k           : default key direction ('bi', '0', or '1')" << std::endl;
-        std::cout << "--ssl-debug                : SSL debug level" << std::endl;
-        std::cout << "--google-dns, -g           : enable Google DNS fallback" << std::endl;
-        std::cout << "--auto-sess, -a            : request autologin session" << std::endl;
-        std::cout << "--auth-retry, -Y           : retry connection on auth failure" << std::endl;
-        std::cout << "--persist-tun, -j          : keep TUN interface open across reconnects" << std::endl;
-        std::cout << "--wintun, -w               : use WinTun instead of TAP-Windows6 on Windows" << std::endl;
-        std::cout << "--peer-info, -I            : peer info key/value list in the form K1=V1,K2=V2,... or @kv.json" << std::endl;
-        std::cout << "--gremlin, -G              : gremlin info (send_delay_ms, recv_delay_ms, send_drop_prob, recv_drop_prob)" << std::endl;
-        std::cout << "--epki-ca                  : simulate external PKI cert supporting intermediate/root certs" << std::endl;
-        std::cout << "--epki-cert                : simulate external PKI cert" << std::endl;
-        std::cout << "--epki-key                 : simulate external PKI private key" << std::endl;
-        std::cout << "--sso-methods              : auth pending methods to announce via IV_SSO" << std::endl;
-        std::cout << "--write-url, -Z            : write INFO URL to file" << std::endl;
-        std::cout << "--tbc                      : generate INFO_JSON/TUN_BUILDER_CAPTURE event" << std::endl;
-        std::cout << "--app-custom-protocols, -K : ACC protocols to advertise" << std::endl;
-        std::cout << "--certcheck-cert, -o       : path to certificate PEM for certcheck" << std::endl;
-        std::cout << "--certcheck-pkey, -O       : path to decrypted pkey PEM for certcheck" << std::endl;
-        std::cout << "--certcheck-clientca, -b   : path to decrypted pkey PEM for certcheck CA" << std::endl;
+        std::cout << "--cache-password, -C       : cache password\n";
+        std::cout << "--no-cert, -x              : disable client certificate\n";
+        std::cout << "--def-keydir, -k           : default key direction ('bi', '0', or '1')\n";
+        std::cout << "--ssl-debug                : SSL debug level\n";
+        std::cout << "--google-dns, -g           : enable Google DNS fallback\n";
+        std::cout << "--auto-sess, -a            : request autologin session\n";
+        std::cout << "--auth-retry, -Y           : retry connection on auth failure\n";
+        std::cout << "--persist-tun, -j          : keep TUN interface open across reconnects\n";
+        std::cout << "--wintun, -w               : use WinTun instead of TAP-Windows6 on Windows\n";
+        std::cout << "--peer-info, -I            : peer info key/value list in the form K1=V1,K2=V2,... or @kv.json\n";
+        std::cout << "--gremlin, -G              : gremlin info (send_delay_ms, recv_delay_ms, send_drop_prob, recv_drop_prob)\n";
+        std::cout << "--epki-ca                  : simulate external PKI cert supporting intermediate/root certs\n";
+        std::cout << "--epki-cert                : simulate external PKI cert\n";
+        std::cout << "--epki-key                 : simulate external PKI private key\n";
+        std::cout << "--sso-methods              : auth pending methods to announce via IV_SSO\n";
+        std::cout << "--write-url, -Z            : write INFO URL to file\n";
+        std::cout << "--tbc                      : generate INFO_JSON/TUN_BUILDER_CAPTURE event\n";
+        std::cout << "--app-custom-protocols, -K : ACC protocols to advertise\n";
+        std::cout << "--certcheck-cert, -o       : path to certificate PEM for certcheck\n";
+        std::cout << "--certcheck-pkey, -O       : path to decrypted pkey PEM for certcheck\n";
+        std::cout << "--certcheck-clientca, -b   : path to decrypted pkey PEM for certcheck CA\n";
         ret = 2;
     }
     return ret;
@@ -1654,7 +1654,7 @@ int main(int argc, char *argv[])
     }
     catch (const std::exception &e)
     {
-        std::cout << "Main thread exception: " << e.what() << std::endl;
+        std::cout << "Main thread exception: " << e.what() << "\n";
         ret = 1;
     }
     return ret;

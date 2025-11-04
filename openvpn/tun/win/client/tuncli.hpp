@@ -132,8 +132,8 @@ class Client : public TunClient
                                                opt,
                                                nullptr,
                                                false);
-                    OPENVPN_LOG("CAPTURED OPTIONS:" << std::endl
-                                                    << po->to_string());
+                    OPENVPN_LOG("CAPTURED OPTIONS:\n"
+                                << po->to_string());
 
                     // create new tun setup object
                     tun_setup = config->new_setup_obj(io_context);
@@ -154,8 +154,8 @@ class Client : public TunClient
 
                     // persist tun settings state
                     if (tun_persist->persist_tun_state(ts, {state, nullptr}))
-                        OPENVPN_LOG("TunPersist: saving tun context:" << std::endl
-                                                                      << tun_persist->options());
+                        OPENVPN_LOG("TunPersist: saving tun context:\n"
+                                    << tun_persist->options());
 
                     // setup handler for external tun close
                     tun_setup->set_service_fail_handler([self = Ptr(this)]()
@@ -361,8 +361,8 @@ class Client : public TunClient
         {
             if (dhcp_capture->mod_reply(buf))
             {
-                OPENVPN_LOG("DHCP PROPS:" << std::endl
-                                          << dhcp_capture->get_props().to_string());
+                OPENVPN_LOG("DHCP PROPS:\n"
+                            << dhcp_capture->get_props().to_string());
                 layer_2_schedule_timer(1);
             }
         }

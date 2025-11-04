@@ -115,9 +115,9 @@ class TLSPRF
     std::string dump(const char *title)
     {
         std::ostringstream out;
-        out << "*** TLSPRF " << title << " pre_master: " << render_hex(pre_master, sizeof(pre_master)) << std::endl;
-        out << "*** TLSPRF " << title << " random1: " << render_hex(random1, sizeof(random1)) << std::endl;
-        out << "*** TLSPRF " << title << " random2: " << render_hex(random2, sizeof(random2)) << std::endl;
+        out << "*** TLSPRF " << title << " pre_master: " << render_hex(pre_master, sizeof(pre_master)) << '\n';
+        out << "*** TLSPRF " << title << " random1: " << render_hex(random1, sizeof(random1)) << "\n";
+        out << "*** TLSPRF " << title << " random2: " << render_hex(random2, sizeof(random2)) << "\n";
         return out.str();
     }
 

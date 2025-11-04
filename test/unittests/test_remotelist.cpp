@@ -329,7 +329,7 @@ TEST(RemoteList, RemoteListBulkResolve)
     ASSERT_NE(output.find("<<<RemoteListBulkResolve>>>"), std::string::npos);
 
     ASSERT_EQ(5UL, rl->size())
-        << "Unexpected remote list item count" << std::endl
+        << "Unexpected remote list item count\n"
         << output;
 
     ASSERT_EQ(rl->get_item(0)->res_addr_list_defined(), true);
@@ -379,7 +379,7 @@ TEST(RemoteList, RemoteListBulkResolve)
     output = testLog->stopCollecting();
 
     ASSERT_EQ(5UL, rl->size())
-        << "Unexpected remote list item count" << std::endl
+        << "Unexpected remote list item count\n"
         << output;
 
     ASSERT_EQ(rl->get_item(0)->res_addr_list_defined(), true);
@@ -418,7 +418,7 @@ TEST(RemoteList, RemoteListBulkResolve)
 
     // Cache was still be good, i.e. no updated 3 and 4
     ASSERT_EQ(5UL, rl->size())
-        << "Unexpected remote list item count" << std::endl
+        << "Unexpected remote list item count\n"
         << output;
 
     ASSERT_EQ(rl->get_item(2)->res_addr_list_defined(), true);
@@ -444,7 +444,7 @@ TEST(RemoteList, RemoteListBulkResolve)
     output = testLog->stopCollecting();
 
     ASSERT_EQ(5UL, rl->size())
-        << "Unexpected remote list item count" << std::endl
+        << "Unexpected remote list item count\n"
         << output;
 
     for (size_t i = 0; i < rl->size(); ++i)

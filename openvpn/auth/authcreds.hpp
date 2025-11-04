@@ -74,17 +74,17 @@ class AuthCreds : public RC<thread_unsafe_refcount>
     std::string to_string() const
     {
         std::ostringstream os;
-        os << "*** AuthCreds ***" << std::endl;
-        os << "user: '" << username << "'" << std::endl;
+        os << "*** AuthCreds ***\n";
+        os << "user: '" << username << "'\n";
         if (password.empty())
         {
-            os << "pass: (empty)" << std::endl;
+            os << "pass: (empty)\n";
         }
         else
         {
-            os << "pass: (non-empty)" << std::endl;
+            os << "pass: (non-empty)\n";
         }
-        os << "peer info:" << std::endl;
+        os << "peer info:\n";
         os << peer_info.render(Option::RENDER_BRACKET | Option::RENDER_NUMBER);
         return os.str();
     }

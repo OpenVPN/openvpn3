@@ -241,7 +241,7 @@ static inline bool xfer_oneway(SslApiBuilder &sender, SslApiBuilder &recv, const
     {
         BufferPtr buf = sender.get().read_ciphertext();
         recv.get().write_ciphertext(buf);
-        std::cout << out << buf->size() << " bytes" << std::endl;
+        std::cout << out << buf->size() << " bytes\n";
         return true;
     }
 
@@ -250,9 +250,9 @@ static inline bool xfer_oneway(SslApiBuilder &sender, SslApiBuilder &recv, const
         /* this can also indicate an error */
         uint8_t cleartext[1024];
 
-        std::cout << out << " read ready?" << std::endl;
+        std::cout << out << " read ready?\n";
         auto ctsize = sender.get().read_cleartext(cleartext, sizeof(cleartext));
-        std::cout << ctsize << std::endl;
+        std::cout << ctsize << '\n';
 
         EXPECT_FALSE(ctsize > 0);
         /* TODO: capture output for tests with data */

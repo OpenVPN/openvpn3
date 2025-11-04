@@ -726,7 +726,7 @@ class RemoteList : public RC<thread_unsafe_refcount>
         for (size_t i = 0; i < list.size(); ++i)
         {
             const Item &e = *list[i];
-            out << '[' << i << "] " << e.to_string() << std::endl;
+            out << '[' << i << "] " << e.to_string() << '\n';
         }
         return out.str();
     }

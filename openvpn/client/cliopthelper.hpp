@@ -533,9 +533,9 @@ class ParseClientConfig
     {
         std::ostringstream os;
 
-        os << "client" << std::endl;
-        os << "dev " << dev << std::endl;
-        os << "dev-type " << protoConfig->layer.dev_type() << std::endl;
+        os << "client\n";
+        os << "dev " << dev << '\n';
+        os << "dev-type " << protoConfig->layer.dev_type() << '\n';
         for (size_t i = 0; i < remoteList->size(); i++)
         {
             const RemoteList::Item::Ptr item = remoteList->get_item(i);
@@ -544,20 +544,18 @@ class ParseClientConfig
             const char *proto = item->transport_protocol.protocol_to_string();
             if (proto)
                 os << " " << proto;
-            os << std::endl;
+            os << '\n';
         }
         if (protoConfig->tls_crypt_context)
         {
-            os << "<tls-crypt>" << std::endl
-               << protoConfig->tls_crypt_key.render() << "</tls-crypt>"
-               << std::endl;
+            os << "<tls-crypt>\n"
+               << protoConfig->tls_crypt_key.render() << "</tls-crypt>\n";
         }
         else if (protoConfig->tls_auth_context)
         {
-            os << "<tls-auth>" << std::endl
-               << protoConfig->tls_auth_key.render() << "</tls-auth>"
-               << std::endl;
-            os << "key_direction " << protoConfig->key_direction << std::endl;
+            os << "<tls-auth>\n"
+               << protoConfig->tls_auth_key.render() << "</tls-auth>\n";
+            os << "key_direction " << protoConfig->key_direction << '\n';
         }
 
         // SSL parameters
@@ -571,26 +569,26 @@ class ParseClientConfig
             std::vector<std::string> extra_certs = sslConfig->extract_extra_certs();
             if (!extra_certs.empty())
             {
-                os << "<extra-certs>" << std::endl;
+                os << "<extra-certs>\n";
                 for (auto &cert : extra_certs)
                 {
                     os << cert;
                 }
-                os << "</extra-certs>" << std::endl;
+                os << "</extra-certs>\n";
             }
         }
 
         os << "cipher " << CryptoAlgs::name(protoConfig->dc.cipher(), "none")
-           << std::endl;
+           << '\n';
         os << "auth " << CryptoAlgs::name(protoConfig->dc.digest(), "none")
-           << std::endl;
+           << '\n';
         const char *comp = protoConfig->comp_ctx.method_to_string();
         if (comp)
-            os << "compress " << comp << std::endl;
+            os << "compress " << comp << '\n';
         os << "keepalive " << protoConfig->keepalive_ping.to_seconds() << " "
-           << protoConfig->keepalive_timeout.to_seconds() << std::endl;
-        os << "tun-mtu " << protoConfig->tun_mtu << std::endl;
-        os << "reneg-sec " << protoConfig->renegotiate.to_seconds() << std::endl;
+           << protoConfig->keepalive_timeout.to_seconds() << '\n';
+        os << "tun-mtu " << protoConfig->tun_mtu << '\n';
+        os << "reneg-sec " << protoConfig->renegotiate.to_seconds() << '\n';
 
         return os.str();
     }
@@ -684,8 +682,8 @@ class ParseClientConfig
     {
         if (pem.empty())
             return;
-        os << "<" << label << ">" << std::endl
-           << pem << "</" << label << ">" << std::endl;
+        os << "<" << label << ">\n"
+           << pem << "</" << label << ">\n";
     }
 
 #ifdef HAVE_CONFIG_JSONCPP

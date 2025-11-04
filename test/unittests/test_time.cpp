@@ -107,7 +107,7 @@ TEST(time, test1)
         const Time::type frac = t.fractional_binary_ms();
         if (sec != last_sec || frac != last_frac)
         {
-            // std::cout << sec << ' ' << frac << std::endl;
+            // std::cout << sec << ' ' << frac << "\n";
             last_sec = sec;
             last_frac = frac;
         }
@@ -117,7 +117,7 @@ TEST(time, test1)
 static void sub(const Time &t1, const Time &t2, bool large)
 {
     const Time::Duration d = t1 - t2;
-    // std::cout << "T-T " << t1.raw() << " - " << t2.raw() << " = " << d.raw() << std::endl;
+    // std::cout << "T-T " << t1.raw() << " - " << t2.raw() << " = " << d.raw() << "\n";
     if (large)
         ASSERT_GE(d.raw(), 100000U);
     else
@@ -127,7 +127,7 @@ static void sub(const Time &t1, const Time &t2, bool large)
 static void sub(const Time::Duration &d1, const Time::Duration &d2)
 {
     const Time::Duration d = d1 - d2;
-    // std::cout << "D-D " << d1.raw() << " - " << d2.raw() << " = " << d.raw() << std::endl;
+    // std::cout << "D-D " << d1.raw() << " - " << d2.raw() << " = " << d.raw() << "\n";
     Time::Duration x = d1;
     x -= d2;
     ASSERT_EQ(x, d) << "D-D INCONSISTENCY DETECTED";
@@ -136,7 +136,7 @@ static void sub(const Time::Duration &d1, const Time::Duration &d2)
 static void add(const Time &t1, const Time::Duration &d1)
 {
     const Time t = t1 + d1;
-    // std::cout << "T+D " << t1.raw() << " + " << d1.raw() << " = " << t.raw() << std::endl;
+    // std::cout << "T+D " << t1.raw() << " + " << d1.raw() << " = " << t.raw() << "\n";
     Time x = t1;
     x += d1;
     ASSERT_EQ(x, t) << "T+D INCONSISTENCY DETECTED";
@@ -145,7 +145,7 @@ static void add(const Time &t1, const Time::Duration &d1)
 static void add(const Time::Duration &d1, const Time::Duration &d2)
 {
     const Time::Duration d = d1 + d2;
-    // std::cout << "D+D " << d1.raw() << " + " << d2.raw() << " = " << d.raw() << std::endl;
+    // std::cout << "D+D " << d1.raw() << " + " << d2.raw() << " = " << d.raw() << "\n";
     Time::Duration x = d1;
     x += d2;
     ASSERT_EQ(x, d) << "D+D INCONSISTENCY DETECTED";

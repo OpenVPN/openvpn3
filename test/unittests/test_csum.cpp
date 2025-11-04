@@ -62,6 +62,6 @@ TEST(misc, stress_csum)
             << " orig=" << orig_csum
             << " updated=" << updated_csum
             << " verify=" << verify_csum
-            << std::endl;
+            << '\n';
     }
 }

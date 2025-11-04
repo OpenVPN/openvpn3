@@ -47,7 +47,7 @@ class WinCommandAgent : public TunWin::SetupFactory
     static bool add_bypass_route(IP::Addr endpoint)
     {
         std::ostringstream os;
-        os << "WinCommandAgent: transmitting bypass route to " << endpoint.to_string() << std::endl;
+        os << "WinCommandAgent: transmitting bypass route to " << endpoint.to_string() << "\n";
 
         // Build JSON request
         Json::Value jreq(Json::objectValue);
@@ -168,7 +168,7 @@ class WinCommandAgent : public TunWin::SetupFactory
 
             // Parse TAP handle
             const std::string tap_handle_hex = json::get_string(jres, "tap_handle_hex");
-            os << "TAP handle: " << tap_handle_hex << std::endl;
+            os << "TAP handle: " << tap_handle_hex << "\n";
             const HANDLE h = BufHex::parse<HANDLE>(tap_handle_hex, "TAP handle");
 
             tap_.guid = json::get_string(jres, "adapter_guid");
@@ -196,7 +196,7 @@ class WinCommandAgent : public TunWin::SetupFactory
                          std::ostream &os,
                          TunWin::RingBuffer::Ptr ring_buffer) override // TunWin::SetupBase
         {
-            os << "SetupClient: transmitting tun setup list to " << config->npserv << std::endl;
+            os << "SetupClient: transmitting tun setup list to " << config->npserv << "\n";
 
             // Build JSON request
             Json::Value jreq(Json::objectValue);
@@ -245,7 +245,7 @@ class WinCommandAgent : public TunWin::SetupFactory
 
             // Parse TAP handle
             const std::string tap_handle_hex = json::get_string(jres, "tap_handle_hex");
-            os << "TAP handle: " << tap_handle_hex << std::endl;
+            os << "TAP handle: " << tap_handle_hex << "\n";
             const HANDLE tap = BufHex::parse<HANDLE>(tap_handle_hex, "TAP handle");
             return tap;
         }
@@ -280,7 +280,7 @@ class WinCommandAgent : public TunWin::SetupFactory
 
         void destroy(std::ostream &os) override // defined by DestructorBase
         {
-            os << "SetupClient: signaling tun destroy event" << std::endl;
+            os << "SetupClient: signaling tun destroy event\n";
             service_process.close();
             destroy_event.signal_event();
         }
@@ -292,7 +292,7 @@ class WinCommandAgent : public TunWin::SetupFactory
                 throw ovpnagent("unexpected transaction set size");
             WS::ClientSet::Transaction &t = *ts.transactions[0];
             const std::string content = t.content_in.to_string();
-            os << t.format_status(ts) << std::endl;
+            os << t.format_status(ts) << "\n";
 
             if (t.comm_status_timeout())
             {

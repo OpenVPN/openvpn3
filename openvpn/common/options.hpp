@@ -1470,7 +1470,7 @@ class OptionList : public std::vector<Option>, public RCCopyable<thread_unsafe_r
             {
                 if (flags & Option::RENDER_NUMBER)
                     out << i << ' ';
-                out << o.render(flags) << std::endl;
+                out << o.render(flags) << '\n';
             }
         }
         return out.str();
@@ -1500,7 +1500,7 @@ class OptionList : public std::vector<Option>, public RCCopyable<thread_unsafe_r
             out << i->first << " [";
             for (IndexList::const_iterator j = i->second.begin(); j != i->second.end(); ++j)
                 out << ' ' << *j;
-            out << " ]" << std::endl;
+            out << " ]\n";
         }
         return out.str();
     }
@@ -1540,7 +1540,7 @@ class OptionList : public std::vector<Option>, public RCCopyable<thread_unsafe_r
         {
             if (!title)
                 title = "NOTE: Unused Options";
-            OPENVPN_LOG_NTNL(title << std::endl
+            OPENVPN_LOG_NTNL(title << '\n'
                                    << render(Option::RENDER_TRUNC_64 | Option::RENDER_NUMBER | Option::RENDER_BRACKET | Option::RENDER_UNUSED));
         }
     }

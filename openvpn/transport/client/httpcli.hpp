@@ -689,8 +689,8 @@ class Client : public TransportClient, AsyncResolvableTCP
 
     void basic_auth(HTTPProxy::ProxyAuthenticate &pa)
     {
-        OPENVPN_LOG("Proxy method: Basic" << std::endl
-                                          << pa.to_string());
+        OPENVPN_LOG("Proxy method: Basic\n"
+                    << pa.to_string());
 
         std::ostringstream os;
         gen_headers(os);
@@ -706,8 +706,8 @@ class Client : public TransportClient, AsyncResolvableTCP
     {
         try
         {
-            OPENVPN_LOG("Proxy method: Digest" << std::endl
-                                               << pa.to_string());
+            OPENVPN_LOG("Proxy method: Digest\n"
+                        << pa.to_string());
 
             // constants
             const std::string http_method = "CONNECT";
@@ -785,8 +785,8 @@ class Client : public TransportClient, AsyncResolvableTCP
 
     void ntlm_auth_phase_1(HTTPProxy::ProxyAuthenticate &pa)
     {
-        OPENVPN_LOG("Proxy method: NTLM" << std::endl
-                                         << pa.to_string());
+        OPENVPN_LOG("Proxy method: NTLM\n"
+                    << pa.to_string());
 
         const std::string phase_1_reply = HTTPProxy::NTLM::phase_1();
 

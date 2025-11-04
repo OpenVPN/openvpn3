@@ -673,7 +673,7 @@ class OMI : public OMICore, public ClientAPI::LogReceiver
         {
             send(string::add_trailing_crlf_copy(fe));
             if (is_errors_to_stderr())
-                std::cerr << fe << std::endl;
+                std::cerr << fe << "\n";
             OPENVPN_LOG_STRING(fe + '\n');
             ret = true;
         }
@@ -1062,7 +1062,7 @@ int run(OptionList opt)
             omi->stop();
         if (io_context_run_called)
             io_context.poll(); // execute completion handlers,
-        std::cerr << "openvpn: run loop exception: " << e.what() << std::endl;
+        std::cerr << "openvpn: run loop exception: " << e.what() << "\n";
         ret = 1;
     }
     return ret;
@@ -1080,14 +1080,14 @@ int main(int argc, char *argv[])
         }
         else
         {
-            std::cout << log_version() << std::endl;
-            std::cout << "Usage: openvpn [args...]" << std::endl;
+            std::cout << log_version() << "\n";
+            std::cout << "Usage: openvpn [args...]\n";
             ret = 2;
         }
     }
     catch (const std::exception &e)
     {
-        std::cerr << "openvpn: " << e.what() << std::endl;
+        std::cerr << "openvpn: " << e.what() << "\n";
         ret = 1;
     }
     return ret;

@@ -943,43 +943,43 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
             if (dc.useEpochKeys())
                 os << ", aead-epoch";
 
-            os << std::endl;
+            os << '\n';
         }
 
         void show_cc_enc_option(std::ostringstream &os) const
         {
             if (tls_auth_enabled())
             {
-                os << "  control channel: tls-auth enabled" << std::endl;
+                os << "  control channel: tls-auth enabled\n";
             }
             if (tls_crypt_v2_enabled())
             {
-                os << "  control channel: tls-crypt v2 enabled" << std::endl;
+                os << "  control channel: tls-crypt v2 enabled\n";
             }
             else if (tls_crypt_enabled())
             {
-                os << "  control channel: tls-crypt enabled" << std::endl;
+                os << "  control channel: tls-crypt enabled\n";
             }
             else if (dynamic_tls_crypt_enabled())
             {
-                os << "  control channel: dynamic tls-crypt enabled" << std::endl;
+                os << "  control channel: dynamic tls-crypt enabled\n";
             }
         }
 
         std::string show_options() const
         {
             std::ostringstream os;
-            os << "PROTOCOL OPTIONS:" << std::endl;
-            os << "  key-derivation: " << CryptoAlgs::name(dc.key_derivation()) << std::endl;
+            os << "PROTOCOL OPTIONS:\n";
+            os << "  key-derivation: " << CryptoAlgs::name(dc.key_derivation()) << '\n';
             if (comp_ctx.type() != CompressContext::NONE)
-                os << "  compress: " << comp_ctx.str() << std::endl;
+                os << "  compress: " << comp_ctx.str() << '\n';
 
             show_cc_enc_option(os);
             get_data_channel_options(os);
 
             if (!app_control_config.supported_protocols.empty())
             {
-                os << "  app custom control channel: " << app_control_config.str() << std::endl;
+                os << "  app custom control channel: " << app_control_config.str() << '\n';
             }
 
             return os.str();
@@ -1180,8 +1180,8 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
 
 
             const std::string ret = out.str();
-            OVPN_LOG_INFO("Sending Peer Info:" << std::endl
-                                               << ret);
+            OVPN_LOG_INFO("Sending Peer Info:\n"
+                          << ret);
             return ret;
         }
 

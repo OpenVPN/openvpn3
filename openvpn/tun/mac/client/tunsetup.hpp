@@ -117,7 +117,7 @@ class Setup : public TunBuilderSetup::Base
                 }
                 catch (const std::exception &e)
                 {
-                    os << e.what() << std::endl;
+                    os << e.what() << "\n";
                 }
             }
             if (fd == -1)
@@ -149,7 +149,7 @@ class Setup : public TunBuilderSetup::Base
         // enable the remove actions
         remove_cmds->enable_destroy(true);
 
-        os << "open " << conf->iface_name << " SUCCEEDED" << std::endl;
+        os << "open " << conf->iface_name << " SUCCEEDED\n";
         return fd;
     }
 
@@ -363,7 +363,7 @@ class Setup : public TunBuilderSetup::Base
                     if (local4 && !local4->gateway.empty())
                         add_del_route(route.address, route.prefix_length, local4->gateway, iface_name, 0, create, destroy);
                     else
-                        os << "ERROR: IPv4 route pushed without IPv4 ifconfig and/or route-gateway" << std::endl;
+                        os << "ERROR: IPv4 route pushed without IPv4 ifconfig and/or route-gateway\n";
                 }
             }
         }
@@ -388,7 +388,7 @@ class Setup : public TunBuilderSetup::Base
                             add_del_route(route.address, route.prefix_length, gw6.gateway_addr_str(), gw6.iface(), R_IPv6, create, destroy);
                         }
                         else
-                            os << "NOTE: cannot determine gateway for exclude IPv6 routes" << std::endl;
+                            os << "NOTE: cannot determine gateway for exclude IPv6 routes\n";
                     }
                 }
                 else
@@ -396,7 +396,7 @@ class Setup : public TunBuilderSetup::Base
                     if (gw4.flags() & MacGatewayInfo::ADDR_DEFINED)
                         add_del_route(route.address, route.prefix_length, gw4.gateway_addr_str(), gw4.iface(), 0, create, destroy);
                     else
-                        os << "NOTE: cannot determine gateway for exclude IPv4 routes" << std::endl;
+                        os << "NOTE: cannot determine gateway for exclude IPv4 routes\n";
                 }
             }
         }
@@ -420,12 +420,12 @@ class Setup : public TunBuilderSetup::Base
                 }
                 else
                 {
-                    os << "ERROR: cannot detect IPv4 default gateway" << std::endl;
+                    os << "ERROR: cannot detect IPv4 default gateway\n";
                 }
             }
             else
             {
-                os << "remote is IPv6, skip bypass route for reroute-ipv4" << std::endl;
+                os << "remote is IPv6, skip bypass route for reroute-ipv4\n";
             }
 
             if (!(pull.reroute_gw.flags & RGWFlags::EmulateExcludeRoutes))
@@ -455,12 +455,12 @@ class Setup : public TunBuilderSetup::Base
                 }
                 else
                 {
-                    os << "ERROR: cannot detect IPv6 default gateway" << std::endl;
+                    os << "ERROR: cannot detect IPv6 default gateway\n";
                 }
             }
             else
             {
-                os << "remote is IPv4, skip bypass route for reroute-ipv6" << std::endl;
+                os << "remote is IPv4, skip bypass route for reroute-ipv6\n";
             }
 
             if (!(pull.reroute_gw.flags & RGWFlags::EmulateExcludeRoutes))

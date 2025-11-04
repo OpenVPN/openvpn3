@@ -107,7 +107,7 @@ class MacGatewayInfo
             // likely no default gw or IPv6 connectivity
             if (os)
             {
-                *os << "GDG: problem writing to routing socket: " << std::to_string(ret) << " errno: " << std::to_string(errno) << " msg: " << ::strerror(errno) << std::endl;
+                *os << "GDG: problem writing to routing socket: " << std::to_string(ret) << " errno: " << std::to_string(errno) << " msg: " << ::strerror(errno) << "\n";
             }
 
             return;

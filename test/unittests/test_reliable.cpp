@@ -48,7 +48,7 @@ TEST(reliable, ack)
     BufferAllocated buf(256);
     buf.init_headroom(128);
     ack.prepend(buf, false);
-    actual << render_hex_generic(buf) << std::endl;
+    actual << render_hex_generic(buf) << '\n';
     EXPECT_EQ(actual.str(), expected);
 
     std::string expected2{"080000002100000100000000990000008800000077000000660000005500000044\n"};
@@ -58,7 +58,7 @@ TEST(reliable, ack)
     BufferAllocated buf2(256);
     buf2.init_headroom(128);
     ack.prepend(buf2, true);
-    actual2 << render_hex_generic(buf2) << std::endl;
+    actual2 << render_hex_generic(buf2) << '\n';
     EXPECT_EQ(actual2.str(), expected2);
 }
 
@@ -77,7 +77,7 @@ TEST(reliable, ack_dup)
     BufferAllocated buf(256);
     buf.init_headroom(128);
     ack.prepend(buf, false);
-    actual << render_hex_generic(buf) << std::endl;
+    actual << render_hex_generic(buf) << '\n';
     EXPECT_EQ(actual.str(), expected);
     EXPECT_EQ(ack.resend_size(), 4U);
 
@@ -91,7 +91,7 @@ TEST(reliable, ack_dup)
     buf2.init_headroom(128);
 
     ack.prepend(buf2, false);
-    actual << render_hex_generic(buf2) << std::endl;
+    actual << render_hex_generic(buf2) << '\n';
     EXPECT_EQ(actual.str(), expected2);
     /* The duplicate 3 should have be there only once */
     EXPECT_EQ(ack.resend_size(), 5U);
@@ -101,7 +101,7 @@ TEST(reliable, ack_dup)
     buf3.init_headroom(128);
     ack.prepend(buf3, false);
 
-    actual << render_hex_generic(buf3) << std::endl;
+    actual << render_hex_generic(buf3) << '\n';
 
     std::string expected3{"0400000002000000040000000300000006\n"};
     EXPECT_EQ(actual.str(), expected3);
@@ -164,7 +164,7 @@ void print_msg(const Time::Duration t,
 {
     case_detail << t.raw() << ' ' << title
                 << '[' << id << "] " << (char *)buf->data()
-                << std::endl;
+                << '\n';
 }
 
 
@@ -207,12 +207,12 @@ void test(MTRand &rand,
             if (rand.randrange(40)) // with small probability, simulate a dropped ACK
                                     // JMD_TODO: why wouldn't this have drop_prob probability
             {
-                case_detail << t.raw() << " ACK [" << id << "]" << std::endl;
+                case_detail << t.raw() << " ACK [" << id << "]\n";
                 send.ack(id);
             }
             else
             {
-                case_detail << t.raw() << " Simulate dropped ACK [" << id << "]" << std::endl;
+                case_detail << t.raw() << " Simulate dropped ACK [" << id << "]\n";
             }
         }
 
@@ -267,7 +267,7 @@ void test(MTRand &rand,
                 {
                     case_detail << t.raw()
                                 << " Simulate packet reordering "
-                                << i1 << " <-> " << i2 << std::endl;
+                                << i1 << " <-> " << i2 << '\n';
                     std::swap(wire[i1], wire[i2]);
                 }
             }
@@ -279,7 +279,7 @@ void test(MTRand &rand,
             Message msg = wire.front();
             wire.pop_front();
 
-            case_detail << t.raw() << " Received packet [" << msg.id << "]" << std::endl;
+            case_detail << t.raw() << " Received packet [" << msg.id << "]\n";
 
             // simulate dropped packet
             if (rand.randrange(drop_prob))
@@ -292,7 +292,7 @@ void test(MTRand &rand,
             else
             {
                 case_detail << t.raw()
-                            << " Simulate dropped packet [" << msg.id << "]" << std::endl;
+                            << " Simulate dropped packet [" << msg.id << "]\n";
             }
         }
 
@@ -316,8 +316,7 @@ void test(MTRand &rand,
                 << " final_t=" << t.raw()
                 << " iterations=" << iterations
                 << " count=" << count
-                << " [" << send_id << '/' << (rec_id ? rec_id - 1 : 0) << ']'
-                << std::endl;
+                << " [" << send_id << '/' << (rec_id ? rec_id - 1 : 0) << "]\n";
     if (send_id != (rec_id ? rec_id - 1 : 0))
         throw receive_sequence();
 }
@@ -349,7 +348,7 @@ TEST(reliable, simulation)
         std::stringstream case_detail;
         try
         {
-            case_detail << "Test case " << sim_case.test_case << std::endl;
+            case_detail << "Test case " << sim_case.test_case << '\n';
             test(rand,
                  base,
                  end,
