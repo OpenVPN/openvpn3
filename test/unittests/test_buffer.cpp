@@ -51,7 +51,7 @@ TEST(buffer, const_buffer_ref_1)
     static unsigned char hello[] = "hello world";
     Buffer buf(hello, sizeof(hello) - 1, true);
     ConstBuffer &cbuf = const_buffer_ref(buf);
-    EXPECT_EQ(cbuf.size(), 11u);
+    EXPECT_EQ(cbuf.size(), 11U);
     EXPECT_EQ(buf_to_string(buf), buf_to_string(cbuf));
 }
 
@@ -61,7 +61,7 @@ TEST(buffer, const_buffer_ref_2)
     BufferAllocated buf(64);
     buf_append_string(buf, "hello world");
     ConstBuffer &cbuf = const_buffer_ref(buf);
-    EXPECT_EQ(cbuf.size(), 11u);
+    EXPECT_EQ(cbuf.size(), 11U);
     EXPECT_EQ(buf_to_string(buf), buf_to_string(cbuf));
 }
 
@@ -71,7 +71,7 @@ TEST(buffer, my_const_buffer_1)
     typedef ConstBufferType<const char> MyConstBuffer;
     static const char hello[] = "hello world";
     MyConstBuffer cbuf(hello, sizeof(hello) - 1, true);
-    EXPECT_EQ(cbuf.size(), 11u);
+    EXPECT_EQ(cbuf.size(), 11U);
     EXPECT_EQ(std::string(cbuf.c_data(), cbuf.size()), "hello world");
 }
 
@@ -389,43 +389,43 @@ TEST(buffer, prepend_alloc)
 {
     BufferAllocated buf(64);
     buf_append_string(buf, "hello world");
-    EXPECT_EQ(buf.offset(), 0u);
+    EXPECT_EQ(buf.offset(), 0U);
 
     buf.prepend_alloc(5);
-    EXPECT_EQ(buf.size(), 16u);
-    EXPECT_EQ(buf.remaining(), 48u);
+    EXPECT_EQ(buf.size(), 16U);
+    EXPECT_EQ(buf.remaining(), 48U);
 }
 
 
 TEST(buffer, prepend_alloc_2)
 {
     BufferAllocated buf(64);
-    EXPECT_EQ(buf.offset(), 0u);
+    EXPECT_EQ(buf.offset(), 0U);
     buf.init_headroom(2);
-    EXPECT_EQ(buf.offset(), 2u);
+    EXPECT_EQ(buf.offset(), 2U);
     buf_append_string(buf, "hello world");
-    EXPECT_EQ(buf.offset(), 2u);
+    EXPECT_EQ(buf.offset(), 2U);
 
     buf.prepend_alloc(5);
-    EXPECT_EQ(buf.offset(), 0u);
-    EXPECT_EQ(buf.size(), 16u);
-    EXPECT_EQ(buf.remaining(), 48u);
+    EXPECT_EQ(buf.offset(), 0U);
+    EXPECT_EQ(buf.size(), 16U);
+    EXPECT_EQ(buf.remaining(), 48U);
 }
 
 
 TEST(buffer, prepend_alloc_fits)
 {
     BufferAllocated buf(64);
-    EXPECT_EQ(buf.offset(), 0u);
+    EXPECT_EQ(buf.offset(), 0U);
     buf.init_headroom(5);
-    EXPECT_EQ(buf.offset(), 5u);
+    EXPECT_EQ(buf.offset(), 5U);
     buf_append_string(buf, "hello world");
-    EXPECT_EQ(buf.offset(), 5u);
+    EXPECT_EQ(buf.offset(), 5U);
 
     buf.prepend_alloc(5);
-    EXPECT_EQ(buf.offset(), 0u);
-    EXPECT_EQ(buf.size(), 16u);
-    EXPECT_EQ(buf.remaining(), 48u);
+    EXPECT_EQ(buf.offset(), 0U);
+    EXPECT_EQ(buf.size(), 16U);
+    EXPECT_EQ(buf.remaining(), 48U);
 }
 
 TEST(buffer, prepend_alloc_fail)
@@ -434,8 +434,8 @@ TEST(buffer, prepend_alloc_fail)
     buf_append_string(buf, "hello world");
 
     EXPECT_THROW(buf.prepend_alloc(5), std::exception);
-    EXPECT_EQ(buf.size(), 11u);
-    EXPECT_EQ(buf.remaining(), 0u);
+    EXPECT_EQ(buf.size(), 11U);
+    EXPECT_EQ(buf.remaining(), 0U);
 }
 
 TEST(buffer, prepend_alloc_fail2)
@@ -444,8 +444,8 @@ TEST(buffer, prepend_alloc_fail2)
     buf_append_string(buf, "hello world");
 
     EXPECT_THROW(buf.prepend_alloc(5), std::exception);
-    EXPECT_EQ(buf.size(), 11u);
-    EXPECT_EQ(buf.remaining(), 3u);
+    EXPECT_EQ(buf.size(), 11U);
+    EXPECT_EQ(buf.remaining(), 3U);
 }
 
 TEST(buffer, realign)
@@ -461,7 +461,7 @@ TEST(buffer, realign)
     EXPECT_EQ(buf[0], ' ');
     EXPECT_EQ(buf[5], 'd');
     EXPECT_THROW(buf[6], BufferException);
-    EXPECT_EQ(buf.size(), 6u);
+    EXPECT_EQ(buf.size(), 6U);
     EXPECT_EQ(buf.c_data_raw()[0], ' ');
 }
 
@@ -476,7 +476,7 @@ TEST(buffer, realign2)
 
     EXPECT_EQ(buf.c_data_raw()[5], 'h');
     EXPECT_EQ(buf[0], 'h');
-    EXPECT_EQ(buf.size(), 11u);
+    EXPECT_EQ(buf.size(), 11U);
 }
 
 TEST(buffer, realign3)
@@ -490,16 +490,16 @@ TEST(buffer, realign3)
 
     EXPECT_EQ(buf.c_data_raw()[5], 'h');
     EXPECT_EQ(buf[0], 'h');
-    EXPECT_EQ(buf.size(), 11u);
-    EXPECT_EQ(buf.offset(), 5u);
+    EXPECT_EQ(buf.size(), 11U);
+    EXPECT_EQ(buf.offset(), 5U);
 }
 
 TEST(buffer, realign4)
 {
     BufferAllocated buf(32);
-    buf.realign(7u);
+    buf.realign(7U);
     buf_append_string(buf, "hello world");
-    EXPECT_EQ(buf.offset(), 7u);
+    EXPECT_EQ(buf.offset(), 7U);
     buf.realign(0);
 
     EXPECT_EQ(buf.c_data_raw()[0], 'h');
@@ -536,9 +536,9 @@ TEST(buffer, invariants_after_move_safe)
     BufferAllocated buf2(std::move(buf));
 
     // coverity[USE_AFTER_MOVE]
-    EXPECT_EQ(buf.size(), 0u);
+    EXPECT_EQ(buf.size(), 0U);
     // coverity[USE_AFTER_MOVE]
-    EXPECT_EQ(buf.capacity(), 0u);
+    EXPECT_EQ(buf.capacity(), 0U);
     // coverity[USE_AFTER_MOVE]
     EXPECT_THROW(buf[0], BufferException);
     // coverity[USE_AFTER_MOVE]
@@ -550,9 +550,9 @@ TEST(buffer, invariants_after_move_safe)
     // coverity[USE_AFTER_MOVE]
     EXPECT_EQ(buf.data_raw(), nullptr);
     // coverity[USE_AFTER_MOVE]
-    EXPECT_EQ(buf.offset(), 0u);
+    EXPECT_EQ(buf.offset(), 0U);
     // coverity[USE_AFTER_MOVE]
-    EXPECT_EQ(buf.remaining(), 0u);
+    EXPECT_EQ(buf.remaining(), 0U);
 }
 
 TEST(buffer, push_back_after_move_safe)
@@ -565,7 +565,7 @@ TEST(buffer, push_back_after_move_safe)
     buf.push_back('X');
 
     // coverity[USE_AFTER_MOVE]
-    EXPECT_EQ(buf2.size(), 11u);
+    EXPECT_EQ(buf2.size(), 11U);
     // coverity[USE_AFTER_MOVE]
     EXPECT_EQ(buf2[0], 'h');
     // coverity[USE_AFTER_MOVE]
@@ -585,7 +585,7 @@ TEST(buffer, append_after_move_safe)
     buf = buf3;
 
     // coverity[USE_AFTER_MOVE]
-    EXPECT_EQ(buf2.size(), 11u);
+    EXPECT_EQ(buf2.size(), 11U);
     // coverity[USE_AFTER_MOVE]
     EXPECT_EQ(buf2[0], 'h');
     // coverity[USE_AFTER_MOVE]

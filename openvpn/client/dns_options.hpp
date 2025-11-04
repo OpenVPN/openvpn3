@@ -144,7 +144,7 @@ struct DnsAddress
     void from_json(const Json::Value &root, const std::string &title)
     {
         json::assert_dict(root, title);
-        json::to_uint_optional(root, port, "port", 0u, title);
+        json::to_uint_optional(root, port, "port", 0U, title);
 
         std::string addr_str;
         json::to_string(root, addr_str, "address", title);

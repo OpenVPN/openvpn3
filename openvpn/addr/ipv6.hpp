@@ -735,7 +735,7 @@ class Addr // NOTE: must be union-legal, so default constructor does not initial
         if (prefix_len > 0)
         {
             const unsigned int pl = prefix_len - 1;
-            const std::uint32_t mask = ~((1u << (31 - (pl & 31))) - 1);
+            const std::uint32_t mask = ~((1U << (31 - (pl & 31))) - 1);
             switch (pl >> 5)
             {
             case 0:
@@ -798,10 +798,10 @@ class Addr // NOTE: must be union-legal, so default constructor does not initial
     {
         if (shift == 1)
         {
-            high <<= 1u;
-            if (low & (std::uint64_t(1) << 63u))
-                high |= 1u;
-            low <<= 1u;
+            high <<= 1U;
+            if (low & (std::uint64_t(1) << 63U))
+                high |= 1U;
+            low <<= 1U;
         }
         else if (shift == 0)
         {
@@ -814,7 +814,7 @@ class Addr // NOTE: must be union-legal, so default constructor does not initial
         }
         else if (shift < 64)
         {
-            high = (high << shift) | (low >> (64u - shift));
+            high = (high << shift) | (low >> (64U - shift));
             low <<= shift;
         }
         else if (shift < 128) /* in [64, 127] */
@@ -835,10 +835,10 @@ class Addr // NOTE: must be union-legal, so default constructor does not initial
     {
         if (shift == 1)
         {
-            low >>= 1u;
-            if (high & 1u)
-                low |= (std::uint64_t(1) << 63u);
-            high >>= 1u;
+            low >>= 1U;
+            if (high & 1U)
+                low |= (std::uint64_t(1) << 63U);
+            high >>= 1U;
         }
         else if (shift == 0)
         {

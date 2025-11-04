@@ -295,7 +295,7 @@ class TimeType
     }
     std::uint64_t nanoseconds_since_epoch() const
     {
-        return base_ * 1000000000ull + time_ * (1000000000ull / prec);
+        return base_ * 1000000000ULL + time_ * (1000000000ULL / prec);
     }
     T fractional_binary_ms() const
     {

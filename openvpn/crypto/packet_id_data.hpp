@@ -53,7 +53,7 @@ struct PacketIDData
 
     /* the part of the packet id that represents the PID, the first 16 bits
      * are used by the Epoch*/
-    static constexpr inline data_id_t epoch_packet_id_mask = 0x0000ffffffffffffull;
+    static constexpr inline data_id_t epoch_packet_id_mask = 0x0000ffffffffffffULL;
 
 
     data_id_t id = 0; // legal values are 1 through 2^64-1
@@ -102,7 +102,7 @@ struct PacketIDData
 
     uint16_t get_epoch()
     {
-        return static_cast<uint16_t>((id & ~epoch_packet_id_mask) >> 48ull);
+        return static_cast<uint16_t>((id & ~epoch_packet_id_mask) >> 48ULL);
     }
 
     /**
@@ -170,11 +170,11 @@ class PacketIDDataSend
     OPENVPN_SIMPLE_EXCEPTION(packet_id_wrap);
 
     /** the maximum allowed value for a epoch packet counter (48 bit) */
-    static constexpr inline PacketIDData::data_id_t epoch_packet_id_max = 0x0000ffffffffffffull;
+    static constexpr inline PacketIDData::data_id_t epoch_packet_id_max = 0x0000ffffffffffffULL;
 
 
     explicit PacketIDDataSend(bool wide_arg, uint16_t epoch)
-        : pid_(wide_arg, static_cast<PacketIDData::data_id_t>(epoch) << 48ull)
+        : pid_(wide_arg, static_cast<PacketIDData::data_id_t>(epoch) << 48ULL)
     {
     }
 
@@ -286,7 +286,7 @@ template <unsigned int REPLAY_WINDOW_ORDER,
 class PacketIDDataReceiveType
 {
   public:
-    static constexpr unsigned int REPLAY_WINDOW_BYTES = 1u << REPLAY_WINDOW_ORDER;
+    static constexpr unsigned int REPLAY_WINDOW_BYTES = 1U << REPLAY_WINDOW_ORDER;
     static constexpr unsigned int REPLAY_WINDOW_SIZE = REPLAY_WINDOW_BYTES * 8;
 
 #if defined(__GNUC__) && (__GNUC__ < 11)
@@ -409,14 +409,14 @@ class PacketIDDataReceiveType
             if (delta < REPLAY_WINDOW_SIZE)
             {
                 base = replay_index(-delta);
-                history[base / 8] |= static_cast<uint8_t>(1u << (base % 8));
+                history[base / 8] |= static_cast<uint8_t>(1U << (base % 8));
                 extent += static_cast<std::size_t>(delta);
                 if (extent > REPLAY_WINDOW_SIZE)
                     extent = REPLAY_WINDOW_SIZE;
                 for (unsigned i = 1; i < delta; ++i)
                 {
                     const auto newbase = replay_index(i);
-                    history[newbase / 8] &= static_cast<uint8_t>(~(1u << (newbase % 8)));
+                    history[newbase / 8] &= static_cast<uint8_t>(~(1U << (newbase % 8)));
                 }
             }
             else
@@ -438,7 +438,7 @@ class PacketIDDataReceiveType
                 {
                     const auto ri = replay_index(delta);
                     std::uint8_t *p = &history[ri / 8];
-                    const std::uint8_t mask = static_cast<uint8_t>(1u << (ri % 8));
+                    const std::uint8_t mask = static_cast<uint8_t>(1U << (ri % 8));
                     if (*p & mask)
                         return Error::PKTID_REPLAY;
                     *p |= mask;

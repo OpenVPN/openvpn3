@@ -430,7 +430,7 @@ TEST(sslctx_ut, handshake)
 
     try
     {
-        for (auto i = 0u; i < ITER; ++i)
+        for (auto i = 0U; i < ITER; ++i)
         {
             xfer(*client, *server);
         }
@@ -457,7 +457,7 @@ TEST(sslctx_ut, ca_handshake)
 
     try
     {
-        for (auto i = 0u; i < ITER; ++i)
+        for (auto i = 0U; i < ITER; ++i)
         {
             xfer(*client, *server);
         }
@@ -478,7 +478,7 @@ TEST(sslctx_ut, handshake_fail)
 
     try
     {
-        for (auto i = 0u; i < ITER; ++i)
+        for (auto i = 0U; i < ITER; ++i)
         {
             xfer(*client, *server);
         }

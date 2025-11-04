@@ -397,7 +397,7 @@ class unit_test_uniform_int_distribution
                 low = static_cast<uint32_t>(product);
             }
         }
-        return A + (product >> 32u);
+        return A + (product >> 32U);
     }
 
     explicit unit_test_uniform_int_distribution(uint32_t low = 0, uint32_t high = std::numeric_limits<uint32_t>::max())

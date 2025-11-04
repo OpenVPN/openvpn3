@@ -79,7 +79,7 @@ TEST(reliable, ack_dup)
     ack.prepend(buf, false);
     actual << render_hex_generic(buf) << std::endl;
     EXPECT_EQ(actual.str(), expected);
-    EXPECT_EQ(ack.resend_size(), 4u);
+    EXPECT_EQ(ack.resend_size(), 4U);
 
     ack.push_back(3);
     ack.push_back(6);
@@ -94,7 +94,7 @@ TEST(reliable, ack_dup)
     actual << render_hex_generic(buf2) << std::endl;
     EXPECT_EQ(actual.str(), expected2);
     /* The duplicate 3 should have be there only once */
-    EXPECT_EQ(ack.resend_size(), 5u);
+    EXPECT_EQ(ack.resend_size(), 5U);
 
     actual.str("");
     BufferAllocated buf3(256, BufAllocFlags::NO_FLAGS);

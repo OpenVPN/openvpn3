@@ -203,7 +203,7 @@ TEST(CPUTime, cpu_time_thread_1)
 TEST(CPUTime, cpu_time_thread_numcores)
 {
     // Use number of available cores
-    auto num_cores = std::min(std::thread::hardware_concurrency(), 1u);
+    auto num_cores = std::min(std::thread::hardware_concurrency(), 1U);
 
     // Meassure running a single worker thread
     MEASURE(parent_start, chk_parent_start, false);

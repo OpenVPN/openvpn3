@@ -109,7 +109,7 @@ class NTLM
 
         // add target information block to the blob
         size_t tib_len = 0;
-        if (response[0x16] & 0x80u) // check for Target Information block (TIB)
+        if (response[0x16] & 0x80U) // check for Target Information block (TIB)
         {
             tib_len = response[0x28]; // get TIB size
             if (tib_len > 96)

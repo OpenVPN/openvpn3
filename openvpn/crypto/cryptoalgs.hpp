@@ -190,7 +190,7 @@ class Alg
 };
 
 /** The limit for AES-GCM ciphers according to https://datatracker.ietf.org/doc/draft-irtf-cfrg-aead-limits/ */
-static constexpr uint64_t gcm_limit = (1ull << 36) - 1;
+static constexpr uint64_t gcm_limit = (1ULL << 36) - 1;
 
 inline std::array<Alg, Type::SIZE> algs = {
     // clang-format off

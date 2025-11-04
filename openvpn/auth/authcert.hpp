@@ -176,7 +176,7 @@ class AuthCert : public RC<thread_unsafe_refcount>
         bool defined() const
         {
             for (size_t i = 0; i < 5; ++i)
-                if (serial_number32[i] != 0xffffffffu)
+                if (serial_number32[i] != 0xffffffffU)
                     return true;
             return false;
         }

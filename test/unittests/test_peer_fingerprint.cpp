@@ -56,7 +56,7 @@ TEST(PeerFingerprint, parse_config)
     };
 
     TestPeerFingerprints fps(cfg, test_fingerprint.size());
-    ASSERT_EQ(fps.size(), 5u);
+    ASSERT_EQ(fps.size(), 5U);
 
     for (std::size_t i = 1; i <= fps.size(); ++i)
     {

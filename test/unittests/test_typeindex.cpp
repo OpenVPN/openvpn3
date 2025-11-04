@@ -143,7 +143,7 @@ TEST(typeindex, perf_test_fast)
             i = 0;
     }
     OPENVPN_LOG("PERF " << n_strings << '/' << N);
-    ASSERT_EQ(n_strings, 28571428u);
+    ASSERT_EQ(n_strings, 28571428U);
 }
 
 // as a control, test performance of dynamic_cast
@@ -166,7 +166,7 @@ TEST(typeindex, perf_test_dynamic)
             i = 0;
     }
     OPENVPN_LOG("PERF " << n_strings << '/' << N);
-    ASSERT_EQ(n_strings, 28571428u);
+    ASSERT_EQ(n_strings, 28571428U);
 }
 
 #endif

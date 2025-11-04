@@ -50,7 +50,7 @@ TEST(crypto, hmac)
 
     uint8_t hash[20];
 
-    ASSERT_EQ(hmac.final(hash), 20u);
+    ASSERT_EQ(hmac.final(hash), 20U);
 
     /* Google test does not seem to have a good memory equality test macro */
     ASSERT_EQ(std::memcmp(hash, goodhash, sizeof(goodhash)), 0);
@@ -60,7 +60,7 @@ TEST(crypto, hmac)
     /* Do this again to ensure that reset works */
     hmac.update(ipsum, std::strlen(ipsumlorem));
     hmac.update(ipsum, std::strlen(ipsumlorem));
-    ASSERT_EQ(hmac.final(hash), 20u);
+    ASSERT_EQ(hmac.final(hash), 20U);
 
     /* Google test does not seem to have a good memory equality test macro */
     ASSERT_EQ(std::memcmp(hash, goodhash, sizeof(goodhash)), 0);
@@ -74,7 +74,7 @@ TEST(crypto, hmac)
     /* Do this again to ensure that reset works */
     hmac.update(ipsum, std::strlen(ipsumlorem));
     hmac.update(ipsum, std::strlen(ipsumlorem));
-    ASSERT_EQ(hmac.final(hash), 20u);
+    ASSERT_EQ(hmac.final(hash), 20U);
 
     /* Google test does not seem to have a good memory equality test macro */
     ASSERT_EQ(std::memcmp(hash, goodhash, sizeof(goodhash)), 0);

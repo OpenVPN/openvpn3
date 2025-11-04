@@ -192,28 +192,28 @@ TEST(authcert_openssl, sn_256)
 
 TEST(authcert_openssl, sn_32bit_pre)
 {
-    AuthCert ac("sn_32bit_pre", 4294967295ll);
+    AuthCert ac("sn_32bit_pre", 4294967295LL);
     ASSERT_TRUE(ac.defined());
     ASSERT_TRUE(ac.sn_defined());
-    ASSERT_EQ(ac.serial_number_as_int64(), 4294967295ll);
+    ASSERT_EQ(ac.serial_number_as_int64(), 4294967295LL);
     ASSERT_EQ(ac.to_string(), "CN=sn_32bit_pre SN=ff:ff:ff:ff ISSUER_FP=0000000000000000000000000000000000000000");
 }
 
 TEST(authcert_openssl, sn_32bit_post)
 {
-    AuthCert ac("sn_32bit_post", 4294967296ll);
+    AuthCert ac("sn_32bit_post", 4294967296LL);
     ASSERT_TRUE(ac.defined());
     ASSERT_TRUE(ac.sn_defined());
-    ASSERT_EQ(ac.serial_number_as_int64(), 4294967296ll);
+    ASSERT_EQ(ac.serial_number_as_int64(), 4294967296LL);
     ASSERT_EQ(ac.to_string(), "CN=sn_32bit_post SN=01:00:00:00:00 ISSUER_FP=0000000000000000000000000000000000000000");
 }
 
 TEST(authcert_openssl, sn_64bit)
 {
-    AuthCert ac("sn_64bit", 81985529216486895ll);
+    AuthCert ac("sn_64bit", 81985529216486895LL);
     ASSERT_TRUE(ac.defined());
     ASSERT_TRUE(ac.sn_defined());
-    ASSERT_EQ(ac.serial_number_as_int64(), 81985529216486895ll);
+    ASSERT_EQ(ac.serial_number_as_int64(), 81985529216486895LL);
     ASSERT_EQ(ac.to_string(), "CN=sn_64bit SN=01:23:45:67:89:ab:cd:ef ISSUER_FP=0000000000000000000000000000000000000000");
 }
 

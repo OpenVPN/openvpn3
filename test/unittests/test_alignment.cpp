@@ -44,7 +44,7 @@ TEST(AlignmentSafeExtractTest, ExtractStructFromMisalignedData)
     struct TestStruct
     {
         int a = 42;
-        float b = 98.6f;
+        float b = 98.6F;
     } test_struct;
 
     unsigned char data[32];

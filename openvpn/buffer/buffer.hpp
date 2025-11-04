@@ -872,11 +872,11 @@ class BufferType : public ConstBufferType<T>
 
 // Flag constants
 namespace BufAllocFlags {
-constexpr BufferFlags NO_FLAGS(0u);            ///< no flags set
-constexpr BufferFlags CONSTRUCT_ZERO(1u << 0); ///< if enabled, constructors/init will zero allocated space
-constexpr BufferFlags DESTRUCT_ZERO(1u << 1);  ///< if enabled, destructor will zero data before deletion
-constexpr BufferFlags GROW(1u << 2);           ///< if enabled, buffer will grow (otherwise buffer_full exception will be thrown)
-constexpr BufferFlags ARRAY(1u << 3);          ///< if enabled, use as array
+constexpr BufferFlags NO_FLAGS(0U);            ///< no flags set
+constexpr BufferFlags CONSTRUCT_ZERO(1U << 0); ///< if enabled, constructors/init will zero allocated space
+constexpr BufferFlags DESTRUCT_ZERO(1U << 1);  ///< if enabled, destructor will zero data before deletion
+constexpr BufferFlags GROW(1U << 2);           ///< if enabled, buffer will grow (otherwise buffer_full exception will be thrown)
+constexpr BufferFlags ARRAY(1U << 3);          ///< if enabled, use as array
 } // namespace BufAllocFlags
 
 template <typename T>

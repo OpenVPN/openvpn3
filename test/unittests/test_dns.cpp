@@ -42,12 +42,12 @@ TEST(Dns, Options)
 
     DnsOptionsParser dns(config, false);
 
-    ASSERT_EQ(dns.search_domains.size(), 3u);
+    ASSERT_EQ(dns.search_domains.size(), 3U);
     ASSERT_EQ(dns.search_domains[0].to_string(), "domain0");
     ASSERT_EQ(dns.search_domains[1].to_string(), "domain1");
     ASSERT_EQ(dns.search_domains[2].to_string(), "domain2");
 
-    ASSERT_EQ(dns.servers.size(), 3u);
+    ASSERT_EQ(dns.servers.size(), 3U);
 
     int i = 1;
     for (const auto &keyval : dns.servers)
@@ -59,11 +59,11 @@ TEST(Dns, Options)
         {
             ASSERT_EQ(i, 1);
 
-            ASSERT_TRUE(server.addresses.size() == 1u);
+            ASSERT_TRUE(server.addresses.size() == 1U);
             ASSERT_EQ(server.addresses[0].address, "2.2.2.2");
-            ASSERT_EQ(server.addresses[0].port, 5353u);
+            ASSERT_EQ(server.addresses[0].port, 5353U);
 
-            ASSERT_EQ(server.domains.size(), 2u);
+            ASSERT_EQ(server.domains.size(), 2U);
             ASSERT_EQ(server.domains[0].to_string(), "rdom0");
             ASSERT_EQ(server.domains[1].to_string(), "rdom1");
 
@@ -76,14 +76,14 @@ TEST(Dns, Options)
         {
             ASSERT_EQ(i, 2);
 
-            ASSERT_TRUE(server.addresses.size() == 2u);
+            ASSERT_TRUE(server.addresses.size() == 2U);
             ASSERT_EQ(server.addresses[0].address, "1.1.1.1");
-            ASSERT_EQ(server.addresses[0].port, 0u);
+            ASSERT_EQ(server.addresses[0].port, 0U);
 
             ASSERT_EQ(server.addresses[1].address, "1::1");
-            ASSERT_EQ(server.addresses[1].port, 5353u);
+            ASSERT_EQ(server.addresses[1].port, 5353U);
 
-            ASSERT_EQ(server.domains.size(), 0u);
+            ASSERT_EQ(server.domains.size(), 0U);
 
             ASSERT_EQ(server.dnssec, DnsServer::Security::Unset);
 
@@ -94,17 +94,17 @@ TEST(Dns, Options)
         {
             ASSERT_EQ(i, 3);
 
-            ASSERT_TRUE(server.addresses.size() == 3u);
+            ASSERT_TRUE(server.addresses.size() == 3U);
             ASSERT_EQ(server.addresses[0].address, "3::3");
-            ASSERT_EQ(server.addresses[0].port, 0u);
+            ASSERT_EQ(server.addresses[0].port, 0U);
 
             ASSERT_EQ(server.addresses[1].address, "3.2.1.0");
-            ASSERT_EQ(server.addresses[1].port, 4242u);
+            ASSERT_EQ(server.addresses[1].port, 4242U);
 
             ASSERT_EQ(server.addresses[2].address, "3:3::3:3");
-            ASSERT_EQ(server.addresses[2].port, 3333u);
+            ASSERT_EQ(server.addresses[2].port, 3333U);
 
-            ASSERT_EQ(server.domains.size(), 0u);
+            ASSERT_EQ(server.domains.size(), 0U);
 
             ASSERT_EQ(server.dnssec, DnsServer::Security::No);
 
@@ -130,8 +130,8 @@ TEST(Dns, OptionsMerger)
     config.update_map();
 
     merger.merge(pushed, config);
-    ASSERT_EQ(config.size(), 2u);
-    ASSERT_EQ(pushed.size(), 2u);
+    ASSERT_EQ(config.size(), 2U);
+    ASSERT_EQ(pushed.size(), 2U);
     ASSERT_EQ(pushed[0].ref(4), "::1");
     ASSERT_EQ(pushed[1].ref(4), "2.2.2.2");
 }
@@ -224,8 +224,8 @@ TEST(Dns, ServerEightAddresses)
     config.parse_from_config("dns server 0 address 1::1 2::2 3::3 4::4 5::5 6::6 7::7 8::8\n", nullptr);
     config.update_map();
     DnsOptionsParser dns(config, false);
-    ASSERT_EQ(dns.servers.size(), 1u);
-    ASSERT_EQ(dns.servers[0].addresses.size(), 8u);
+    ASSERT_EQ(dns.servers.size(), 1U);
+    ASSERT_EQ(dns.servers[0].addresses.size(), 8U);
 }
 
 TEST(Dns, ServerTooManyAddresses)
@@ -305,18 +305,18 @@ TEST(Dns, dhcp_options)
 
     ASSERT_TRUE(dns.from_dhcp_options);
 
-    ASSERT_EQ(dns.search_domains.size(), 3u);
+    ASSERT_EQ(dns.search_domains.size(), 3U);
     ASSERT_EQ(dns.search_domains[0].to_string(), "ads");
     ASSERT_EQ(dns.search_domains[1].to_string(), "domain0");
     ASSERT_EQ(dns.search_domains[2].to_string(), "domain1");
 
-    ASSERT_EQ(dns.servers.size(), 1u);
-    ASSERT_TRUE(dns.servers[0].addresses.size() == 2u);
+    ASSERT_EQ(dns.servers.size(), 1U);
+    ASSERT_TRUE(dns.servers[0].addresses.size() == 2U);
     ASSERT_EQ(dns.servers[0].addresses[0].address, "1.1.1.1");
-    ASSERT_EQ(dns.servers[0].addresses[0].port, 0u);
+    ASSERT_EQ(dns.servers[0].addresses[0].port, 0U);
 
     ASSERT_EQ(dns.servers[0].addresses[1].address, "1::1");
-    ASSERT_EQ(dns.servers[0].addresses[1].port, 0u);
+    ASSERT_EQ(dns.servers[0].addresses[1].port, 0U);
 }
 
 TEST(Dns, dhcp_options_with_split_domains)
@@ -336,18 +336,18 @@ TEST(Dns, dhcp_options_with_split_domains)
 
     ASSERT_TRUE(dns.from_dhcp_options);
 
-    ASSERT_EQ(dns.search_domains.size(), 1u);
+    ASSERT_EQ(dns.search_domains.size(), 1U);
     ASSERT_EQ(dns.search_domains[0].to_string(), "ads");
 
-    ASSERT_EQ(dns.servers.size(), 1u);
+    ASSERT_EQ(dns.servers.size(), 1U);
 
-    ASSERT_TRUE(dns.servers[0].addresses.size() == 2u);
+    ASSERT_TRUE(dns.servers[0].addresses.size() == 2U);
     ASSERT_EQ(dns.servers[0].addresses[0].address, "1.1.1.1");
-    ASSERT_EQ(dns.servers[0].addresses[0].port, 0u);
+    ASSERT_EQ(dns.servers[0].addresses[0].port, 0U);
     ASSERT_EQ(dns.servers[0].addresses[1].address, "1::1");
-    ASSERT_EQ(dns.servers[0].addresses[1].port, 0u);
+    ASSERT_EQ(dns.servers[0].addresses[1].port, 0U);
 
-    ASSERT_TRUE(dns.servers[0].domains.size() == 2u);
+    ASSERT_TRUE(dns.servers[0].domains.size() == 2U);
     ASSERT_EQ(dns.servers[0].domains[0].domain, "domain0");
     ASSERT_EQ(dns.servers[0].domains[1].domain, "domain1");
 }
@@ -370,12 +370,12 @@ TEST(Dns, dhcp_options_ignored)
 
     ASSERT_FALSE(dns.from_dhcp_options);
     ASSERT_TRUE(dns.search_domains.empty());
-    ASSERT_EQ(dns.servers.size(), 1u);
+    ASSERT_EQ(dns.servers.size(), 1U);
 
     ASSERT_TRUE(dns.servers[123].domains.empty());
-    ASSERT_TRUE(dns.servers[123].addresses.size() == 1u);
+    ASSERT_TRUE(dns.servers[123].addresses.size() == 1U);
     ASSERT_EQ(dns.servers[123].addresses[0].address, "123::123");
-    ASSERT_EQ(dns.servers[123].addresses[0].port, 0u);
+    ASSERT_EQ(dns.servers[123].addresses[0].port, 0U);
 }
 
 TEST(Dns, ToStringMinValuesSet)
