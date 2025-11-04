@@ -153,7 +153,7 @@ inline void parse(const OptionList &options,
     up.reserve(2);
     if (!parse(options, opt_name, flags, &up) && (flags & OPT_OPTIONAL))
         return;
-    if (up.size() >= 1)
+    if (!up.empty())
     {
         user = std::move(up[0]);
         if (up.size() >= 2)

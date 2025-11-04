@@ -148,7 +148,7 @@ class Parse
         Parse p;
         p.scheme = https ? "https" : "http";
         p.host = host;
-        if (port.size() >= 1 && !string::is_digit(port[0])) // non-INET address
+        if (!port.empty() && !string::is_digit(port[0])) // non-INET address
             p.scheme = port;
         else
             p.port = port;

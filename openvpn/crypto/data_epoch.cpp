@@ -173,7 +173,7 @@ void openvpn::DataChannelEpoch::generate_future_receive_keys()
 
     /* Either we have not generated any future keys yet or the last
      * index is the same as our current epoch key */
-    if (future_keys.size() > 0 && future_keys.back().epoch != receive.epoch)
+    if (!future_keys.empty() && future_keys.back().epoch != receive.epoch)
         throw epoch_key_exception("Epoch key generation and future keys mismatch detected");
 
     /* free the keys that are not used anymore */

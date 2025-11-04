@@ -37,7 +37,7 @@ class EncryptCHM
     void encrypt(BufferAllocated &buf)
     {
         // skip null packets
-        if (!buf.size())
+        if (buf.empty())
             return;
 
         if (cipher.defined())

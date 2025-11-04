@@ -82,7 +82,7 @@ struct Config
 
     Config(const std::string &spec)
     {
-        full_chain = (spec.length() > 0 && spec[0] == '+');
+        full_chain = (!spec.empty() && spec[0] == '+');
         type = parse_type(spec.substr(full_chain ? 1 : 0));
         if (type == UNDEF)
             throw Exception("cannot parse attribute '" + spec + "'");

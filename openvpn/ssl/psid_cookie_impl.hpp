@@ -92,7 +92,7 @@ class PsidCookieImpl : public PsidCookie
         if (!pcfg_.tls_auth_enabled() && !pcfg_.tls_crypt_v2_enabled())
             return Intercept::DECLINE_HANDLING;
 
-        if (!pkt_buf.size())
+        if (pkt_buf.empty())
             return Intercept::EARLY_DROP; // packet validation fails, no opcode
 
         CookieHelper chelp(pkt_buf[0]);

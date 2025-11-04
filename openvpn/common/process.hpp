@@ -109,7 +109,7 @@ inline int system_cmd(const std::string &cmd, const Argv &argv)
 inline int system_cmd(const Argv &argv)
 {
     int ret = -1;
-    if (argv.size())
+    if (!argv.empty())
         ret = system_cmd(argv[0], argv);
     return ret;
 }

@@ -169,7 +169,7 @@ class List : public std::vector<Item>
                 int n_threads_exists = 0;
                 {
                     const std::string ntstr = o.get_optional(4 - local, 16);
-                    if (ntstr.length() > 0 && string::is_digit(ntstr[0]))
+                    if (!ntstr.empty() && string::is_digit(ntstr[0]))
                         n_threads_exists = 1;
                 }
                 if (n_threads_exists)

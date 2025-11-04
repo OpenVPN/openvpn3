@@ -96,7 +96,7 @@ struct Set : public std::vector<KeyValue>, public RCCopyable<thread_unsafe_refco
     template <typename SET>
     static void parse_flexible(const std::string &src, SET &dest)
     {
-        if (src.length() >= 1 && src[0] == '@')
+        if (!src.empty() && src[0] == '@')
         {
             const std::string fn = src.substr(1);
 #ifdef OPENVPN_JSON_INTERNAL

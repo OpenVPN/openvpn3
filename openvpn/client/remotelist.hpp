@@ -131,7 +131,7 @@ class RemoteList : public RC<thread_unsafe_refcount>
 
         bool res_addr_list_defined() const
         {
-            return res_addr_list && res_addr_list->size() > 0;
+            return res_addr_list && !res_addr_list->empty();
         }
 
         std::string actual_host() const
@@ -231,7 +231,7 @@ class RemoteList : public RC<thread_unsafe_refcount>
     struct Directives
     {
         explicit Directives(const std::string &conn_tag = "")
-            : connection(conn_tag.length() ? conn_tag : "connection")
+            : connection(!conn_tag.empty() ? conn_tag : "connection")
         {
         }
 
@@ -685,7 +685,7 @@ class RemoteList : public RC<thread_unsafe_refcount>
     // return true if object has at least one connection entry
     bool defined() const
     {
-        return list.size() > 0;
+        return !list.empty();
     }
 
     // return remote list size

@@ -75,7 +75,7 @@ class CompressLZO : public Compress
     void compress(BufferAllocated &buf, const bool hint) override
     {
         // skip null packets
-        if (!buf.size())
+        if (buf.empty())
             return;
 
         if (hint && !asym)
@@ -125,7 +125,7 @@ class CompressLZO : public Compress
     void decompress(BufferAllocated &buf) override
     {
         // skip null packets
-        if (!buf.size())
+        if (buf.empty())
             return;
 
         const unsigned char c = buf.pop_front();

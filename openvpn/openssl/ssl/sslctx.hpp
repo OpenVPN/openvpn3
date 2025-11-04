@@ -1659,7 +1659,7 @@ class OpenSSLContext : public SSLFactoryAPI
 
     bool x509_cert_ku_defined() const
     {
-        return config->ku.size() > 0;
+        return !config->ku.empty();
     }
 
     bool verify_x509_cert_ku(::X509 *cert) const

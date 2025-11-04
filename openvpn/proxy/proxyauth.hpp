@@ -58,7 +58,7 @@ class ProxyAuthenticate : public RC<thread_unsafe_refcount>
     void do_parse(const std::string &line)
     {
         std::vector<std::string> tuple = Split::by_char<std::vector<std::string>, StandardLex, Split::NullLimit>(line, ' ', 0, 1);
-        if (tuple.size() >= 1)
+        if (!tuple.empty())
             method = tuple[0];
         if (tuple.size() == 2)
         {

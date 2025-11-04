@@ -173,7 +173,7 @@ class Option
     {
         try
         {
-            if (data.size() > 0)
+            if (!data.empty())
                 return Unicode::utf8_printable(data[0], 32);
             else
                 return "";
@@ -425,7 +425,7 @@ class Option
     std::string err_ref() const
     {
         std::string ret = "option";
-        if (data.size())
+        if (!data.empty())
         {
             ret += " '";
             ret += printable_directive();
@@ -893,7 +893,7 @@ class OptionList : public std::vector<Option>, public RCCopyable<thread_unsafe_r
         for (std::vector<std::string>::const_iterator i = list.begin(); i != list.end(); ++i)
         {
             const Option opt = Split::by_space<Option, Lex, SpaceMatch, Limits>(*i, lim);
-            if (opt.size())
+            if (!opt.empty())
             {
                 if (lim)
                 {
@@ -940,7 +940,7 @@ class OptionList : public std::vector<Option>, public RCCopyable<thread_unsafe_r
             Option opt;
             opt.reserve(2);
             Split::by_char_void<Option, NullLex, Limits>(opt, line, '=', 0, 1, lim);
-            if (opt.size())
+            if (!opt.empty())
             {
                 if (lim)
                 {
@@ -1019,7 +1019,7 @@ class OptionList : public std::vector<Option>, public RCCopyable<thread_unsafe_r
             else if (!ignore_line(line))
             {
                 Option opt = parse_option_from_line(line, lim);
-                if (opt.size())
+                if (!opt.empty())
                 {
                     if (is_open_tag(opt.ref(0)))
                     {
@@ -1087,7 +1087,7 @@ class OptionList : public std::vector<Option>, public RCCopyable<thread_unsafe_r
                 else if (line.starts_with(prefix))
                 {
                     Option opt = Split::by_char<Option, NullLex, Limits>(std::string(line, prefix.length()), '=', 0, 1, lim);
-                    if (opt.size())
+                    if (!opt.empty())
                     {
                         if (is_open_meta_tag(opt.ref(0)))
                         {

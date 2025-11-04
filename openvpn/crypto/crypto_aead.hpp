@@ -190,7 +190,7 @@ class Crypto : public CryptoDCInstance
     bool encrypt(BufferAllocated &buf, const unsigned char *op32) override
     {
         // only process non-null packets
-        if (buf.size())
+        if (!buf.empty())
         {
             // build nonce/IV/AD
             Nonce nonce(e.nonce, e.pid_send, op32);
@@ -235,7 +235,7 @@ class Crypto : public CryptoDCInstance
     Error::Type decrypt(BufferAllocated &buf, const std::time_t now, const unsigned char *op32) override
     {
         // only process non-null packets
-        if (buf.size())
+        if (!buf.empty())
         {
             // get nonce/IV/AD
             Nonce nonce(d.nonce, d.pid_recv, buf, op32);

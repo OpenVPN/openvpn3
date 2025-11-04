@@ -47,7 +47,7 @@ class CompressStub : public Compress
     void compress(BufferAllocated &buf, const bool hint) override
     {
         // skip null packets
-        if (!buf.size())
+        if (buf.empty())
             return;
 
         // indicate that we didn't compress
@@ -60,7 +60,7 @@ class CompressStub : public Compress
     void decompress(BufferAllocated &buf) override
     {
         // skip null packets
-        if (!buf.size())
+        if (buf.empty())
             return;
 
         const unsigned char c = buf.pop_front();
@@ -110,7 +110,7 @@ class CompressStubV2 : public Compress
     void compress(BufferAllocated &buf, const bool hint) override
     {
         // skip null packets
-        if (!buf.size())
+        if (buf.empty())
             return;
 
         // indicate that we didn't compress
@@ -120,7 +120,7 @@ class CompressStubV2 : public Compress
     void decompress(BufferAllocated &buf) override
     {
         // skip null packets
-        if (!buf.size())
+        if (buf.empty())
             return;
 
         const int cop = v2_pull(buf);

@@ -144,10 +144,10 @@ class PushedOptionsFilter : public OptionList::FilterBase
     FilterAction route_nopull_filter_(const Option &opt)
     {
         FilterAction action = Accept;
-        if (opt.size() >= 1)
+        if (!opt.empty())
         {
             const std::string &directive = opt.ref(0);
-            if (directive.length() >= 1)
+            if (!directive.empty())
             {
                 switch (directive[0])
                 {

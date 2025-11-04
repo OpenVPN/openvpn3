@@ -439,7 +439,7 @@ class TestProto : public ProtoContextCallbackInterface
     void data_decrypt(const ProtoContext::PacketType &type, BufferAllocated &in_out)
     {
         proto_context.data_decrypt(type, in_out);
-        if (in_out.size())
+        if (!in_out.empty())
         {
             data_bytes_ += in_out.size();
             data_drought.event();
@@ -757,7 +757,7 @@ class NoisyWire
         }
 #endif
 
-        if (wire.size())
+        if (!wire.empty())
         {
             BufferPtr bp = wire.front();
             wire.pop_front();
@@ -779,7 +779,7 @@ class NoisyWire
 
 #ifdef SIMULATE_CORRUPTED
             // simulate corrupted packet
-            if (bp->size() && !rand(corrupt_prob))
+            if (!bp->empty() && !rand(corrupt_prob))
             {
 #ifdef VERBOSE
                 std::cout << now->raw() << " " << title << " Simulating a corrupted packet" << std::endl;

@@ -47,7 +47,7 @@ class EmulateExcludeRouteImpl : public EmulateExcludeRoute
 
     bool enabled(const IPVerFlags &ipv) const override
     {
-        return exclude.size() && (ipv.rgv4() || ipv.rgv6());
+        return !exclude.empty() && (ipv.rgv4() || ipv.rgv6());
     }
 
     void emulate(TunBuilderBase *tb, IPVerFlags &ipv, const IP::Addr &server_addr) const override

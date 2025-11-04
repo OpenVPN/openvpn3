@@ -60,13 +60,13 @@ inline bool win_dev(const std::string &path, const bool fully_qualified)
 // true if path is fully qualified
 inline bool is_fully_qualified(const std::string &path)
 {
-    return win_dev(path, true) || (path.length() > 0 && is_dirsep(path[0]));
+    return win_dev(path, true) || (!path.empty() && is_dirsep(path[0]));
 }
 
 // does path refer to regular file without directory traversal
 inline bool is_flat(const std::string &path)
 {
-    return path.length() > 0
+    return !path.empty()
            && path != "."
            && path != ".."
            && path.find_first_of(dirsep) == std::string::npos

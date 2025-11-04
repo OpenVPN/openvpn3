@@ -65,7 +65,7 @@ class MemQStream : public MemQBase
                 }
 
                 // Start a new buffer
-                while (b.size())
+                while (!b.empty())
                 {
                     auto newbuf = BufferAllocatedRc::Create();
                     fc.prepare(*newbuf);

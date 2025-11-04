@@ -83,14 +83,14 @@ static void do_test(const bool grow, const bool verbose)
         {
             PKTSTREAM pktstream;
             BufferAllocated in;
-            while (big.size())
+            while (!big.empty())
             {
                 const size_t bytes = std::min(big.size(), rand_size(*prng));
                 fc.prepare(in);
                 in.write(big.data(), bytes);
                 big.advance(bytes);
                 BufferAllocated out;
-                while (in.size())
+                while (!in.empty())
                 {
                     pktstream.put(in, fc);
                     while (pktstream.ready())

@@ -38,7 +38,7 @@ class DecryptCHM
     Error::Type decrypt(BufferAllocated &buf, const std::time_t now)
     {
         // skip null packets
-        if (!buf.size())
+        if (buf.empty())
             return Error::SUCCESS;
 
         // verify the HMAC

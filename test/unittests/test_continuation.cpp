@@ -150,7 +150,7 @@ static void test_roundtrip(const OptionList &opt_orig, const std::string &prefix
 
     // remove client-side push-continuation directives before comparison
     std::erase_if(cc, [](const Option &o)
-                  { return o.size() >= 1 && o.ref(0) == "push-continuation"; });
+                  { return !o.empty() && o.ref(0) == "push-continuation"; });
     require_equal(opt_orig, cc, "TEST_ROUNDTRIP #3");
 
     // defragment back to original form

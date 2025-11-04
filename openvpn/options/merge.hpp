@@ -253,7 +253,7 @@ class ProfileMerge
             else if (!OptionList::ignore_line(line))
             {
                 Option opt = Split::by_space<Option, OptionList::LexComment, SpaceMatch, Split::NullLimit>(line);
-                if (opt.size())
+                if (!opt.empty())
                 {
                     if (OptionList::is_open_tag(opt.ref(0)) && opt.size() == 1)
                     {
@@ -408,7 +408,7 @@ class ProfileMerge
 
     static bool is_fileref_directive(const std::string &d, unsigned int &flags)
     {
-        if (d.length() > 0)
+        if (!d.empty())
         {
             switch (d[0])
             {

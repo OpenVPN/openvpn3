@@ -101,12 +101,12 @@ class ClientHalt
 
     static bool is_halt(const StringList &sl)
     {
-        return sl.size() >= 1 && sl[0] == "HALT";
+        return !sl.empty() && sl[0] == "HALT";
     }
 
     static bool is_restart(const StringList &sl)
     {
-        return sl.size() >= 1 && sl[0] == "RESTART";
+        return !sl.empty() && sl[0] == "RESTART";
     }
 
     bool restart_ = false;

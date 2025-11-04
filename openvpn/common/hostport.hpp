@@ -63,7 +63,7 @@ inline bool is_valid_host_char(const char c)
 
 inline bool is_valid_host(const std::string &host)
 {
-    if (!host.length() || host.length() > 256)
+    if (host.empty() || host.length() > 256)
         return false;
     for (const auto &c : host)
     {
@@ -80,7 +80,7 @@ inline bool is_valid_unix_sock_char(const unsigned char c)
 
 inline bool is_valid_unix_sock(const std::string &host)
 {
-    if (!host.length() || host.length() > 256)
+    if (host.empty() || host.length() > 256)
         return false;
     for (const auto &c : host)
     {

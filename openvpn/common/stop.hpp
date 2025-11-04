@@ -86,7 +86,7 @@ class Stop
     {
         std::lock_guard<std::recursive_mutex> lock(mutex);
         stop_called = true;
-        while (scopes.size())
+        while (!scopes.empty())
         {
             Scope *scope = scopes.back();
             scopes.pop_back();
@@ -109,7 +109,7 @@ class Stop
   private:
     void prune()
     {
-        while (scopes.size() && !scopes.back())
+        while (!scopes.empty() && !scopes.back())
             scopes.pop_back();
     }
 

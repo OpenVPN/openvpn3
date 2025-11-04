@@ -96,7 +96,7 @@ class ReliableAck
 
         size_t acks_added = 0;
 
-        while (acks_added < max_acks && data.size() > 0)
+        while (acks_added < max_acks && !data.empty())
         {
             auto ack = data.front();
             data.pop_front();

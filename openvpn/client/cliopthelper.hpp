@@ -147,7 +147,7 @@ class ParseClientConfig
             // userlocked username/password via <auth-user-pass>
             std::vector<std::string> user_pass;
             const bool auth_user_pass = parse_auth_user_pass(options, &user_pass);
-            if (auth_user_pass && user_pass.size() >= 1)
+            if (auth_user_pass && !user_pass.empty())
             {
                 userlockedUsername_ = user_pass[0];
                 if (user_pass.size() >= 2)
@@ -569,7 +569,7 @@ class ParseClientConfig
             print_pem(os, "cert", sslConfig->extract_cert());
 
             std::vector<std::string> extra_certs = sslConfig->extract_extra_certs();
-            if (extra_certs.size() > 0)
+            if (!extra_certs.empty())
             {
                 os << "<extra-certs>" << std::endl;
                 for (auto &cert : extra_certs)

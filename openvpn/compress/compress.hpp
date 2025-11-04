@@ -81,7 +81,7 @@ class Compress : public RC<thread_unsafe_refcount>,
 
     void do_swap(Buffer &buf, unsigned char op)
     {
-        if (buf.size())
+        if (!buf.empty())
         {
             buf.push_back(buf[0]);
             buf[0] = op;

@@ -65,7 +65,7 @@ struct PeerFingerprint
             output << v << ':';
 
         std::string str(output.str());
-        if (str.size())
+        if (!str.empty())
             str.erase(str.size() - 1);
 
         return str;

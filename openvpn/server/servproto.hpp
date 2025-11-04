@@ -212,7 +212,7 @@ class ServerProto
                 {
                     // data packet
                     ret = proto_context.data_decrypt(pt, buf);
-                    if (buf.size())
+                    if (!buf.empty())
                     {
 #ifdef OPENVPN_PACKET_LOG
                         log_packet(buf, false);

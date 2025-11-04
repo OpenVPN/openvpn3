@@ -406,7 +406,7 @@ class LinkCommon : public LinkBase
         stats->inc_stat(SessionStats::PACKETS_IN, 1);
         if (mutate)
             mutate->post_recv(buf);
-        while (buf.size())
+        while (!buf.empty())
         {
             pktstream.put(buf, frame_context);
             if (pktstream.ready())

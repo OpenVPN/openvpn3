@@ -1528,7 +1528,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
 
     static uint16_t read_uint16_length(Buffer &buf)
     {
-        if (buf.size())
+        if (!buf.empty())
         {
             std::uint16_t net_size;
             buf.read((unsigned char *)&net_size, sizeof(net_size));
@@ -3781,7 +3781,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
         {
             try
             {
-                if (!net_buf.size())
+                if (net_buf.empty())
                     return false;
 
                 const unsigned int op = net_buf[0];
@@ -3855,7 +3855,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
 
             try
             {
-                if (!net_buf.size())
+                if (net_buf.empty())
                     return false;
 
                 const unsigned int op = net_buf[0];
@@ -4315,7 +4315,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
         select_key_context(type, false).decrypt(in_out);
 
         // update time of most recent packet received
-        if (in_out.size())
+        if (!in_out.empty())
         {
             update_last_received();
             ret = true;

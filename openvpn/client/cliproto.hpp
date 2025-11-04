@@ -376,7 +376,7 @@ class Session : ProtoContextCallbackInterface,
             {
                 // data packet
                 proto_context.data_decrypt(pt, buf);
-                if (buf.size())
+                if (!buf.empty())
                 {
 #ifdef OPENVPN_PACKET_LOG
                     log_packet(buf, false);
@@ -454,7 +454,7 @@ class Session : ProtoContextCallbackInterface,
             }
 
             // encrypt packet
-            if (buf.size())
+            if (!buf.empty())
             {
                 const ProtoContext::ProtoConfig &c = proto_context.conf();
 
@@ -479,7 +479,7 @@ class Session : ProtoContextCallbackInterface,
                 else
                 {
                     proto_context.data_encrypt(buf);
-                    if (buf.size())
+                    if (!buf.empty())
                     {
                         // send packet via transport to destination
                         OPENVPN_LOG_CLIPROTO("Transport SEND " << server_endpoint_render() << ' ' << proto_context.dump_packet(buf));
@@ -815,7 +815,7 @@ class Session : ProtoContextCallbackInterface,
                 key_words = msg.substr(strlen("AUTH_PENDING,"));
                 auto opts = OptionList::parse_from_csv_static(key_words, nullptr);
                 std::string timeout_str = opts.get_optional("timeout", 1, 20);
-                if (timeout_str != "")
+                if (!timeout_str.empty())
                 {
                     try
                     {

@@ -131,7 +131,7 @@ class CompressLZ4 : public CompressLZ4Base
     void compress(BufferAllocated &buf, const bool hint) override
     {
         // skip null packets
-        if (!buf.size())
+        if (buf.empty())
             return;
 
         if (hint && !asym)
@@ -150,7 +150,7 @@ class CompressLZ4 : public CompressLZ4Base
     void decompress(BufferAllocated &buf) override
     {
         // skip null packets
-        if (!buf.size())
+        if (buf.empty())
             return;
 
         const unsigned char c = buf.pop_front();
@@ -190,7 +190,7 @@ class CompressLZ4v2 : public CompressLZ4Base
     void compress(BufferAllocated &buf, const bool hint) override
     {
         // skip null packets
-        if (!buf.size())
+        if (buf.empty())
             return;
 
         if (hint && !asym)
@@ -209,7 +209,7 @@ class CompressLZ4v2 : public CompressLZ4Base
     void decompress(BufferAllocated &buf) override
     {
         // skip null packets
-        if (!buf.size())
+        if (buf.empty())
             return;
 
         const int c = v2_pull(buf);

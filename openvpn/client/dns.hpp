@@ -266,7 +266,7 @@ struct DnsOptionsParser : public DnsOptions
             search_domains.insert(search_domains.begin(), DnsDomain(std::move(adapter_domain_suffix)));
         }
 
-        if (!ignore_values && servers.size() && servers[0].addresses.empty())
+        if (!ignore_values && !servers.empty() && servers[0].addresses.empty())
         {
             parse_errors += "\n";
             parse_errors += "dns server does not have an address assigned";

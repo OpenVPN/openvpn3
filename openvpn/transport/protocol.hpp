@@ -335,7 +335,7 @@ class Protocol
         {
             const std::string s1 = s.substr(0, 3);
             const std::string s2 = s.substr(3);
-            if (s2 == "")
+            if (s2.empty())
             {
                 if (s1 == "udp")
                     ret = UDP;
