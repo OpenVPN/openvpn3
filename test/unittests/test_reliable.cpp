@@ -333,10 +333,10 @@ TEST(Reliable, Simulation)
 {
     MTRand rand;
     std::vector<test_params> sim_cases = {
-        {1, 4, 4, 10, 16},
-        {2, 2, 4, 10, 16},
-        {3, 4, 8, 10, 16},
-        {4, 4, 4, 2, 2},
+        {.test_case = 1, .relsize = 4, .wiresize = 4, .reorder_prob = 10, .drop_prob = 16},
+        {.test_case = 2, .relsize = 2, .wiresize = 4, .reorder_prob = 10, .drop_prob = 16},
+        {.test_case = 3, .relsize = 4, .wiresize = 8, .reorder_prob = 10, .drop_prob = 16},
+        {.test_case = 4, .relsize = 4, .wiresize = 4, .reorder_prob = 2, .drop_prob = 2},
     };
     const Time::Duration end = Time::Duration::seconds(1000);
     const Time::Duration step = Time::Duration::binary_ms(100);

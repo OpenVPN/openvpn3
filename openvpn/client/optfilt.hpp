@@ -49,7 +49,7 @@ class PushedOptionsFilter : public OptionList::FilterBase
                 throw option_error(ERR_INVALID_OPTION_VAL, "invalid pull-filter action: " + action_str);
 
             const Option match = OptionList::parse_option_from_line(o.get(2, -1), nullptr);
-            pull_filter_list_.push_back({action, match});
+            pull_filter_list_.push_back({.action = action, .match = match});
         }
     }
 

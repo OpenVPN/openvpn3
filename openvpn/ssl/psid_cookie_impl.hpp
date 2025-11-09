@@ -304,7 +304,7 @@ class PsidCookieImpl : public PsidCookie
 
         CookieHelper::prepend_TLV(payload);
 
-        PacketIDControl packet_id{0, 0};
+        PacketIDControl packet_id{.id = 0, .time = 0};
         packet_id.write(payload, true);
 
         client_session_id.prepend(payload);
