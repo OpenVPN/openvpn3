@@ -14,7 +14,7 @@
 
 #include <openvpn/common/platform.hpp>
 
-#if !defined(OPENVPN_PLATFORM_WIN)
+#ifndef OPENVPN_PLATFORM_WIN
 #include <pwd.h>
 #include <unistd.h>
 #else
@@ -28,7 +28,7 @@
 namespace openvpn {
 inline std::string get_password(const char *prompt)
 {
-#if !defined(OPENVPN_PLATFORM_WIN)
+#ifndef OPENVPN_PLATFORM_WIN
     char *ret = getpass(prompt);
     return ret;
 #else

@@ -14,7 +14,7 @@
 #include <openvpn/common/endian_platform.hpp>
 
 namespace openvpn::Endian {
-#if defined(OPENVPN_LITTLE_ENDIAN)
+#ifdef OPENVPN_LITTLE_ENDIAN
 inline size_t e16(const size_t v)
 {
     return v;

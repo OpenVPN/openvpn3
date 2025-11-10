@@ -14,7 +14,7 @@
 
 #include <openvpn/common/platform.hpp>
 
-#if defined(OPENVPN_PLATFORM_WIN)
+#ifdef OPENVPN_PLATFORM_WIN
 #error temporary file methods not supported on Windows
 #endif
 

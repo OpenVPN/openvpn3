@@ -21,7 +21,7 @@
 
 // Set up export of our public interface unless
 // OPENVPN_CORE_API_VISIBILITY_HIDDEN is defined
-#if defined(__GNUC__)
+#ifdef __GNUC__
 #define OPENVPN_CLIENT_EXPORT
 #ifndef OPENVPN_CORE_API_VISIBILITY_HIDDEN
 #pragma GCC visibility push(default)
@@ -860,7 +860,7 @@ OPENVPN_CLIENT_EXPORT void OpenVPNClient::process_epki_cert_chain(const External
 
 OPENVPN_CLIENT_EXPORT Status OpenVPNClient::connect()
 {
-#if !defined(OPENVPN_OVPNCLI_SINGLE_THREAD)
+#ifndef OPENVPN_OVPNCLI_SINGLE_THREAD
     openvpn_io::detail::signal_blocker signal_blocker; // signals should be handled by parent thread
 #endif
 #if defined(OPENVPN_LOG_LOGTHREAD_H) && !defined(OPENVPN_LOG_LOGBASE_H)
@@ -882,7 +882,7 @@ OPENVPN_CLIENT_EXPORT Status OpenVPNClient::do_connect()
     try
     {
         connect_attach();
-#if defined(OPENVPN_OVPNCLI_ASYNC_SETUP)
+#ifdef OPENVPN_OVPNCLI_ASYNC_SETUP
         openvpn_io::post(*state->io_context(), [this]()
                          { do_connect_async(); });
 #else
@@ -953,18 +953,18 @@ OPENVPN_CLIENT_EXPORT void OpenVPNClient::connect_setup(Status &status, bool &se
     cc.extra_peer_info = state->extra_peer_info;
     cc.stop = state->async_stop_local();
     cc.socket_protect = &state->socket_protect;
-#if defined(USE_TUN_BUILDER)
+#ifdef USE_TUN_BUILDER
     cc.builder = this;
 #endif
-#if defined(OPENVPN_EXTERNAL_TUN_FACTORY)
+#ifdef OPENVPN_EXTERNAL_TUN_FACTORY
     cc.extern_tun_factory = this;
 #endif
-#if defined(OPENVPN_EXTERNAL_TRANSPORT_FACTORY)
+#ifdef OPENVPN_EXTERNAL_TRANSPORT_FACTORY
     cc.extern_transport_factory = this;
 #endif
 
     // external PKI
-#if !defined(USE_APPLE_SSL)
+#ifndef USE_APPLE_SSL
     if (state->eval.externalPki && !state->clientconf.disableClientCert)
     {
         if (!state->clientconf.external_pki_alias.empty())

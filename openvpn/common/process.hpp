@@ -46,7 +46,7 @@ inline pid_t system_cmd_async(const std::string &cmd,
     auto av = argv_wrap.c_argv();
     auto ev = env_wrap ? env_wrap->c_argv() : ::environ;
 
-#if defined(__APPLE__)
+#ifdef __APPLE__
     /* macOS vfork is deprecated and behaves identical to fork() */
     const pid_t pid = ::fork();
 #else

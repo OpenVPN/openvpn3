@@ -69,7 +69,7 @@
 #include <openvpn/common/process.hpp>
 #endif
 
-#if defined(USE_MBEDTLS)
+#ifdef USE_MBEDTLS
 #include <openvpn/mbedtls/util/pkcs1.hpp>
 #elif defined(USE_OPENSSL)
 #include <openssl/evp.h>
@@ -79,7 +79,7 @@
 #endif
 #endif
 
-#if defined(OPENVPN_PLATFORM_WIN)
+#ifdef OPENVPN_PLATFORM_WIN
 #include <openvpn/win/console.hpp>
 #include <shellapi.h>
 #endif
@@ -88,7 +88,7 @@
 #include "client/core-client-netcfg.hpp"
 #endif
 
-#if defined(OPENVPN_PLATFORM_LINUX)
+#ifdef OPENVPN_PLATFORM_LINUX
 
 #include <openvpn/tun/linux/client/tuncli.hpp>
 
@@ -233,7 +233,7 @@ class Client : public ClientBase
 
     std::string epki_ca;
     std::string epki_cert;
-#if defined(USE_MBEDTLS)
+#ifdef USE_MBEDTLS
     MbedTLSPKI::PKContext epki_ctx;       // external PKI context
     MbedTLSPKI::PKContext certcheck_pkey; // external PKI context
 #elif defined(USE_OPENSSL)
@@ -681,7 +681,7 @@ class Client : public ClientBase
 
     void external_pki_sign_request(ClientAPI::ExternalPKISignRequest &signreq) override
     {
-#if defined(USE_MBEDTLS)
+#ifdef USE_MBEDTLS
         if (epki_ctx.defined())
         {
             try
@@ -821,7 +821,7 @@ static Client *the_client = nullptr; // GLOBAL
 
 static void worker_thread()
 {
-#if !defined(OPENVPN_OVPNCLI_SINGLE_THREAD)
+#ifndef OPENVPN_OVPNCLI_SINGLE_THREAD
     openvpn_io::detail::signal_blocker signal_blocker; // signals should be handled by parent thread
 #endif
     try
@@ -861,7 +861,7 @@ static std::string read_profile(const char *fn, const std::string *profile_conte
     }
 }
 
-#if defined(OPENVPN_PLATFORM_WIN)
+#ifdef OPENVPN_PLATFORM_WIN
 
 static void start_thread(Client &client)
 {
@@ -1345,7 +1345,7 @@ int openvpn_client(int argc, char *argv[], const std::string *profile_content)
 
                     ClientAPI::Config config;
                     config.guiVersion = "cli 1.0";
-#if defined(OPENVPN_PLATFORM_WIN)
+#ifdef OPENVPN_PLATFORM_WIN
                     int nargs = 0;
                     auto argvw = CommandLineToArgvW(GetCommandLineW(), &nargs);
                     UTF8 utf8(Win::utf8(argvw[nargs - 1]));
@@ -1390,7 +1390,7 @@ int openvpn_client(int argc, char *argv[], const std::string *profile_content)
                     config.enableNonPreferredDCAlgorithms = enableNonPreferredDCO;
                     config.ssoMethods = ssoMethods;
                     config.appCustomProtocols = appCustomProtocols;
-#if defined(OPENVPN_OVPNCLI_SINGLE_THREAD)
+#ifdef OPENVPN_OVPNCLI_SINGLE_THREAD
                     config.clockTickMS = 250;
 #endif
 
@@ -1444,7 +1444,7 @@ int openvpn_client(int argc, char *argv[], const std::string *profile_content)
                     }
                     else
                     {
-#if defined(USE_NETCFG)
+#ifdef USE_NETCFG
                         auto dbus_system = DBus::Connection::Create(DBus::BusType::SYSTEM);
                         NetCfgTunBuilder<Client> client(dbus_system);
 #else
@@ -1499,7 +1499,7 @@ int openvpn_client(int argc, char *argv[], const std::string *profile_content)
                             if (!epki_key_fn.empty())
                             {
                                 const std::string epki_key_txt = read_text_utf8(epki_key_fn);
-#if defined(USE_MBEDTLS)
+#ifdef USE_MBEDTLS
 
                                 auto mbedrng = std::make_unique<MbedTLSRandom>();
                                 client.epki_ctx.parse(epki_key_txt, "EPKI", privateKeyPassword, *mbedrng);
@@ -1644,7 +1644,7 @@ int main(int argc, char *argv[])
     LogBaseSimple log;
 #endif
 
-#if defined(OPENVPN_PLATFORM_WIN)
+#ifdef OPENVPN_PLATFORM_WIN
     SetConsoleOutputCP(CP_UTF8);
 #endif
 

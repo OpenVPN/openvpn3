@@ -18,7 +18,7 @@
 
 #include <openvpn/common/arch.hpp>
 
-#if defined(USE_OPENSSL)
+#ifdef USE_OPENSSL
 #include <openvpn/openssl/util/engine.hpp>
 #include <openvpn/openssl/ssl/sslctx.hpp>
 #endif
@@ -34,7 +34,7 @@ namespace openvpn {
 
 inline void init_openssl(const std::string &engine)
 {
-#if defined(USE_OPENSSL)
+#ifdef USE_OPENSSL
     openssl_setup_engine(engine);
     OpenSSLContext::SSL::init_static();
 #elif defined(USE_MINICRYPTO) && (defined(OPENVPN_ARCH_x86_64) || defined(OPENVPN_ARCH_i386))

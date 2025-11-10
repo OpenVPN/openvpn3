@@ -173,7 +173,7 @@
 
 #include <openvpn/crypto/cryptodcsel.hpp>
 
-#if defined(USE_MBEDTLS_APPLE_HYBRID)
+#ifdef USE_MBEDTLS_APPLE_HYBRID
 #define USE_MBEDTLS
 #endif
 
@@ -216,7 +216,7 @@
 using namespace openvpn;
 
 // server Crypto/SSL/Rand implementation
-#if defined(USE_MBEDTLS_SERVER)
+#ifdef USE_MBEDTLS_SERVER
 typedef MbedTLSCryptoAPI ServerCryptoAPI;
 typedef MbedTLSContext ServerSSLAPI;
 typedef MbedTLSRandom ServerRandomAPI;
@@ -229,7 +229,7 @@ using ServerRandomAPI = OpenSSLRandom;
 #endif
 
 // client SSL implementation can be OpenSSL, Apple SSL, or MbedTLS
-#if defined(USE_MBEDTLS)
+#ifdef USE_MBEDTLS
 #if defined(USE_MBEDTLS_APPLE_HYBRID)
 typedef AppleCryptoAPI ClientCryptoAPI;
 #else
@@ -936,7 +936,7 @@ static auto create_client_proto_context(ClientSSLAPI::Config::Ptr cc, Frame::Ptr
     }
     cp->tls_crypt_ = ProtoContext::ProtoConfig::TLSCrypt::V2;
 #endif
-#if defined(HANDSHAKE_WINDOW)
+#ifdef HANDSHAKE_WINDOW
     cp->handshake_window = Time::Duration::seconds(HANDSHAKE_WINDOW);
 #elif SITER > 1
     cp->handshake_window = Time::Duration::seconds(30);
@@ -949,7 +949,7 @@ static auto create_client_proto_context(ClientSSLAPI::Config::Ptr cc, Frame::Ptr
     cp->become_primary = cp->handshake_window;
 #endif
     cp->tls_timeout = Time::Duration::milliseconds(TLS_TIMEOUT_CLIENT);
-#if defined(CLIENT_NO_RENEG)
+#ifdef CLIENT_NO_RENEG
     cp->renegotiate = Time::Duration::infinite();
 #else
     cp->renegotiate = Time::Duration::seconds(RENEG);
@@ -1049,7 +1049,7 @@ int test(const int thread_num,
         sp->set_tls_auth_digest(CryptoAlgs::lookup(PROTO_DIGEST));
         sp->key_direction = 1;
 #endif
-#if defined(USE_TLS_CRYPT)
+#ifdef USE_TLS_CRYPT
         sp->tls_crypt_factory.reset(new CryptoTLSCryptFactory<ClientCryptoAPI>());
         sp->tls_crypt_key.parse(tls_auth_key);
         sp->set_tls_crypt_algs();
@@ -1079,7 +1079,7 @@ int test(const int thread_num,
             sp->key_direction = 1;
         }
 #endif
-#if defined(HANDSHAKE_WINDOW)
+#ifdef HANDSHAKE_WINDOW
         sp->handshake_window = Time::Duration::seconds(HANDSHAKE_WINDOW);
 #elif SITER > 1
         sp->handshake_window = Time::Duration::seconds(30);
@@ -1092,7 +1092,7 @@ int test(const int thread_num,
         sp->become_primary = sp->handshake_window;
 #endif
         sp->tls_timeout = Time::Duration::milliseconds(TLS_TIMEOUT_SERVER);
-#if defined(SERVER_NO_RENEG)
+#ifdef SERVER_NO_RENEG
         sp->renegotiate = Time::Duration::infinite();
 #else
         // NOTE: if we don't add sp->handshake_window, both client and server reneg-sec (RENEG)
@@ -1218,7 +1218,7 @@ class ProtoUnitTest : public testing::Test
     // Sets up the test fixture.
     void SetUp() override
     {
-#if defined(USE_MBEDTLS)
+#ifdef USE_MBEDTLS
         mbedtls_debug_set_threshold(1);
 #endif
 
@@ -1234,7 +1234,7 @@ class ProtoUnitTest : public testing::Test
     // Tears down the test fixture.
     void TearDown() override
     {
-#if defined(USE_MBEDTLS)
+#ifdef USE_MBEDTLS
         mbedtls_debug_set_threshold(4);
 #endif
         openvpn::Compress::set_log_level(openvpn::Compress::default_log_level);

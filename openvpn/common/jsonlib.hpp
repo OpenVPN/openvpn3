@@ -11,7 +11,7 @@
 
 #pragma once
 
-#if defined(HAVE_JSONCPP)
+#ifdef HAVE_JSONCPP
 #define HAVE_JSON
 #include "json/json.h" // JsonCpp library
 #elif defined(HAVE_OPENVPN_COMMON)

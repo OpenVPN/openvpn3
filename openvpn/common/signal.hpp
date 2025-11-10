@@ -14,7 +14,7 @@
 
 #include <openvpn/common/platform.hpp>
 
-#if !defined(OPENVPN_PLATFORM_WIN)
+#ifndef OPENVPN_PLATFORM_WIN
 
 #include <signal.h>
 

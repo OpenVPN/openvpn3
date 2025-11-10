@@ -27,11 +27,11 @@ inline std::string platform_string(const std::string &title, const std::string &
     if (!app_version.empty())
         os << app_version << '/';
     os << OPENVPN_VERSION;
-#if defined OPENVPN_CORE_GIT_VERSION
+#ifdef OPENVPN_CORE_GIT_VERSION
     os << "(" << OPENVPN_CORE_GIT_VERSION << ")";
 #endif
     os << ' ' << platform_name();
-#if defined(OPENVPN_ARCH_x86_64)
+#ifdef OPENVPN_ARCH_x86_64
     os << " x86_64";
 #elif defined(OPENVPN_ARCH_i386)
     os << " i386";

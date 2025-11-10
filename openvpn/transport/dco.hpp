@@ -26,7 +26,7 @@
 #include <openvpn/tun/client/tunbase.hpp>
 #include <openvpn/tun/client/tunprop.hpp>
 
-#if defined(OPENVPN_PLATFORM_WIN)
+#ifdef OPENVPN_PLATFORM_WIN
 #include <openvpn/tun/win/client/tunsetup.hpp>
 #include <openvpn/tun/win/client/clientconfig.hpp>
 #endif
@@ -53,7 +53,7 @@ struct DCO : public virtual RC<thread_unsafe_refcount>
 
     struct TunConfig
     {
-#if defined(OPENVPN_PLATFORM_WIN)
+#ifdef OPENVPN_PLATFORM_WIN
         TunWin::SetupFactory::Ptr setup_factory;
 
         TunWin::SetupBase::Ptr new_setup_obj(openvpn_io::io_context &io_context, bool allow_local_dns_resolvers)

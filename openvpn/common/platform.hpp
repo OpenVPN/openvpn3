@@ -14,7 +14,7 @@
 #ifndef OPENVPN_COMMON_PLATFORM_H
 #define OPENVPN_COMMON_PLATFORM_H
 
-#if defined(_WIN32)
+#ifdef _WIN32
 #define OPENVPN_PLATFORM_WIN
 #if defined(__cplusplus_winrt)
 #include <winapifamily.h>
@@ -41,7 +41,7 @@
 #define OPENVPN_PLATFORM_LINUX
 #endif
 
-#if !defined(_WIN32)
+#ifndef _WIN32
 #define OPENVPN_PLATFORM_TYPE_UNIX
 #endif
 

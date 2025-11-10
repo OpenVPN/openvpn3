@@ -36,7 +36,7 @@
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
 
-#if !defined(OPENVPN_PLATFORM_WIN)
+#ifndef OPENVPN_PLATFORM_WIN
 #include <getopt.h>
 #else
 

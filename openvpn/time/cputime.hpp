@@ -24,7 +24,7 @@
 #include <openvpn/common/number.hpp>
 #include <openvpn/common/exception.hpp>
 
-#if defined(__APPLE__)
+#ifdef __APPLE__
 #include <mach/mach.h>
 
 /**
@@ -80,7 +80,7 @@ inline double cpu_time(const bool thread = false)
         struct rusage usage{};
 
         int ret = 0;
-#if defined(__APPLE__)
+#ifdef __APPLE__
         if (thread)
             ret = getrusage_thread(usage);
         else

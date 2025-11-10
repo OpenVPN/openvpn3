@@ -721,7 +721,7 @@ class OpenSSLContext : public SSLFactoryAPI
             // Return maximum TLS version supported by OpenSSL.
             // Assume that presence of SSL_OP_NO_TLSvX macro indicates
             // that local OpenSSL library implements TLSvX.
-#if defined(SSL_OP_NO_TLSv1_3)
+#ifdef SSL_OP_NO_TLSv1_3
             return TLSVersion::Type::V1_3;
 #elif defined(SSL_OP_NO_TLSv1_2)
             return TLSVersion::Type::V1_2;
@@ -1388,7 +1388,7 @@ class OpenSSLContext : public SSLFactoryAPI
         {
             set_openssl_tls_groups(config->tls_groups);
         }
-#if defined(TLS1_3_VERSION)
+#ifdef TLS1_3_VERSION
         if (!config->tls_ciphersuite_list.empty())
         {
             if (!SSL_CTX_set_ciphersuites(ctx.get(), config->tls_ciphersuite_list.c_str()))

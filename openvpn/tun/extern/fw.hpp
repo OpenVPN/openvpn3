@@ -14,7 +14,7 @@
 
 namespace openvpn {
 
-#if defined(OPENVPN_EXTERNAL_TUN_FACTORY)
+#ifdef OPENVPN_EXTERNAL_TUN_FACTORY
 
 struct TunClientFactory;
 class OptionList;

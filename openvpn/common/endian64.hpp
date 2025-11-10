@@ -32,7 +32,7 @@ inline std::uint64_t mingw_bswap64(const std::uint64_t val)
 inline std::uint64_t rev64(const std::uint64_t value)
 {
 #ifdef OPENVPN_LITTLE_ENDIAN
-#if defined(_MSC_VER)
+#ifdef _MSC_VER
     return _byteswap_uint64(value);
 #elif defined(__MINGW32__)
     return mingw_bswap64(value);

@@ -25,7 +25,7 @@
 #include <openvpn/buffer/bufstr.hpp>
 #include <openvpn/buffer/buflist.hpp>
 
-#if defined(OPENVPN_PLATFORM_WIN)
+#ifdef OPENVPN_PLATFORM_WIN
 #include <filesystem>
 #include <openvpn/win/unicode.hpp>
 #endif
@@ -57,7 +57,7 @@ inline BufferPtr read_binary(const std::string &filename,
                              const std::uint64_t max_size = 0,
                              const BufferFlags buffer_flags = BufAllocFlags::NO_FLAGS)
 {
-#if defined(OPENVPN_PLATFORM_WIN)
+#ifdef OPENVPN_PLATFORM_WIN
     Win::UTF16 filenamew(Win::utf16(filename));
     std::filesystem::path path(filenamew.get());
     std::ifstream ifs(path, std::ios::binary);

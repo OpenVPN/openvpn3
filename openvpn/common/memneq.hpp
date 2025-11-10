@@ -15,7 +15,7 @@
 #include <openvpn/common/size.hpp>
 #include <atomic>
 
-#if defined(USE_OPENSSL)
+#ifdef USE_OPENSSL
 #include <openssl/crypto.h>
 #endif
 
@@ -27,7 +27,7 @@
 
 // Define a portable compiler memory access fence (from Boost).
 
-#if defined(__INTEL_COMPILER)
+#ifdef __INTEL_COMPILER
 
 #define OPENVPN_COMPILER_FENCE __memory_barrier();
 
@@ -67,7 +67,7 @@ namespace openvpn::crypto {
  */
 inline bool memneq(const void *a, const void *b, size_t size);
 
-#if defined(USE_OPENSSL)
+#ifdef USE_OPENSSL
 inline bool memneq(const void *a, const void *b, size_t size)
 {
     // memcmp does return 0 (=false) when the memory is equal. It normally

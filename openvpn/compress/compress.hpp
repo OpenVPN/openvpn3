@@ -27,7 +27,7 @@
 namespace openvpn {
 
 //! Debugging level for message emitted from compression
-#if !defined(OPENVPN_DEBUG_COMPRESS)
+#ifndef OPENVPN_DEBUG_COMPRESS
 #define OPENVPN_DEBUG_COMPRESS 1
 #endif
 

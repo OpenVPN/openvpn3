@@ -40,7 +40,7 @@
 #endif
 
 namespace openvpn::SSLLib {
-#if defined(USE_MBEDTLS)
+#ifdef USE_MBEDTLS
 #define SSL_LIB_NAME "MbedTLS"
 using CryptoAPI = MbedTLSCryptoAPI;
 #if defined OPENVPN_PLATFORM_UWP

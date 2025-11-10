@@ -14,13 +14,13 @@
 #ifndef XKEY_COMMON_H_
 #define XKEY_COMMON_H_
 
-#if defined (__cplusplus)
+#ifdef __cplusplus
 extern "C" {
 #endif
 
 /* Guard to only enable if OpenSSL is used and not trigger an error if mbed
  * TLS is compiled without OpenSSL being installed */
-#if defined(USE_OPENSSL)
+#ifdef USE_OPENSSL
 #include <openssl/opensslv.h>
 #if OPENSSL_VERSION_NUMBER >= 0x30000010L && !defined(DISABLE_XKEY_PROVIDER)
 #define HAVE_XKEY_PROVIDER 1
@@ -131,7 +131,7 @@ void xkey_set_logging_cb_function(XKEY_LOGGING_CALLBACK_fn logfunc);
 
 #endif /* USE_OPENSSL */
 
-#if defined (__cplusplus)
+#ifdef __cplusplus
 }
 #endif
 #endif /* XKEY_COMMON_H_ */

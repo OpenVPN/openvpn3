@@ -20,7 +20,7 @@
 
 namespace openvpn {
 
-#if defined(__GNUC__)
+#ifdef __GNUC__
 
 template <typename T>
 inline constexpr int n_bits_type()

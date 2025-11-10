@@ -14,7 +14,7 @@
 
 // Branch prediction hints (these make a difference on ARM)
 #if !defined(likely) && !defined(unlikely)
-#if defined(__GNUC__)
+#ifdef __GNUC__
 #define likely(x) __builtin_expect((x), 1)
 #define unlikely(x) __builtin_expect((x), 0)
 #else

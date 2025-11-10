@@ -202,7 +202,7 @@ class Client : public TunClient
                         sd = tun_setup->establish(*po, &tsconf, nullptr, os);
                     }
 
-#if defined(HAVE_JSON)
+#ifdef HAVE_JSON
                     if (config->generate_tun_builder_capture_event)
                     {
                         // create an event with TunBuilderCapture data as JSON

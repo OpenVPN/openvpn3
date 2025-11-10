@@ -199,7 +199,7 @@ void runTest(comppair alg, bool verbose = false)
 
     switch (alg)
     {
-#if defined(HAVE_LZO)
+#ifdef HAVE_LZO
     case comppair::lzoasym:
         compress.reset(new CompressLZO(frame, stats, SUPPORT_SWAP, false));
         decompress.reset(new CompressLZOAsym(frame, stats, SUPPORT_SWAP, false));
@@ -211,13 +211,13 @@ void runTest(comppair alg, bool verbose = false)
         break;
 
 #endif
-#if defined(HAVE_LZ4)
+#ifdef HAVE_LZ4
     case comppair::lz4:
         compress.reset(new CompressLZ4(frame, stats, false));
         decompress = compress;
         break;
 #endif
-#if defined(HAVE_SNAPPY)
+#ifdef HAVE_SNAPPY
     case comppair::snappy:
         compress.reset(new CompressSnappy(frame, stats, false));
         decompress = compress;
@@ -241,13 +241,13 @@ void runTest(comppair alg, bool verbose = false)
 }
 
 namespace unittests {
-#if defined(HAVE_SNAPPY)
+#ifdef HAVE_SNAPPY
 TEST(Compression, snappy)
 {
     runTest(comppair::snappy);
 }
 #endif
-#if defined(HAVE_LZO)
+#ifdef HAVE_LZO
 TEST(Compression, lzo)
 {
     runTest(comppair::lzo);
@@ -258,7 +258,7 @@ TEST(Compression, lzoasym)
     runTest(comppair::lzoasym);
 }
 #endif
-#if defined(HAVE_LZ4)
+#ifdef HAVE_LZ4
 TEST(Compression, lz4)
 {
     runTest(comppair::lz4);

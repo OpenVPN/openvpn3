@@ -25,7 +25,7 @@
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/string.hpp>
 
-#if defined(OPENVPN_PLATFORM_WIN)
+#ifdef OPENVPN_PLATFORM_WIN
 #include <windows.h>
 #else
 #include <sys/time.h>
@@ -33,7 +33,7 @@
 
 namespace openvpn {
 
-#if defined(OPENVPN_PLATFORM_WIN)
+#ifdef OPENVPN_PLATFORM_WIN
 
 inline std::string date_time(const time_t now)
 {
@@ -166,7 +166,7 @@ inline std::string date_time_rfc822(const time_t t)
     struct tm lt;
     char buf[64];
 
-#if defined(OPENVPN_PLATFORM_WIN)
+#ifdef OPENVPN_PLATFORM_WIN
     if (gmtime_s(&lt, &t))
         return "";
     // MinGW doesn't yet support %T, so use %H:%M:%S

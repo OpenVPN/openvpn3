@@ -35,7 +35,7 @@ TEST(ssl, sslciphersuites)
 
 
     sslcfg->set_tls_ciphersuite_list("TLS_CHACHA2000");
-#if defined(USE_MBEDTLS)
+#ifdef USE_MBEDTLS
     /* Ignored on non TLS 1.3 implementations */
     sslfact = sslcfg->new_factory();
 #else
@@ -96,7 +96,7 @@ TEST(ssl, tls_groups)
 #endif
 }
 
-#if defined(USE_OPENSSL)
+#ifdef USE_OPENSSL
 TEST(ssl, translate_ciphers_openssl)
 {
     bool previousLogOutput = testLog->isStdoutEnabled();
