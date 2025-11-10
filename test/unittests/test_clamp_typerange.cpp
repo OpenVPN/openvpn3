@@ -27,77 +27,77 @@ using namespace openvpn::numeric_util;
 
 TEST(ClampToTyperange, SameTypeNocast1)
 {
-    int32_t i32 = -1;
+    const int32_t i32 = -1;
     auto result = clamp_to_typerange<int32_t>(i32);
     EXPECT_EQ(result, i32);
 }
 
 TEST(ClampToTyperange, SignMismatch321)
 {
-    int32_t i32 = -1;
+    const int32_t i32 = -1;
     auto result = clamp_to_typerange<uint32_t>(i32);
     EXPECT_EQ(result, 0);
 }
 
 TEST(ClampToTyperange, SignMismatch322)
 {
-    uint32_t u32 = std::numeric_limits<uint32_t>::max();
+    const uint32_t u32 = std::numeric_limits<uint32_t>::max();
     auto result = clamp_to_typerange<int32_t>(u32);
     EXPECT_EQ(result, std::numeric_limits<int32_t>::max());
 }
 
 TEST(ClampToTyperange, SignMismatch323)
 {
-    uint32_t u32 = 0;
+    const uint32_t u32 = 0;
     auto result = clamp_to_typerange<int32_t>(u32);
     EXPECT_EQ(result, 0);
 }
 
 TEST(ClampToTyperange, SignMismatch324)
 {
-    uint32_t u32 = 42;
+    const uint32_t u32 = 42;
     auto result = clamp_to_typerange<int32_t>(u32);
     EXPECT_EQ(result, 42);
 }
 
 TEST(ClampToTyperange, SignMismatch325)
 {
-    uint32_t u32 = uint32_t(std::numeric_limits<int32_t>::max());
+    const uint32_t u32 = uint32_t(std::numeric_limits<int32_t>::max());
     auto result = clamp_to_typerange<int32_t>(u32);
     EXPECT_EQ(result, std::numeric_limits<int32_t>::max());
 }
 
 TEST(ClampToTyperange, SignMismatch326)
 {
-    int32_t s32 = std::numeric_limits<int32_t>::max();
+    const int32_t s32 = std::numeric_limits<int32_t>::max();
     auto result = clamp_to_typerange<uint8_t>(s32);
     EXPECT_EQ(result, std::numeric_limits<uint8_t>::max());
 }
 
 TEST(ClampToTyperange, SignMismatch327)
 {
-    int32_t s32 = 42;
+    const int32_t s32 = 42;
     auto result = clamp_to_typerange<uint8_t>(s32);
     EXPECT_EQ(result, 42);
 }
 
 TEST(ClampToTyperange, SRangeMismatch16641)
 {
-    int64_t s64 = std::numeric_limits<int64_t>::max();
+    const int64_t s64 = std::numeric_limits<int64_t>::max();
     auto result = clamp_to_typerange<int16_t>(s64);
     EXPECT_EQ(result, std::numeric_limits<int16_t>::max());
 }
 
 TEST(ClampToTyperange, SRangeMatch16641)
 {
-    int64_t s64 = 0;
+    const int64_t s64 = 0;
     auto result = clamp_to_typerange<int16_t>(s64);
     EXPECT_EQ(result, 0);
 }
 
 TEST(ClampToTyperange, URangeMismatch16641)
 {
-    uint64_t u64 = std::numeric_limits<uint64_t>::max();
+    const uint64_t u64 = std::numeric_limits<uint64_t>::max();
     auto result = clamp_to_typerange<uint16_t>(u64);
     EXPECT_EQ(result, std::numeric_limits<uint16_t>::max());
 }
@@ -110,77 +110,77 @@ TEST(ClampToTyperange, URangeMismatch16641)
 
 TEST(ClampToDefault, SameTypeNocast1)
 {
-    int32_t i32 = -1;
+    const int32_t i32 = -1;
     auto result = clamp_to_default<int32_t>(i32, 0);
     EXPECT_EQ(result, i32);
 }
 
 TEST(ClampToDefault, SignMismatch321)
 {
-    int32_t i32 = -1;
+    const int32_t i32 = -1;
     auto result = clamp_to_default<uint32_t>(i32, 42);
     EXPECT_EQ(result, 42);
 }
 
 TEST(ClampToDefault, SignMismatch322)
 {
-    uint32_t u32 = std::numeric_limits<uint32_t>::max();
+    const uint32_t u32 = std::numeric_limits<uint32_t>::max();
     auto result = clamp_to_default<int32_t>(u32, 1);
     EXPECT_EQ(result, 1);
 }
 
 TEST(ClampToDefault, SignMismatch323)
 {
-    uint32_t u32 = 0;
+    const uint32_t u32 = 0;
     auto result = clamp_to_default<int32_t>(u32, 42);
     EXPECT_EQ(result, 0);
 }
 
 TEST(ClampToDefault, SignMismatch324)
 {
-    uint32_t u32 = 42;
+    const uint32_t u32 = 42;
     auto result = clamp_to_default<int32_t>(u32, 0);
     EXPECT_EQ(result, 42);
 }
 
 TEST(ClampToDefault, SignMismatch325)
 {
-    uint32_t u32 = uint32_t(std::numeric_limits<int32_t>::max());
+    const uint32_t u32 = uint32_t(std::numeric_limits<int32_t>::max());
     auto result = clamp_to_default<int32_t>(u32, -1);
     EXPECT_EQ(result, std::numeric_limits<int32_t>::max());
 }
 
 TEST(ClampToDefault, SignMismatch326)
 {
-    int32_t s32 = std::numeric_limits<int32_t>::max();
+    const int32_t s32 = std::numeric_limits<int32_t>::max();
     auto result = clamp_to_default<uint8_t>(s32, 0);
     EXPECT_EQ(result, 0);
 }
 
 TEST(ClampToDefault, SignMismatch327)
 {
-    int32_t s32 = 42;
+    const int32_t s32 = 42;
     auto result = clamp_to_default<uint8_t>(s32, -1);
     EXPECT_EQ(result, 42);
 }
 
 TEST(ClampToDefault, SRangeMismatch16641)
 {
-    int64_t s64 = std::numeric_limits<int64_t>::max();
+    const int64_t s64 = std::numeric_limits<int64_t>::max();
     auto result = clamp_to_default<int16_t>(s64, 0);
     EXPECT_EQ(result, 0);
 }
 
 TEST(ClampToDefault, SRangeMatch16641)
 {
-    int64_t s64 = 0;
+    const int64_t s64 = 0;
     auto result = clamp_to_default<int16_t>(s64, -1);
     EXPECT_EQ(result, 0);
 }
 
 TEST(ClampToDefault, URangeMismatch16641)
 {
-    uint64_t u64 = std::numeric_limits<uint64_t>::max();
+    const uint64_t u64 = std::numeric_limits<uint64_t>::max();
     auto result = clamp_to_default<uint16_t>(u64, 42);
     EXPECT_EQ(result, 42);
 }
@@ -192,7 +192,7 @@ TEST(ClampToDefault, URangeMismatch16641)
 
 TEST(ClampNotify, SameTypeNocast1)
 {
-    int32_t i32 = -1;
+    const int32_t i32 = -1;
     auto result = clamp_notify<int32_t>(i32, [](int32_t inVal)
                                         { return 0; });
     EXPECT_EQ(result, i32);
@@ -200,7 +200,7 @@ TEST(ClampNotify, SameTypeNocast1)
 
 TEST(ClampNotify, SignMismatch321)
 {
-    int32_t i32 = -1;
+    const int32_t i32 = -1;
     auto result = clamp_notify<uint32_t>(i32, [](int32_t inVal)
                                          { return 42; });
     EXPECT_EQ(result, 42);
@@ -208,7 +208,7 @@ TEST(ClampNotify, SignMismatch321)
 
 TEST(ClampNotify, SignMismatch322)
 {
-    uint32_t u32 = std::numeric_limits<uint32_t>::max();
+    const uint32_t u32 = std::numeric_limits<uint32_t>::max();
     auto result = clamp_notify<int32_t>(u32, [](uint32_t inVal)
                                         { return 1; });
     EXPECT_EQ(result, 1);
@@ -216,7 +216,7 @@ TEST(ClampNotify, SignMismatch322)
 
 TEST(ClampNotify, SignMismatch323)
 {
-    uint32_t u32 = 0;
+    const uint32_t u32 = 0;
     auto result = clamp_notify<int32_t>(u32, [](uint32_t inVal)
                                         { return 42; });
     EXPECT_EQ(result, 0);
@@ -224,7 +224,7 @@ TEST(ClampNotify, SignMismatch323)
 
 TEST(ClampNotify, SignMismatch324)
 {
-    uint32_t u32 = 42;
+    const uint32_t u32 = 42;
     auto result = clamp_notify<int32_t>(u32, [](uint32_t inVal)
                                         { return 0; });
     EXPECT_EQ(result, 42);
@@ -232,7 +232,7 @@ TEST(ClampNotify, SignMismatch324)
 
 TEST(ClampNotify, SignMismatch325)
 {
-    uint32_t u32 = uint32_t(std::numeric_limits<int32_t>::max());
+    const uint32_t u32 = uint32_t(std::numeric_limits<int32_t>::max());
     auto result = clamp_notify<int32_t>(u32, [](uint32_t inVal)
                                         { return -1; });
     EXPECT_EQ(result, std::numeric_limits<int32_t>::max());
@@ -240,7 +240,7 @@ TEST(ClampNotify, SignMismatch325)
 
 TEST(ClampNotify, SignMismatch326)
 {
-    int32_t s32 = std::numeric_limits<int32_t>::max();
+    const int32_t s32 = std::numeric_limits<int32_t>::max();
     auto result = clamp_notify<uint8_t>(s32, [](int32_t inVal) -> uint8_t
                                         { return 0; });
     EXPECT_EQ(result, 0);
@@ -248,7 +248,7 @@ TEST(ClampNotify, SignMismatch326)
 
 TEST(ClampNotify, SignMismatch327)
 {
-    int32_t s32 = 42;
+    const int32_t s32 = 42;
     auto result = clamp_notify<uint8_t>(s32, [](int32_t inVal) -> uint8_t
                                         { return 0; });
     EXPECT_EQ(result, 42);
@@ -256,7 +256,7 @@ TEST(ClampNotify, SignMismatch327)
 
 TEST(ClampNotify, SRangeMismatch16641)
 {
-    int64_t s64 = std::numeric_limits<int64_t>::max();
+    const int64_t s64 = std::numeric_limits<int64_t>::max();
     auto result = clamp_notify<int16_t>(s64, [](int64_t inVal) -> int16_t
                                         { return 0; });
     EXPECT_EQ(result, 0);
@@ -264,7 +264,7 @@ TEST(ClampNotify, SRangeMismatch16641)
 
 TEST(ClampNotify, SRangeMatch16641)
 {
-    int64_t s64 = 0;
+    const int64_t s64 = 0;
     auto result = clamp_notify<int16_t>(s64, [](int64_t inVal) -> int16_t
                                         { return -1; });
     EXPECT_EQ(result, 0);
@@ -272,7 +272,7 @@ TEST(ClampNotify, SRangeMatch16641)
 
 TEST(ClampNotify, URangeMismatch16641)
 {
-    uint64_t u64 = std::numeric_limits<uint64_t>::max();
+    const uint64_t u64 = std::numeric_limits<uint64_t>::max();
     auto result = clamp_notify<uint16_t>(u64, [](uint64_t inVal) -> uint16_t
                                          { return 42; });
     EXPECT_EQ(result, 42);

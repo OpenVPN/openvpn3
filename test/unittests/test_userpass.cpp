@@ -115,7 +115,7 @@ TEST(UserPass, Missing)
         UserPass::parse(cfg, optname, flags, user, pass);
         ASSERT_TRUE(user.empty()) << "flags: " << flags;
         ASSERT_TRUE(pass.empty()) << "flags: " << flags;
-        bool ret = UserPass::parse(cfg, optname, flags, &userpass);
+        const bool ret = UserPass::parse(cfg, optname, flags, &userpass);
         ASSERT_FALSE(ret) << "flags: " << flags;
         ASSERT_EQ(userpass.size(), 0) << "flags: " << flags;
     }
@@ -167,7 +167,7 @@ TEST(UserPass, NoArgs)
         UserPass::parse(cfg, optname, flags, user, pass);
         ASSERT_TRUE(user.empty()) << "flags: " << flags;
         ASSERT_TRUE(pass.empty()) << "flags: " << flags;
-        bool ret = UserPass::parse(cfg, optname, flags, &userpass);
+        const bool ret = UserPass::parse(cfg, optname, flags, &userpass);
         ASSERT_TRUE(ret) << "flags: " << flags;
         ASSERT_EQ(userpass.size(), 0) << "flags: " << flags;
     }
@@ -221,7 +221,7 @@ TEST(UserPass, UserOnly)
             UserPass::parse(cfg, optname, flags, user, pass);
             ASSERT_EQ(user, "username") << "config: " << config_text << "flags: " << flags;
             ASSERT_TRUE(pass.empty()) << "config: " << config_text << "flags: " << flags;
-            bool ret = UserPass::parse(cfg, optname, flags, &userpass);
+            const bool ret = UserPass::parse(cfg, optname, flags, &userpass);
             ASSERT_TRUE(ret) << "config: " << config_text << "flags: " << flags;
             ASSERT_EQ(userpass.size(), 1) << "config: " << config_text << "flags: " << flags;
             ASSERT_EQ(userpass[0], "username") << "config: " << config_text << "flags: " << flags;
@@ -242,7 +242,7 @@ TEST(UserPass, UserOnly)
             UserPass::parse(cfg, optname, flags, user, pass);
             ASSERT_EQ(user, userpass_file_fn) << "flags: " << flags;
             ASSERT_TRUE(pass.empty()) << "flags: " << flags;
-            bool ret = UserPass::parse(cfg, optname, flags, &userpass);
+            const bool ret = UserPass::parse(cfg, optname, flags, &userpass);
             ASSERT_TRUE(ret) << "flags: " << flags;
             ASSERT_EQ(userpass.size(), 1) << "flags: " << flags;
             ASSERT_EQ(userpass[0], userpass_file_fn) << "flags: " << flags;
@@ -268,7 +268,7 @@ TEST(UserPass, UserOnly)
                 UserPass::parse(cfg, optname, flags, user, pass),
                 UserPass::creds_error)
                 << "config: " << config_text << "flags: " << flags;
-            bool ret = UserPass::parse(cfg, optname, flags, &userpass);
+            const bool ret = UserPass::parse(cfg, optname, flags, &userpass);
             // FIXME?
             ASSERT_TRUE(ret) << "config: " << config_text << "flags: " << flags;
         }
@@ -296,7 +296,7 @@ TEST(UserPass, UserPass)
             UserPass::parse(cfg, optname, flags_try_file, user, pass);
             ASSERT_EQ(user, "username") << "config: " << config_text << "flags: " << flags;
             ASSERT_EQ(pass, "password") << "config: " << config_text << "flags: " << flags;
-            bool ret = UserPass::parse(cfg, optname, flags_try_file, &userpass);
+            const bool ret = UserPass::parse(cfg, optname, flags_try_file, &userpass);
             ASSERT_TRUE(ret) << "config: " << config_text << "flags: " << flags;
             ASSERT_EQ(userpass.size(), 2) << "config: " << config_text << "flags: " << flags;
             ASSERT_EQ(userpass[0], "username") << "config: " << config_text << "flags: " << flags;
@@ -372,7 +372,7 @@ TEST(UserPass, ParseFileOverflow)
             ASSERT_ANY_THROW(UserPass::parse_file(filename, flags, user, pass))
                 << "file: " << filename << "flags: " << flags;
             auto flags_try_file = flags | UserPass::TRY_FILE;
-            std::string config_text = std::string("auth ") + filename;
+            const std::string config_text = std::string("auth ") + filename;
             std::vector<std::string> userpass;
             OptionList cfg;
             cfg.parse_from_config(config_text, nullptr);

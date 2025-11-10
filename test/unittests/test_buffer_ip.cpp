@@ -48,7 +48,7 @@ static constexpr int ITER = 1000000;
 
 TEST(BufferIp, Ipv4)
 {
-    MTRand::Ptr prng(new MTRand());
+    const MTRand::Ptr prng(new MTRand());
     for (int count = 0; count < ITER; ++count)
     {
         std::uint32_t addr;
@@ -67,7 +67,7 @@ TEST(BufferIp, Ipv4)
 
 TEST(BufferIp, Ipv6)
 {
-    MTRand::Ptr prng(new MTRand());
+    const MTRand::Ptr prng(new MTRand());
     for (int count = 0; count < ITER; ++count)
     {
         std::uint8_t addr[16];

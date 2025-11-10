@@ -106,7 +106,7 @@ class ReliableSendTemplate
             const Message &msg = ref_by_id(i);
             if (msg.defined())
             {
-                Time::Duration ut = msg.until_retransmit(now);
+                const Time::Duration ut = msg.until_retransmit(now);
                 if (ut < ret)
                     ret = ut;
             }

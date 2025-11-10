@@ -30,7 +30,7 @@ void testcase(PIDRecv &pr,
 TEST(Misc, PktidTestControl)
 {
     using PIDRecv = PacketIDControlReceiveType<3, 5>;
-    SessionStats::Ptr stats(new SessionStats());
+    const SessionStats::Ptr stats(new SessionStats());
     PIDRecv pr;
     pr.init("test", 0, stats);
 
@@ -105,7 +105,7 @@ void perfiter(const long n,
     MTRand urand;
     std::vector<bool> bv(n);
     long high = 0;
-    SessionStats::Ptr stats(new SessionStats());
+    const SessionStats::Ptr stats(new SessionStats());
     PIDRecv pr;
     pr.init("test", 0, stats);
 

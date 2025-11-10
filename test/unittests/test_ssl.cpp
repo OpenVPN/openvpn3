@@ -25,7 +25,7 @@ using namespace openvpn;
 TEST(Ssl, Sslciphersuites)
 {
     SSLFactoryAPI::Ptr sslfact;
-    SSLLib::SSLAPI::Config::Ptr sslcfg(new SSLLib::SSLAPI::Config);
+    const SSLLib::SSLAPI::Config::Ptr sslcfg(new SSLLib::SSLAPI::Config);
     sslcfg->set_local_cert_enabled(false);
     sslcfg->set_flags(SSLConst::NO_VERIFY_PEER);
 
@@ -46,12 +46,12 @@ TEST(Ssl, Sslciphersuites)
 
 TEST(Ssl, Sslciphers)
 {
-    StrongRandomAPI::Ptr rng(new FakeSecureRand);
+    const StrongRandomAPI::Ptr rng(new FakeSecureRand);
 
-    bool previousLogOutput = testLog->isStdoutEnabled();
+    const bool previousLogOutput = testLog->isStdoutEnabled();
     testLog->setPrintOutput(false);
     SSLFactoryAPI::Ptr sslfact;
-    SSLLib::SSLAPI::Config::Ptr sslcfg(new SSLLib::SSLAPI::Config);
+    const SSLLib::SSLAPI::Config::Ptr sslcfg(new SSLLib::SSLAPI::Config);
     sslcfg->set_local_cert_enabled(false);
     sslcfg->set_flags(SSLConst::NO_VERIFY_PEER);
     sslcfg->set_rng(rng);
@@ -67,11 +67,11 @@ TEST(Ssl, Sslciphers)
 
 TEST(Ssl, TlsGroups)
 {
-    StrongRandomAPI::Ptr rng(new FakeSecureRand);
+    const StrongRandomAPI::Ptr rng(new FakeSecureRand);
 
-    SSLFactoryAPI::Ptr sslfact;
+    const SSLFactoryAPI::Ptr sslfact;
 
-    SSLLib::SSLAPI::Config::Ptr sslcfg(new SSLLib::SSLAPI::Config);
+    const SSLLib::SSLAPI::Config::Ptr sslcfg(new SSLLib::SSLAPI::Config);
     sslcfg->set_local_cert_enabled(false);
     sslcfg->set_flags(SSLConst::NO_VERIFY_PEER);
     sslcfg->set_rng(rng);
@@ -99,7 +99,7 @@ TEST(Ssl, TlsGroups)
 #ifdef USE_OPENSSL
 TEST(Ssl, TranslateCiphersOpenssl)
 {
-    bool previousLogOutput = testLog->isStdoutEnabled();
+    const bool previousLogOutput = testLog->isStdoutEnabled();
     testLog->setPrintOutput(false);
     EXPECT_EQ("ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-SHA256:AES256-SHA",
               OpenSSLContext::translate_cipher_list("TLS-ECDHE-RSA-WITH-AES-128-GCM-SHA256:TLS-ECDHE-RSA-WITH-AES-128-CBC-SHA256:AES256-SHA"));
@@ -113,9 +113,9 @@ TEST(Ssl, TranslateCiphersOpenssl)
 #if defined(USE_OPENSSL) && OPENSSL_VERSION_NUMBER >= 0x30000000L
 TEST(Ssl, EnablelegacyProvider)
 {
-    StrongRandomAPI::Ptr rng(new FakeSecureRand);
+    const StrongRandomAPI::Ptr rng(new FakeSecureRand);
 
-    SSLLib::SSLAPI::Config::Ptr sslcfg(new SSLLib::SSLAPI::Config);
+    const SSLLib::SSLAPI::Config::Ptr sslcfg(new SSLLib::SSLAPI::Config);
     sslcfg->set_local_cert_enabled(false);
     sslcfg->set_flags(SSLConst::NO_VERIFY_PEER);
     sslcfg->set_rng(rng);
@@ -124,7 +124,7 @@ TEST(Ssl, EnablelegacyProvider)
 
     EXPECT_EQ(SSLLib::CryptoAPI::CipherContext::is_supported(f_nolegacy->libctx(), openvpn::CryptoAlgs::BF_CBC), false);
 
-    SSLLib::SSLAPI::Config::Ptr sslcfg_legacy(new SSLLib::SSLAPI::Config);
+    const SSLLib::SSLAPI::Config::Ptr sslcfg_legacy(new SSLLib::SSLAPI::Config);
     sslcfg_legacy->set_local_cert_enabled(false);
     sslcfg_legacy->set_flags(SSLConst::NO_VERIFY_PEER);
     sslcfg_legacy->set_rng(rng);

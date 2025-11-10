@@ -193,7 +193,7 @@ class Crypto : public CryptoDCInstance
         if (!buf.empty())
         {
             // build nonce/IV/AD
-            Nonce nonce(e.nonce, e.pid_send, op32);
+            const Nonce nonce(e.nonce, e.pid_send, op32);
 
             // encrypt to work buf
             frame->prepare(Frame::ENCRYPT_WORK, e.work);
@@ -203,7 +203,7 @@ class Crypto : public CryptoDCInstance
 
             unsigned char *work_data = e.work.write_alloc(buf.size());
 
-            unsigned char *auth_tag_tmp = nullptr;
+            const unsigned char *auth_tag_tmp = nullptr;
             // alloc auth tag in buffer at the start of the packet
             // Create a temporary auth tag at the end if the implementation and mode require it
 
@@ -242,7 +242,7 @@ class Crypto : public CryptoDCInstance
 
             // get auth tag if it is at the front. If the auth tag is at the end
             // the decrypt function will just treat it as part of the input
-            unsigned char *auth_tag = nullptr;
+            const unsigned char *auth_tag = nullptr;
 
             auth_tag = buf.read_alloc(CRYPTO_API::CipherContextAEAD::AUTH_TAG_LEN);
 

@@ -108,7 +108,7 @@ class RouteEmulationTest : public testing::Test
 
         if (!keepEmu)
         {
-            openvpn::EmulateExcludeRouteFactory::Ptr factory(
+            const openvpn::EmulateExcludeRouteFactory::Ptr factory(
                 new openvpn::EmulateExcludeRouteFactoryImpl(excludeServer));
 
             emu = factory->new_obj();
@@ -127,8 +127,8 @@ class RouteEmulationTest : public testing::Test
 
     void addRoute(bool include, const std::string &route)
     {
-        std::string ipstr = route.substr(0, route.find('/'));
-        std::string mask = route.substr(route.find('/') + 1);
+        const std::string ipstr = route.substr(0, route.find('/'));
+        const std::string mask = route.substr(route.find('/') + 1);
         emu->add_route(include, openvpn::IP::Addr(ipstr), std::stoi(mask));
     }
 

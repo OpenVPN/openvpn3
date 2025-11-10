@@ -35,7 +35,7 @@ class LogOutputCollector : public LogBase
 
     void log(const std::string &l) override
     {
-        std::lock_guard<std::mutex> lock(mutex);
+        const std::lock_guard<std::mutex> lock(mutex);
 
         if (output_log)
             std::cout << l;
@@ -151,7 +151,7 @@ extern openvpn::LogOutputCollector *testLog;
  */
 inline void override_logOutput(bool doLogOutput, void (*test_func)())
 {
-    bool previousOutputState = testLog->isStdoutEnabled();
+    const bool previousOutputState = testLog->isStdoutEnabled();
     testLog->setPrintOutput(doLogOutput);
     test_func();
     testLog->setPrintOutput(previousOutputState);
@@ -251,8 +251,8 @@ inline std::string getSortedString(const std::string &output)
 {
     std::stringstream ss{output};
 
-    std::istream_iterator<detail::line> begin{ss};
-    std::istream_iterator<detail::line> end;
+    const std::istream_iterator<detail::line> begin{ss};
+    const std::istream_iterator<detail::line> end;
     std::vector<std::string> lines{begin, end};
 
     // sort lines
@@ -292,7 +292,7 @@ class FakeAsyncResolvable : public RESOLVABLE
         EndpointList endpoints;
         for (const auto &result : results)
         {
-            EndpointType ep(openvpn_io::ip::make_address(result.first), result.second);
+            const EndpointType ep(openvpn_io::ip::make_address(result.first), result.second);
             endpoints.push_back(ep);
         }
         results_[host + ":" + service] = std::move(endpoints);
@@ -382,7 +382,7 @@ class unit_test_uniform_int_distribution
     uint32_t operator()(generator &prng)
     {
         /* Get random number in (0, range) first */
-        uint32_t range = B - A + 1;
+        const uint32_t range = B - A + 1;
 
         uint64_t product = uint64_t{prng()} * uint64_t{range};
 
@@ -390,7 +390,7 @@ class unit_test_uniform_int_distribution
 
         if (low < range)
         {
-            uint32_t threshold = -range % range;
+            const uint32_t threshold = -range % range;
             while (low < threshold)
             {
                 product = uint64_t{prng()} * uint64_t{range};

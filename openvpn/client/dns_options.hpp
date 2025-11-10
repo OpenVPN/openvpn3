@@ -112,7 +112,7 @@ struct DnsAddress
     {
         std::ostringstream os;
 
-        IP::Addr addr(address);
+        const IP::Addr addr(address);
         os << (addr.is_ipv6() && port ? "[" : "")
            << address
            << (addr.is_ipv6() && port ? "]" : "");

@@ -59,7 +59,7 @@ class Init
   public:
     Init()
     {
-        std::lock_guard<std::mutex> lock(the_instance_mutex);
+        const std::lock_guard<std::mutex> lock(the_instance_mutex);
 
         initptr = init_instance.lock();
         if (!initptr)
@@ -72,7 +72,7 @@ class Init
     ~Init()
     {
         // explicitly reset smart pointer to make the destructor run under the lock_guard
-        std::lock_guard<std::mutex> lock(the_instance_mutex);
+        const std::lock_guard<std::mutex> lock(the_instance_mutex);
         initptr.reset();
     }
 };

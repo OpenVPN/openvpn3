@@ -369,7 +369,7 @@ class Session : ProtoContextCallbackInterface,
             }
 
             // get packet type
-            ProtoContext::PacketType pt = proto_context.packet_type(buf);
+            const ProtoContext::PacketType pt = proto_context.packet_type(buf);
 
             // process packet
             if (pt.is_data())
@@ -469,7 +469,7 @@ class Session : ProtoContextCallbackInterface,
                 // here we need to add it back since we check the whole IP packet size, not just TCP payload
                 constexpr size_t MinTcpHeader = 20;
                 constexpr size_t MinIpHeader = 20;
-                size_t mss_no_tcp_ip_encap = c.mss_fix + (MinTcpHeader + MinIpHeader);
+                const size_t mss_no_tcp_ip_encap = c.mss_fix + (MinTcpHeader + MinIpHeader);
 
                 if (df && c.mss_fix > 0 && buf.size() > mss_no_tcp_ip_encap)
                 {
@@ -814,7 +814,7 @@ class Session : ProtoContextCallbackInterface,
             {
                 key_words = msg.substr(strlen("AUTH_PENDING,"));
                 auto opts = OptionList::parse_from_csv_static(key_words, nullptr);
-                std::string timeout_str = opts.get_optional("timeout", 1, 20);
+                const std::string timeout_str = opts.get_optional("timeout", 1, 20);
                 if (!timeout_str.empty())
                 {
                     try
@@ -993,7 +993,7 @@ class Session : ProtoContextCallbackInterface,
     */
     void recv_custom_control_message(const std::string &msg)
     {
-        bool fullmessage = proto_context.conf().app_control_recv.receive_message(msg);
+        const bool fullmessage = proto_context.conf().app_control_recv.receive_message(msg);
         if (!fullmessage)
             return;
 
@@ -1197,7 +1197,7 @@ class Session : ProtoContextCallbackInterface,
 
         try
         {
-            std::string client_ip = received_options.get_optional("client-ip", 1, 256);
+            const std::string client_ip = received_options.get_optional("client-ip", 1, 256);
             if (!client_ip.empty())
                 ev->client_ip = IP::Addr::validate(client_ip, "client-ip");
         }
@@ -1327,7 +1327,7 @@ class Session : ProtoContextCallbackInterface,
     // react to any tls warning triggered during the tls-handshake
     virtual void check_tls_warnings()
     {
-        uint32_t tls_warnings = proto_context.get_tls_warnings();
+        const uint32_t tls_warnings = proto_context.get_tls_warnings();
 
         if (tls_warnings & SSLAPI::TLS_WARN_SIG_MD5)
         {
@@ -1350,7 +1350,7 @@ class Session : ProtoContextCallbackInterface,
             cli_events->add_event(std::move(ev));
         }
 
-        CompressContext::Type comp_type = proto_context.conf().comp_ctx.type();
+        const CompressContext::Type comp_type = proto_context.conf().comp_ctx.type();
 
         // abort connection if compression is pushed and its support is unannounced
         if (comp_type != CompressContext::COMP_STUBv2
@@ -1555,7 +1555,7 @@ class Session : ProtoContextCallbackInterface,
 
     void process_echo(const OptionList &opt)
     {
-        OptionList::IndexMap::const_iterator echo_opt = opt.map().find("echo");
+        const OptionList::IndexMap::const_iterator echo_opt = opt.map().find("echo");
         if (echo_opt != opt.map().end())
         {
             for (OptionList::IndexList::const_iterator i = echo_opt->second.begin(); i != echo_opt->second.end(); ++i)

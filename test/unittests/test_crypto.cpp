@@ -103,7 +103,7 @@ openvpn::CryptoDCInstance::Ptr create_dctest_instance(bool use_epoch)
     dc.set_use_epoch_keys(use_epoch);
 
     openvpn::SSLLib::Ctx libctx = nullptr;
-    openvpn::CryptoDCFactory::Ptr dc_factory_sel{new openvpn::CryptoDCSelect<openvpn::SSLLib::CryptoAPI>(libctx, frameptr, statsptr, nullptr)};
+    const openvpn::CryptoDCFactory::Ptr dc_factory_sel{new openvpn::CryptoDCSelect<openvpn::SSLLib::CryptoAPI>(libctx, frameptr, statsptr, nullptr)};
 
     auto dc_factory = dc_factory_sel->new_obj(dc);
 
@@ -148,7 +148,7 @@ void test_datachannel_crypto(bool use_epoch)
 {
     openvpn::CryptoAlgs::allow_default_dc_algs<openvpn::SSLLib::CryptoAPI>(nullptr, true, false);
 
-    openvpn::CryptoDCInstance::Ptr cryptodc = create_dctest_instance(use_epoch);
+    const openvpn::CryptoDCInstance::Ptr cryptodc = create_dctest_instance(use_epoch);
 
 
     const char *plaintext = "The quick little fox jumps over the bureaucratic hurdles";
@@ -166,21 +166,21 @@ void test_datachannel_crypto(bool use_epoch)
 
     const unsigned char op32[]{7, 0, 0, 23};
 
-    bool const wrapwarn = cryptodc->encrypt(work, op32);
+    const bool wrapwarn = cryptodc->encrypt(work, op32);
     ASSERT_FALSE(wrapwarn);
 
-    size_t pkt_counter_len = use_epoch ? 8 : 4;
-    size_t tag_len = 16;
+    const size_t pkt_counter_len = use_epoch ? 8 : 4;
+    const size_t tag_len = 16;
 
     /* 16 for tag, 4 or 8 for packet counter */
     EXPECT_EQ(work.size(), std::strlen(plaintext) + pkt_counter_len + tag_len);
 
     const uint8_t exp_tag_short[16]{0x1f, 0xdd, 0x90, 0x8f, 0x0e, 0x9d, 0xc2, 0x5e, 0x79, 0xd8, 0x32, 0x02, 0x0d, 0x58, 0xe7, 0x3f};
-    std::array<uint8_t, 16> exp_tag_epoch = {0Xa0, 0xb5, 0x4c, 0xdd, 0x93, 0xff, 0x0b, 0x01, 0xa3, 0x26, 0x5e, 0xcf, 0x19, 0xd5, 0x6a, 0x06};
+    const std::array<uint8_t, 16> exp_tag_epoch = {0Xa0, 0xb5, 0x4c, 0xdd, 0x93, 0xff, 0x0b, 0x01, 0xa3, 0x26, 0x5e, 0xcf, 0x19, 0xd5, 0x6a, 0x06};
 
     if (use_epoch)
     {
-        ptrdiff_t tag_offset = 56;
+        const ptrdiff_t tag_offset = 56;
         uint8_t packetid1[8] = {0, 0x1, 0, 0, 0, 0, 0, 1};
         EXPECT_EQ(std::memcmp(work.data(), packetid1, 8), 0);
 
@@ -196,7 +196,7 @@ void test_datachannel_crypto(bool use_epoch)
     }
     else
     {
-        ptrdiff_t tag_offset = 16;
+        const ptrdiff_t tag_offset = 16;
         uint8_t packetid1[]{0, 0, 0, 1};
         EXPECT_EQ(std::memcmp(work.data(), packetid1, 4), 0);
         EXPECT_EQ(std::memcmp(work.data() + pkt_counter_len, exp_tag_short, 16), 0);
@@ -219,8 +219,8 @@ TEST(Crypto, TestEpochIterateKey)
 {
     openvpn::CryptoAlgs::allow_default_dc_algs<openvpn::SSLLib::CryptoAPI>(nullptr, true, false);
 
-    openvpn::CryptoDCInstance::Ptr cryptodcsend = create_dctest_instance(true);
-    openvpn::CryptoDCInstance::Ptr cryptodcrecv = create_dctest_instance(true);
+    const openvpn::CryptoDCInstance::Ptr cryptodcsend = create_dctest_instance(true);
+    const openvpn::CryptoDCInstance::Ptr cryptodcrecv = create_dctest_instance(true);
 
     auto *epochdcsend = dynamic_cast<openvpn::AEADEpoch::Crypto<openvpn::SSLLib::CryptoAPI> *>(cryptodcsend.get());
 
@@ -244,17 +244,17 @@ TEST(Crypto, TestEpochIterateKey)
 
     std::memcpy(work.write_alloc(std::strlen(plaintext)), plaintext, std::strlen(plaintext));
 
-    bool const wrapwarn = cryptodcsend->encrypt(work, op32);
+    const bool wrapwarn = cryptodcsend->encrypt(work, op32);
     ASSERT_FALSE(wrapwarn);
 
-    std::size_t pkt_counter_len = 8;
-    std::size_t tag_len = 16;
+    const std::size_t pkt_counter_len = 8;
+    const std::size_t tag_len = 16;
 
     /* 16 for tag, 4 or 8 for packet counter */
     EXPECT_EQ(work.size(), std::strlen(plaintext) + pkt_counter_len + tag_len);
 
-    std::array<uint8_t, 16> exp_tag_epoch = {0x0f, 0xff, 0xf5, 0x91, 0x3d, 0x39, 0xd7, 0x5b, 0x18, 0x57, 0x3b, 0x57, 0x48, 0x58, 0x9a, 0x7d};
-    ptrdiff_t tag_offset = 56;
+    const std::array<uint8_t, 16> exp_tag_epoch = {0x0f, 0xff, 0xf5, 0x91, 0x3d, 0x39, 0xd7, 0x5b, 0x18, 0x57, 0x3b, 0x57, 0x48, 0x58, 0x9a, 0x7d};
+    const ptrdiff_t tag_offset = 56;
     uint8_t packetid1[8] = {0, 0x4, 0, 0, 0, 0, 0, 1};
     EXPECT_EQ(std::memcmp(work.data(), packetid1, 8), 0);
 
@@ -290,9 +290,9 @@ TEST(Crypto, EpochDeriveDataKeys)
     ASSERT_EQ(key.size(), 24);
     ASSERT_EQ(iv.size(), 12);
 
-    std::array<uint8_t, 24> exp_key{0xed, 0x85, 0x33, 0xdb, 0x1c, 0x28, 0xac, 0xe4, 0x18, 0xe9, 0x00, 0x6a, 0xb2, 0x9c, 0x17, 0x41, 0x7d, 0x60, 0xeb, 0xe6, 0xcd, 0x90, 0xbf, 0x0a};
+    const std::array<uint8_t, 24> exp_key{0xed, 0x85, 0x33, 0xdb, 0x1c, 0x28, 0xac, 0xe4, 0x18, 0xe9, 0x00, 0x6a, 0xb2, 0x9c, 0x17, 0x41, 0x7d, 0x60, 0xeb, 0xe6, 0xcd, 0x90, 0xbf, 0x0a};
 
-    std::array<uint8_t, 12> exp_impl_iv{0x86, 0x89, 0x0a, 0xab, 0xf0, 0x32, 0xcb, 0x59, 0xf4, 0xcf, 0xa3, 0x4e};
+    const std::array<uint8_t, 12> exp_impl_iv{0x86, 0x89, 0x0a, 0xab, 0xf0, 0x32, 0xcb, 0x59, 0xf4, 0xcf, 0xa3, 0x4e};
 
 
     std::array<uint8_t, 24> key_array;
@@ -373,7 +373,7 @@ TEST(Crypto, HkdfExpandTesta1)
         {0xf0, 0xf1, 0xf2, 0xf3, 0xf4, 0xf5,
          0xf6, 0xf7, 0xf8, 0xf9};
 
-    std::array<uint8_t,42> okm
+    std::array<uint8_t,42> const okm
         {0x3c, 0xb2, 0x5f, 0x25, 0xfa, 0xac, 0xd5, 0x7a,
          0x90, 0x43, 0x4f, 0x64, 0xd0, 0x36, 0x2f, 0x2a,
          0x2d, 0x2d, 0x0a, 0x90, 0xcf, 0x1a, 0x5a, 0x4c,
@@ -412,7 +412,7 @@ TEST(Crypto, HkdfExpandTesta2)
          0xf8, 0xf9, 0xfa, 0xfb, 0xfc, 0xfd, 0xfe, 0xff};
 
     const int L = 82;
-    std::array<uint8_t,82> okm
+    std::array<uint8_t,82> const okm
         {0xb1, 0x1e, 0x39, 0x8d, 0xc8, 0x03, 0x27, 0xa1,
          0xc8, 0xe7, 0xf7, 0x8c, 0x59, 0x6a, 0x49, 0x34,
          0x4f, 0x01, 0x2e, 0xda, 0x2d, 0x4e, 0xfa, 0xd8,
@@ -443,7 +443,7 @@ TEST(Crypto, OvpnLabelExpandTest)
          0x90, 0xb6, 0xc7, 0x3b, 0xb5, 0x0f, 0x9c, 0x31,
          0x22, 0xec, 0x84, 0x4a, 0xd7, 0xc2, 0xb3, 0xe5};
 
-    std::array<uint8_t, 16> out_expected =
+    std::array<uint8_t, 16> const out_expected =
         {0x18, 0x5e, 0xaa, 0x1c, 0x7f, 0x22, 0x8a, 0xb8,
          0xeb, 0x29, 0x77, 0x32, 0x14, 0xd9, 0x20, 0x46};
     // clang-format on
@@ -465,7 +465,7 @@ TEST(Crypto, HkdfExpandTesta3)
          0x96, 0x59, 0x67, 0x76, 0xaf, 0xdb, 0x63, 0x77,
          0xac, 0x43, 0x4c, 0x1c, 0x29, 0x3c, 0xcb, 0x04};
 
-    std::array<uint8_t,42> okm =
+    std::array<uint8_t,42> const okm =
         {0x8d, 0xa4, 0xe7, 0x75, 0xa5, 0x63, 0xc1, 0x8f,
          0x71, 0x5f, 0x80, 0x2a, 0x06, 0x3c, 0x5a, 0x31,
          0xb8, 0xa1, 0x1f, 0x5c, 0x5e, 0xe1, 0x87, 0x9e,
@@ -474,8 +474,8 @@ TEST(Crypto, HkdfExpandTesta3)
          0x96, 0xc8};
     // clang-format off
 
-    uint8_t *info = nullptr;
-    int L = 42;
+    uint8_t  const*info = nullptr;
+    int const L = 42;
 
     std::array<uint8_t,42>  out {0xfa};
     openvpn::ovpn_hkdf_expand(prk, info, 0, out.data(), L);
@@ -529,7 +529,7 @@ protected:
     void initDCE(uint16_t numfuture)
     {
         uint8_t e1send_data[32] = { 0x23 };
-        uint8_t e1recv_data[32] = { 0x27 };
+        uint8_t const e1recv_data[32] = { 0x27 };
         openvpn::StaticKey e1send{e1send_data, sizeof (e1send_data)};
         openvpn::StaticKey e1recv{e1send_data, sizeof (e1recv_data)};
 
@@ -552,7 +552,7 @@ TEST_F(EpochTest, KeyGeneration)
 
 TEST_F(EpochTest, KeyRotation)
 {
-openvpn::SessionStats::Ptr stats{new openvpn::SessionStats{}};
+openvpn::SessionStats::Ptr const stats{new openvpn::SessionStats{}};
     /* should replace send + key recv */
     dce_.replace_update_recv_key(9, stats);
 
@@ -594,7 +594,7 @@ EXPECT_EQ(dce_.send_ctx_().epoch, 14);
 
 TEST_F(EpochTest, KeyReceiveLookup)
 {
-openvpn::SessionStats::Ptr stats{new openvpn::SessionStats{}};
+openvpn::SessionStats::Ptr const stats{new openvpn::SessionStats{}};
 
     /* lookup some wacky things that should fail */
     EXPECT_EQ(dce_.lookup_decrypt_key(2000), nullptr);
@@ -647,7 +647,7 @@ dce_.replace_update_recv_key(8, stats);
 
 TEST_F(EpochTest, KeyOverflow)
 {
-    openvpn::SessionStats::Ptr stats{new openvpn::SessionStats{}};
+    openvpn::SessionStats::Ptr const stats{new openvpn::SessionStats{}};
     initDCE(32);
 
     /* Modify the receive epoch and keys to have a very high epoch to test

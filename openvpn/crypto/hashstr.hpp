@@ -67,13 +67,13 @@ class HashString
 
     std::string final_hex()
     {
-        BufferPtr bp = final();
+        const BufferPtr bp = final();
         return render_hex_generic(*bp);
     }
 
     std::string final_base64()
     {
-        BufferPtr bp = final();
+        const BufferPtr bp = final();
         return base64->encode(*bp);
     }
 

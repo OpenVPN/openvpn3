@@ -67,8 +67,8 @@ class NTLM
         split_domain_username(dom_username, domain, username);
 
         // convert password from utf-8 to utf-16 and take an MD4 hash of it
-        BufferPtr password_u = Unicode::string_to_utf16(password);
-        DigestInstance::Ptr md4_ctx(digest_factory.new_digest(CryptoAlgs::MD4));
+        const BufferPtr password_u = Unicode::string_to_utf16(password);
+        const DigestInstance::Ptr md4_ctx(digest_factory.new_digest(CryptoAlgs::MD4));
         md4_ctx->update(password_u->c_data(), password_u->size());
         unsigned char md4_hash[21];
         md4_ctx->final(md4_hash);
@@ -90,8 +90,8 @@ class NTLM
         // convert to utf-16, and run it through HMAC-MD5
         // keyed to md4_hash
         const std::string ud = string::to_upper_copy(username) + domain;
-        BufferPtr ud_u = Unicode::string_to_utf16(ud);
-        HMACInstance::Ptr hmac_ctx1(digest_factory.new_hmac(CryptoAlgs::MD5, md4_hash, 16));
+        const BufferPtr ud_u = Unicode::string_to_utf16(ud);
+        const HMACInstance::Ptr hmac_ctx1(digest_factory.new_hmac(CryptoAlgs::MD5, md4_hash, 16));
         hmac_ctx1->update(ud_u->c_data(), ud_u->size());
         unsigned char ntlmv2_hash[16];
         hmac_ctx1->final(ntlmv2_hash);
@@ -132,7 +132,7 @@ class NTLM
         std::memcpy(&ntlmv2_response[8], challenge, 8);
 
         // hmac-md5
-        HMACInstance::Ptr hmac_ctx2(digest_factory.new_hmac(CryptoAlgs::MD5, ntlmv2_hash, 16));
+        const HMACInstance::Ptr hmac_ctx2(digest_factory.new_hmac(CryptoAlgs::MD5, ntlmv2_hash, 16));
         hmac_ctx2->update(&ntlmv2_response[8], ntlmv2_blob_size + 8);
         unsigned char ntlmv2_hmacmd5[16];
         hmac_ctx2->final(ntlmv2_hmacmd5);

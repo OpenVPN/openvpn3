@@ -47,7 +47,7 @@ class BufferStream : public std::streambuf
     {
         if (c != EOF)
         {
-            unsigned char uc = (unsigned char)c;
+            const unsigned char uc = (unsigned char)c;
             buf.push_back(uc);
         }
         return c;

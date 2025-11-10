@@ -53,12 +53,12 @@ void load_client_config(const std::string &config_content)
     config.clientconf.dco = true;
     config.proto_context_options.reset(new ProtoContextCompressionOptions());
 
-    ClientAPI::OpenVPNClientHelper client_helper;
-    ParseClientConfig conf = ParseClientConfig::parse(config_content);
+    const ClientAPI::OpenVPNClientHelper client_helper;
+    const ParseClientConfig conf = ParseClientConfig::parse(config_content);
 
     auto parsed_config = ParseClientConfig::parse(config_content, nullptr, options);
 
-    ClientOptions cliopt(options, config);
+    const ClientOptions cliopt(options, config);
 }
 
 TEST_P(ValidConfigs, ValidConfig)
@@ -76,7 +76,7 @@ TEST_P(InvalidConfigs, ConfigThrowsOptionError)
 
 TEST(Config, MissingRequiredOption)
 {
-    ParseClientConfig conf = ParseClientConfig::parse("mode server");
+    const ParseClientConfig conf = ParseClientConfig::parse("mode server");
     EXPECT_EQ(conf.error(), true);
     EXPECT_TRUE(conf.message().find("option_error: remote option not specified") != std::string::npos);
 }
@@ -137,15 +137,15 @@ TEST(Config, DuplicateOptionsSets)
     config.clientconf.dco = false;
     config.proto_context_options = new ProtoContextCompressionOptions();
 
-    ClientAPI::OpenVPNClientHelper client_helper;
+    const ClientAPI::OpenVPNClientHelper client_helper;
 
-    ParseClientConfig conf = ParseClientConfig::parse(minimalConfig);
+    const ParseClientConfig conf = ParseClientConfig::parse(minimalConfig);
 
     auto parsed_config = ParseClientConfig::parse(minimalConfig, nullptr, options);
 
-    ClientOptions cliopt(options, config);
+    const ClientOptions cliopt(options, config);
 
-    std::vector<std::unordered_set<std::string>> allsets = {
+    const std::vector<std::unordered_set<std::string>> allsets = {
         cliopt.settings_feature_not_implemented_fatal,
         cliopt.settings_feature_not_implemented_warn,
         cliopt.settings_ignoreSilently,
@@ -209,8 +209,8 @@ TEST(Config, ServerCertInEval)
 
 TEST(Config, ServerOptionsPresentInErrorMsg)
 {
-    std::vector<std::string> server_options = {"server 10.0.0.0 255.255.255.0",
-                                               "push \"foo bar\""};
+    const std::vector<std::string> server_options = {"server 10.0.0.0 255.255.255.0",
+                                                     "push \"foo bar\""};
 
     for (auto &option : server_options)
     {
@@ -226,7 +226,7 @@ TEST(Config, ServerOptionsPresentInErrorMsg)
 
 TEST(Config, UnknownOptionsPresentInErrorMsg)
 {
-    std::vector<std::string> server_options = {"make-a-lot-of-noise", "water-the-plants"};
+    const std::vector<std::string> server_options = {"make-a-lot-of-noise", "water-the-plants"};
 
     for (auto &option : server_options)
     {
@@ -287,7 +287,7 @@ TEST(Config, MetaOptionInContent)
     ClientOptions::Config config;
     config.clientconf.dco = true;
     config.proto_context_options.reset(new ProtoContextCompressionOptions());
-    ClientOptions cliopt(options, config);
+    const ClientOptions cliopt(options, config);
 
     auto opt = options.get("AAA");
     ASSERT_TRUE(opt.meta());

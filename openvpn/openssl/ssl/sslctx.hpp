@@ -329,7 +329,7 @@ class OpenSSLContext : public SSLFactoryAPI
         {
             std::vector<std::string> ret;
 
-            for (auto const &cert : extra_certs)
+            for (const auto &cert : extra_certs)
                 ret.push_back(cert.render_pem());
 
             return ret;

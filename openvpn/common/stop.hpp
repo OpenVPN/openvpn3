@@ -39,7 +39,7 @@ class Stop
             constexpr int stop_index_limit = 1000;
             if (stop)
             {
-                std::lock_guard<std::recursive_mutex> lock(stop->mutex);
+                const std::lock_guard<std::recursive_mutex> lock(stop->mutex);
                 if (stop->stop_called)
                 {
                     // stop already called, call method immediately
@@ -60,7 +60,7 @@ class Stop
         {
             if (stop)
             {
-                std::lock_guard<std::recursive_mutex> lock(stop->mutex);
+                const std::lock_guard<std::recursive_mutex> lock(stop->mutex);
                 if (index >= 0 && index < static_cast<int>(stop->scopes.size()) && stop->scopes[index] == this)
                 {
                     stop->scopes[index] = nullptr;
@@ -84,7 +84,7 @@ class Stop
 
     void stop()
     {
-        std::lock_guard<std::recursive_mutex> lock(mutex);
+        const std::lock_guard<std::recursive_mutex> lock(mutex);
         stop_called = true;
         while (!scopes.empty())
         {

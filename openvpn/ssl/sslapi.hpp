@@ -118,7 +118,7 @@ class SSLConfigAPI : public RC<thread_unsafe_refcount>
 
     std::string private_key_type_string() const
     {
-        PKType::Type type = private_key_type();
+        const PKType::Type type = private_key_type();
 
         switch (type)
         {

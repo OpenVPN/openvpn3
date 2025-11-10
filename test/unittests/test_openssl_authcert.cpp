@@ -156,7 +156,7 @@ TEST(AuthcertOpenssl, Cert64)
 
 TEST(AuthcertOpenssl, Sn0)
 {
-    AuthCert ac("sn_0", 0);
+    const AuthCert ac("sn_0", 0);
     ASSERT_TRUE(ac.defined());
     ASSERT_TRUE(ac.sn_defined());
     ASSERT_EQ(ac.serial_number_as_int64(), 0);
@@ -165,7 +165,7 @@ TEST(AuthcertOpenssl, Sn0)
 
 TEST(AuthcertOpenssl, Sn1)
 {
-    AuthCert ac("sn_1", 1);
+    const AuthCert ac("sn_1", 1);
     ASSERT_TRUE(ac.defined());
     ASSERT_TRUE(ac.sn_defined());
     ASSERT_EQ(ac.serial_number_as_int64(), 1);
@@ -174,7 +174,7 @@ TEST(AuthcertOpenssl, Sn1)
 
 TEST(AuthcertOpenssl, Sn255)
 {
-    AuthCert ac("sn_255", 255);
+    const AuthCert ac("sn_255", 255);
     ASSERT_TRUE(ac.defined());
     ASSERT_TRUE(ac.sn_defined());
     ASSERT_EQ(ac.serial_number_as_int64(), 255);
@@ -183,7 +183,7 @@ TEST(AuthcertOpenssl, Sn255)
 
 TEST(AuthcertOpenssl, Sn256)
 {
-    AuthCert ac("sn_256", 256);
+    const AuthCert ac("sn_256", 256);
     ASSERT_TRUE(ac.defined());
     ASSERT_TRUE(ac.sn_defined());
     ASSERT_EQ(ac.serial_number_as_int64(), 256);
@@ -192,7 +192,7 @@ TEST(AuthcertOpenssl, Sn256)
 
 TEST(AuthcertOpenssl, Sn32bitPre)
 {
-    AuthCert ac("sn_32bit_pre", 4294967295LL);
+    const AuthCert ac("sn_32bit_pre", 4294967295LL);
     ASSERT_TRUE(ac.defined());
     ASSERT_TRUE(ac.sn_defined());
     ASSERT_EQ(ac.serial_number_as_int64(), 4294967295LL);
@@ -201,7 +201,7 @@ TEST(AuthcertOpenssl, Sn32bitPre)
 
 TEST(AuthcertOpenssl, Sn32bitPost)
 {
-    AuthCert ac("sn_32bit_post", 4294967296LL);
+    const AuthCert ac("sn_32bit_post", 4294967296LL);
     ASSERT_TRUE(ac.defined());
     ASSERT_TRUE(ac.sn_defined());
     ASSERT_EQ(ac.serial_number_as_int64(), 4294967296LL);
@@ -210,7 +210,7 @@ TEST(AuthcertOpenssl, Sn32bitPost)
 
 TEST(AuthcertOpenssl, Sn64bit)
 {
-    AuthCert ac("sn_64bit", 81985529216486895LL);
+    const AuthCert ac("sn_64bit", 81985529216486895LL);
     ASSERT_TRUE(ac.defined());
     ASSERT_TRUE(ac.sn_defined());
     ASSERT_EQ(ac.serial_number_as_int64(), 81985529216486895LL);
@@ -219,7 +219,7 @@ TEST(AuthcertOpenssl, Sn64bit)
 
 TEST(AuthcertOpenssl, Empty)
 {
-    AuthCert ac;
+    const AuthCert ac;
     ASSERT_FALSE(ac.defined());
     ASSERT_FALSE(ac.sn_defined());
 }

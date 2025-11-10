@@ -78,7 +78,7 @@ class PsidCookieTest : public testing::Test
     PsidCookieTest()
         : dummy_io_context(1), pcfg(new ProtoContext::ProtoConfig())
     {
-        std::string tls_key_fn = UNITTEST_SOURCE_DIR "/input/psid_cookie_tls.key";
+        const std::string tls_key_fn = UNITTEST_SOURCE_DIR "/input/psid_cookie_tls.key";
         pcfg->tls_auth_key.parse_from_file(tls_key_fn);
         pcfg->tls_auth_factory.reset(new CryptoOvpnHMACFactory<SSLLib::CryptoAPI>());
         pcfg->set_tls_auth_digest(CryptoAlgs::lookup("SHA256"));
@@ -120,11 +120,11 @@ class PsidCookieTest : public testing::Test
 
 TEST_F(PsidCookieTest, CheckSetup)
 {
-    PsidCookieImpl *pci_dut = pcookie_impl.get();
+    const PsidCookieImpl *pci_dut = pcookie_impl.get();
     ASSERT_NE(pci_dut, nullptr);
 
     // check test clock's equivalence to the PsidCookieImpl clock
-    Time start(set_clock(Time::now()));
+    const Time start(set_clock(Time::now()));
     EXPECT_TRUE(start == *pci_dut->now_);
 
     // spot check other aspects of successful pci_dut creation
@@ -134,11 +134,11 @@ TEST_F(PsidCookieTest, CheckSetup)
 TEST_F(PsidCookieTest, ValidTime)
 {
     PsidCookieImpl &pci_dut(*pcookie_impl.get());
-    ClientAddressMock cli_addr(*pci_dut.pcfg_.prng);
+    const ClientAddressMock cli_addr(*pci_dut.pcfg_.prng);
     ProtoSessionID cli_psid;
     ProtoSessionID srv_psid;
     // interval duplicates the computation in calculate_session_id_hmac()
-    uint64_t interval = (pci_dut.pcfg_.handshake_window.raw() + 1) / 2;
+    const uint64_t interval = (pci_dut.pcfg_.handshake_window.raw() + 1) / 2;
     bool hmac_ok;
 
     cli_psid.randomize(*pci_dut.pcfg_.rng);

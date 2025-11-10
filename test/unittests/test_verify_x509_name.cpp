@@ -57,7 +57,7 @@ TEST(VerifyX509Name, ConfigCorrectDefaultType)
     // Missing type argument - defaults to complete subject DN
     std::string config = "verify-x509-name \"C=KG, ST=NA, O=OpenVPN-TEST, CN=Test-Server, "
                          "emailAddress=me@myhost.mydomain\"";
-    VerifyX509Name ok_default_subj(parse_testcfg(config));
+    const VerifyX509Name ok_default_subj(parse_testcfg(config));
 }
 
 TEST(VerifyX509Name, ConfigCorrectSubject)
@@ -65,21 +65,21 @@ TEST(VerifyX509Name, ConfigCorrectSubject)
     // Correct - type: subject
     std::string config = "verify-x509-name \"C=KG, ST=NA, O=OpenVPN-TEST, CN=Test-Server, "
                          "emailAddress=me@myhost.mydomain\" subject";
-    VerifyX509Name ok_subj(parse_testcfg(config));
+    const VerifyX509Name ok_subj(parse_testcfg(config));
 }
 
 TEST(VerifyX509Name, ConfigCorrectName)
 {
     // Correct - type: name
     std::string config = "verify-x509-name localhost name";
-    VerifyX509Name ok_name(parse_testcfg(config));
+    const VerifyX509Name ok_name(parse_testcfg(config));
 }
 
 TEST(VerifyX509Name, ConfigSquote)
 {
     // ensure that single quote is not treated as name part
     std::string config = "verify-x509-name 'server.example.org'";
-    VerifyX509Name verify(parse_testcfg(config));
+    const VerifyX509Name verify(parse_testcfg(config));
     ASSERT_TRUE(verify.verify("server.example.org"));
 }
 
@@ -87,14 +87,14 @@ TEST(VerifyX509Name, ConfigCorrectNamePrefix)
 {
     // Correct - type: name-prefix
     std::string config = "verify-x509-name Server- name-prefix";
-    VerifyX509Name ok_name_prefix(parse_testcfg(config));
+    const VerifyX509Name ok_name_prefix(parse_testcfg(config));
 }
 
 TEST(VerifyX509Name, TestSubject)
 {
     std::string config = "verify-x509-name \"C=KG, ST=NA, O=OpenVPN-TEST, CN=Test-Server, "
                          "emailAddress=me@myhost.mydomain\"";
-    VerifyX509Name verify_def(parse_testcfg(config));
+    const VerifyX509Name verify_def(parse_testcfg(config));
 
     ASSERT_TRUE(verify_def.verify(
         "C=KG, ST=NA, O=OpenVPN-TEST, CN=Test-Server, "
@@ -108,7 +108,7 @@ TEST(VerifyX509Name, TestSubject)
     // just with the 'subject' type defined explicitly
     config = "verify-x509-name \"C=KG, ST=NA, O=OpenVPN-TEST, CN=Test-Server, "
              "emailAddress=me@myhost.mydomain\" subject";
-    VerifyX509Name verify_subj(parse_testcfg(config));
+    const VerifyX509Name verify_subj(parse_testcfg(config));
 
     ASSERT_TRUE(verify_subj.verify(
         "C=KG, ST=NA, O=OpenVPN-TEST, CN=Test-Server, "
@@ -122,7 +122,7 @@ TEST(VerifyX509Name, TestSubject)
 TEST(VerifyX509Name, TestName)
 {
     std::string config = "verify-x509-name server-1.example.org name";
-    VerifyX509Name verify(parse_testcfg(config));
+    const VerifyX509Name verify(parse_testcfg(config));
 
     ASSERT_TRUE(verify.verify("server-1.example.org"));
     ASSERT_FALSE(verify.verify("server-2.example.org"));
@@ -132,7 +132,7 @@ TEST(VerifyX509Name, TestName)
 TEST(VerifyX509Name, TestNamePrefix)
 {
     std::string config = "verify-x509-name server name-prefix";
-    VerifyX509Name verify(parse_testcfg(config));
+    const VerifyX509Name verify(parse_testcfg(config));
 
     ASSERT_TRUE(verify.verify("server-1.example.org"));
     ASSERT_TRUE(verify.verify("server-2.sub.example.net"));

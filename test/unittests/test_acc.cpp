@@ -108,7 +108,7 @@ TEST(Customcontrolchannel, Msgroundtriponepacket)
 
 TEST(Customcontrolchannel, Tinymessage)
 {
-    std::string request{"I want a cookie!"};
+    const std::string request{"I want a cookie!"};
     auto acmc = genACMC();
     acmc.supported_protocols.push_back("fortune");
     auto cmsgs = acmc.format_message("fortune", request);
@@ -127,7 +127,7 @@ TEST(Customcontrolchannel, Acctostr)
 
 TEST(Customcontrolchannel, RecvWithNul)
 {
-    std::string control_msg{"ACC,fortune,64,6,InsgIm1lIjogImZyb2ciLCAAeGZm/SJtc2ciOiAiSSBhbSAAS2VybWl0IiB9Ig=="};
+    const std::string control_msg{"ACC,fortune,64,6,InsgIm1lIjogImZyb2ciLCAAeGZm/SJtc2ciOiAiSSBhbSAAS2VybWl0IiB9Ig=="};
 
     bool received = false;
     AppControlMessageReceiver accrecv{};
@@ -164,7 +164,7 @@ TEST(Customcontrolchannel, SendWithNul)
 
 TEST(Customcontrolchannel, TestIncorrectLen)
 {
-    std::string control_msg{"ACC,fortune,62,6,InsgIm1lIjogImZyb2ciLCAAeGZm/SJtc2ciOiAiSSBhbSAAS2VybWl0IiB9Ig=="};
+    const std::string control_msg{"ACC,fortune,62,6,InsgIm1lIjogImZyb2ciLCAAeGZm/SJtc2ciOiAiSSBhbSAAS2VybWl0IiB9Ig=="};
 
     AppControlMessageReceiver accrecv{};
 
@@ -175,7 +175,7 @@ TEST(Customcontrolchannel, TestIncorrectLen)
 
 TEST(Customcontrolchannel, TestWrongHeader)
 {
-    std::string control_msg{"ABC,fortune,64,6,InsgIm1lIjogImZyb2ciLCAAeGZm/SJtc2ciOiAiSSBhbSAAS2VybWl0IiB9Ig=="};
+    const std::string control_msg{"ABC,fortune,64,6,InsgIm1lIjogImZyb2ciLCAAeGZm/SJtc2ciOiAiSSBhbSAAS2VybWl0IiB9Ig=="};
 
     AppControlMessageReceiver accrecv{};
 
@@ -186,7 +186,7 @@ TEST(Customcontrolchannel, TestWrongHeader)
 
 TEST(Customcontrolchannel, TestUnsupportedEncoding)
 {
-    std::string control_msg{"ACC,fortune,64,Q,InsgIm1lIjogImZyb2ciLCAAeGZm/SJtc2ciOiAiSSBhbSAAS2VybWl0IiB9Ig=="};
+    const std::string control_msg{"ACC,fortune,64,Q,InsgIm1lIjogImZyb2ciLCAAeGZm/SJtc2ciOiAiSSBhbSAAS2VybWl0IiB9Ig=="};
 
     AppControlMessageReceiver accrecv{};
 
@@ -197,7 +197,7 @@ TEST(Customcontrolchannel, TestUnsupportedEncoding)
 
 TEST(Customcontrolchannel, TestMissingMessage)
 {
-    std::string control_msg{"ABC,fortune,64,6"};
+    const std::string control_msg{"ABC,fortune,64,6"};
 
     AppControlMessageReceiver accrecv{};
 

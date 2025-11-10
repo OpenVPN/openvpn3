@@ -29,7 +29,7 @@ namespace openvpn {
 inline std::string get_password(const char *prompt)
 {
 #ifndef OPENVPN_PLATFORM_WIN
-    char *ret = getpass(prompt);
+    const char *ret = getpass(prompt);
     return ret;
 #else
     Win::Console::Input i{true};

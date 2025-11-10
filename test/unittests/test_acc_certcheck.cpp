@@ -239,7 +239,7 @@ static inline bool xfer_oneway(SslApiBuilder &sender, SslApiBuilder &recv, const
 {
     if (sender.get().read_ciphertext_ready())
     {
-        BufferPtr buf = sender.get().read_ciphertext();
+        const BufferPtr buf = sender.get().read_ciphertext();
         recv.get().write_ciphertext(buf);
         std::cout << out << buf->size() << " bytes\n";
         return true;

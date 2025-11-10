@@ -33,23 +33,23 @@ void move_contents(CertCRLList &dest, CertCRLList &src)
 
 void test_cert_crl()
 {
-    std::string cert_crl_txt = read_text(CERTDIR "/certcrl.pem");
+    const std::string cert_crl_txt = read_text(CERTDIR "/certcrl.pem");
 
     CertCRLList ccl, ccl2;
     ccl.parse_pem(cert_crl_txt, "TEST1");
-    CertCRLList ccl1(ccl);
+    const CertCRLList ccl1(ccl);
     ccl2 = ccl1;
     ccl2 = ccl1;
     std::string rend2 = ccl2.render_pem();
 
     CertCRLList ccl3;
     ccl3.parse_pem_file(CERTDIR "/certcrl.pem");
-    std::string rend3 = ccl3.render_pem();
+    const std::string rend3 = ccl3.render_pem();
 
     ASSERT_EQ(rend2, rend3);
 
     CertCRLList ccl4(rend3, "TEST2");
-    CertCRLList ccl5(std::move(ccl4));
+    const CertCRLList ccl5(std::move(ccl4));
     ccl2 = ccl5;
     rend2 = ccl2.render_pem();
     ASSERT_EQ(rend2, rend3);
@@ -59,7 +59,7 @@ void test_cert_crl()
     rend2 = ccl2.render_pem();
     ASSERT_EQ(rend2, rend3);
 
-    OpenSSLPKI::X509Store xs(ccl2);
+    const OpenSSLPKI::X509Store xs(ccl2);
 
     // std::cout << rend2;
 }
@@ -85,7 +85,7 @@ void test_output_pem()
 
     ASSERT_TRUE(cert);
 
-    std::string pem_out = OpenSSLPKI::X509_get_pem_encoding(cert);
+    const std::string pem_out = OpenSSLPKI::X509_get_pem_encoding(cert);
 
     EXPECT_EQ(pem_out, testcert);
 
@@ -95,22 +95,22 @@ void test_output_pem()
 
 void test_pkey()
 {
-    std::string pkey_txt = read_text(CERTDIR "/key.pem");
+    const std::string pkey_txt = read_text(CERTDIR "/key.pem");
 
     OpenSSLPKI::PKey pkey, pkey2;
     pkey.parse_pem(pkey_txt, "TEST0", nullptr);
-    OpenSSLPKI::PKey pkey1(pkey);
+    const OpenSSLPKI::PKey pkey1(pkey);
     pkey2 = pkey1;
     pkey2 = pkey1;
     std::string rend2 = pkey2.render_pem();
 
-    OpenSSLPKI::PKey pkey3(pkey_txt, "TEST2", nullptr);
-    std::string rend3 = pkey3.render_pem();
+    const OpenSSLPKI::PKey pkey3(pkey_txt, "TEST2", nullptr);
+    const std::string rend3 = pkey3.render_pem();
 
     ASSERT_EQ(rend2, rend3);
 
     OpenSSLPKI::PKey pkey4(rend3, "TEST3", nullptr);
-    OpenSSLPKI::PKey pkey5(std::move(pkey4));
+    const OpenSSLPKI::PKey pkey5(std::move(pkey4));
     pkey2 = pkey5;
     rend2 = pkey2.render_pem();
     ASSERT_EQ(rend2, rend3);
@@ -120,22 +120,22 @@ void test_pkey()
 
 void test_dh()
 {
-    std::string dh_txt = read_text(CERTDIR "/dh2048.pem");
+    const std::string dh_txt = read_text(CERTDIR "/dh2048.pem");
 
     OpenSSLPKI::DH dh, dh2;
     dh.parse_pem(dh_txt);
-    OpenSSLPKI::DH dh1(dh);
+    const OpenSSLPKI::DH dh1(dh);
     dh2 = dh1;
     dh2 = dh1;
     std::string rend2 = dh2.render_pem();
 
-    OpenSSLPKI::DH dh3(dh_txt);
-    std::string rend3 = dh3.render_pem();
+    const OpenSSLPKI::DH dh3(dh_txt);
+    const std::string rend3 = dh3.render_pem();
 
     ASSERT_EQ(rend2, rend3);
 
     OpenSSLPKI::DH dh4(rend3);
-    OpenSSLPKI::DH dh5(std::move(dh4));
+    const OpenSSLPKI::DH dh5(std::move(dh4));
     dh2 = dh5;
     rend2 = dh2.render_pem();
     ASSERT_EQ(rend2, rend3);

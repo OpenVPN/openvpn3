@@ -50,7 +50,7 @@ TEST(Buffer, ConstBufferRef1)
 {
     static unsigned char hello[] = "hello world";
     Buffer buf(hello, sizeof(hello) - 1, true);
-    ConstBuffer &cbuf = const_buffer_ref(buf);
+    const ConstBuffer &cbuf = const_buffer_ref(buf);
     EXPECT_EQ(cbuf.size(), 11U);
     EXPECT_EQ(buf_to_string(buf), buf_to_string(cbuf));
 }
@@ -60,7 +60,7 @@ TEST(Buffer, ConstBufferRef2)
 {
     BufferAllocated buf(64);
     buf_append_string(buf, "hello world");
-    ConstBuffer &cbuf = const_buffer_ref(buf);
+    const ConstBuffer &cbuf = const_buffer_ref(buf);
     EXPECT_EQ(cbuf.size(), 11U);
     EXPECT_EQ(buf_to_string(buf), buf_to_string(cbuf));
 }
@@ -70,7 +70,7 @@ TEST(Buffer, MyConstBuffer1)
 {
     using MyConstBuffer = ConstBufferType<const char>;
     static const char hello[] = "hello world";
-    MyConstBuffer cbuf(hello, sizeof(hello) - 1, true);
+    const MyConstBuffer cbuf(hello, sizeof(hello) - 1, true);
     EXPECT_EQ(cbuf.size(), 11U);
     EXPECT_EQ(std::string(cbuf.c_data(), cbuf.size()), "hello world");
 }
@@ -533,7 +533,7 @@ TEST(Buffer, InvariantsAfterMoveSafe)
     BufferAllocated buf(32);
     buf_append_string(buf, "hello world");
 
-    BufferAllocated buf2(std::move(buf));
+    const BufferAllocated buf2(std::move(buf));
 
     // coverity[USE_AFTER_MOVE]
     EXPECT_EQ(buf.size(), 0U);

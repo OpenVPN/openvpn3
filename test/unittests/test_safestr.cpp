@@ -26,10 +26,10 @@ static void compare(const SafeString &s1, const SafeString &s2, const bool expec
 
 TEST(Safestr, Test1)
 {
-    SafeString a("mybigsecret");
-    SafeString b("mybigsekret");
-    SafeString c("mybigsekrets");
-    SafeString a2("mybigsecret");
+    const SafeString a("mybigsecret");
+    const SafeString b("mybigsekret");
+    const SafeString c("mybigsekrets");
+    const SafeString a2("mybigsecret");
 
     compare(a, a2, true);
     compare(a2, a, true);

@@ -257,7 +257,7 @@ class XKeyExternalPKIImpl : public std::enable_shared_from_this<XKeyExternalPKII
         }
 
         /* convert 'tbs' to base64 */
-        ConstBuffer from_buf(tbs, tbslen, true);
+        const ConstBuffer from_buf(tbs, tbslen, true);
         const std::string from_b64 = base64->encode(from_buf);
 
         std::string sig_b64;

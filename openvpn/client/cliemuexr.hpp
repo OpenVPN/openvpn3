@@ -115,7 +115,7 @@ class EmulateExcludeRouteImpl : public EmulateExcludeRoute
         // excluded IPs.
         // Figure out if this particular route should be installed or not
 
-        IP::Route const *bestroute = nullptr;
+        const IP::Route *bestroute = nullptr;
         // Get the best (longest-prefix/smallest) route from included routes that completely
         // matches this route
         for (const auto &incRoute : include)

@@ -31,8 +31,8 @@
 namespace unittests {
 TEST(LogInfoTest, TestLogInfo)
 {
-    std::string msg("logMessage");
-    openvpn::ClientAPI::LogInfo logInfo(msg);
+    const std::string msg("logMessage");
+    const openvpn::ClientAPI::LogInfo logInfo(msg);
 
     ASSERT_EQ(logInfo.text, msg);
 }

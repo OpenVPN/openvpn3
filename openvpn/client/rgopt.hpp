@@ -115,7 +115,7 @@ class RedirectGatewayFlags
 
     void doinit(const OptionList &opt, const std::string &directive, const bool redirect_gateway)
     {
-        OptionList::IndexMap::const_iterator rg = opt.map().find(directive);
+        const OptionList::IndexMap::const_iterator rg = opt.map().find(directive);
         if (rg != opt.map().end())
             add_flags(opt, rg->second, redirect_gateway);
     }

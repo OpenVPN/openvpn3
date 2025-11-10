@@ -25,7 +25,7 @@ TEST(AlignmentSafeExtractTest, ExtractIntFromMisalignedData)
     unsigned char data[32];
     data[0] = 0xF0;
     memcpy(data + 1, &i, sizeof(i));
-    int value = alignment_safe_extract<int>(data + 1);
+    const int value = alignment_safe_extract<int>(data + 1);
     EXPECT_EQ(value, i);
 }
 
@@ -35,7 +35,7 @@ TEST(AlignmentSafeExtractTest, ExtractDoubleFromMisalignedData)
     unsigned char data[32];
     data[0] = 0xF0;
     memcpy(data + 1, &d, sizeof(d));
-    double value = alignment_safe_extract<double>(data + 1);
+    const double value = alignment_safe_extract<double>(data + 1);
     EXPECT_EQ(value, d);
 }
 
@@ -50,7 +50,7 @@ TEST(AlignmentSafeExtractTest, ExtractStructFromMisalignedData)
     unsigned char data[32];
     data[0] = 0xF0;
     memcpy(data + 1, &test_struct, sizeof(test_struct));
-    TestStruct value = alignment_safe_extract<TestStruct>(data + 1);
+    const TestStruct value = alignment_safe_extract<TestStruct>(data + 1);
     EXPECT_EQ(value.a, test_struct.a);
     EXPECT_EQ(value.b, test_struct.b);
 }

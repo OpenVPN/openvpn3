@@ -92,7 +92,7 @@ class ReliableAck
      */
     void prepend(Buffer &buf, bool ackv1)
     {
-        size_t max_acks = ackv1 ? maximum_acks_ack_v1 : maximum_acks_control_v1;
+        const size_t max_acks = ackv1 ? maximum_acks_ack_v1 : maximum_acks_control_v1;
 
         size_t acks_added = 0;
 

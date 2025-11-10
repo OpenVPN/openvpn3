@@ -141,7 +141,7 @@ inline int lzo1x_decompress_safe(const unsigned char *input,
     unsigned char *output_ptr;
     const unsigned char *match_ptr;
     const unsigned char *const input_ptr_end = input + input_length;
-    unsigned char *const output_ptr_end = output + *output_length;
+    const unsigned char *const output_ptr_end = output + *output_length;
 
     *output_length = 0;
 

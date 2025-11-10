@@ -124,7 +124,7 @@ inline int system_cmd(const std::string &cmd,
                       unsigned int redirect_pipe_flags,
                       const sigset_t *sigmask)
 {
-    SignalBlockerPipe sbpipe;
+    const SignalBlockerPipe sbpipe;
     RedirectPipe remote;
     if (!inout.in.empty())
         redirect_pipe_flags |= RedirectPipe::ENABLE_IN;

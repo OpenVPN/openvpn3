@@ -111,6 +111,6 @@ TEST(SplitLines, MovedError)
     SplitLines in(short_text);
     ASSERT_TRUE(in(true));
     ASSERT_FALSE(in.line_overflow());
-    std::string line = in.line_move();
+    const std::string line = in.line_move();
     ASSERT_THROW(in.line_ref(), SplitLines::moved_error);
 }

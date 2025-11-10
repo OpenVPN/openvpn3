@@ -11,7 +11,7 @@ TEST(Crypto, Hashstr)
 {
     const std::string content = read_text_utf8(UNITTEST_SOURCE_DIR "/input/1984.txt");
 
-    DigestFactory::Ptr digest_factory(new CryptoDigestFactory<SSLLib::CryptoAPI>());
+    const DigestFactory::Ptr digest_factory(new CryptoDigestFactory<SSLLib::CryptoAPI>());
     HashString hash(*digest_factory, CryptoAlgs::MD5);
     hash.update(content);
     const std::string actual = hash.final_hex();

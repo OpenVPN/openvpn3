@@ -94,10 +94,10 @@ class ClientConnect : ClientProto::NotifyCallback,
             if (!test_network())
                 throw ErrorCode(Error::NETWORK_UNAVAILABLE, true, "Network Unavailable");
 
-            RemoteList::Ptr remote_list = client_options->remote_list_precache();
-            RemoteList::BulkResolve::Ptr bulkres(new RemoteList::BulkResolve(io_context,
-                                                                             remote_list,
-                                                                             client_options->stats_ptr()));
+            const RemoteList::Ptr remote_list = client_options->remote_list_precache();
+            const RemoteList::BulkResolve::Ptr bulkres(new RemoteList::BulkResolve(io_context,
+                                                                                   remote_list,
+                                                                                   client_options->stats_ptr()));
             if (bulkres->work_available())
             {
                 ClientEvent::Base::Ptr ev = new ClientEvent::Resolve();
@@ -507,7 +507,7 @@ class ClientConnect : ClientProto::NotifyCallback,
                 {
                 case Error::UNDEF: // means that there wasn't a fatal error
                     {
-                        std::chrono::duration client_delay = client->reconnect_delay();
+                        const std::chrono::duration client_delay = client->reconnect_delay();
                         queue_restart(client_delay.count() > 0 ? client_delay : default_delay_);
                     }
                     break;
@@ -672,7 +672,7 @@ class ClientConnect : ClientProto::NotifyCallback,
         }
 
         // client_config in cliopt.hpp
-        Client::Config::Ptr cli_config = client_options->client_config(!transport_factory_relay);
+        const Client::Config::Ptr cli_config = client_options->client_config(!transport_factory_relay);
         client.reset(new Client(io_context, *cli_config, this)); // build ClientProto::Session from cliproto.hpp
         client_finalized = false;
 

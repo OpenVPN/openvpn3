@@ -1074,7 +1074,7 @@ class ClientOptions : public RC<thread_unsafe_refcount>
 
             if (pcc.peerInfoUV())
             {
-                for (auto const &kv : *pcc.peerInfoUV())
+                for (const auto &kv : *pcc.peerInfoUV())
                 {
                     extra_values[kv.key] = kv.value;
                 }
@@ -1083,7 +1083,7 @@ class ClientOptions : public RC<thread_unsafe_refcount>
             /* Config::peerInfo takes precedence */
             if (config.extra_peer_info.get())
             {
-                for (auto const &kv : *config.extra_peer_info.get())
+                for (const auto &kv : *config.extra_peer_info.get())
                 {
                     extra_values[kv.key] = kv.value;
                 }

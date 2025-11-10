@@ -111,8 +111,8 @@ class RingBuffer : public RC<thread_unsafe_refcount>
         receive_ring_ = (TUN_RING *)MapViewOfFile(receive_ring_hmem(), FILE_MAP_ALL_ACCESS, 0, 0, sizeof(TUN_RING));
     }
 
-    RingBuffer(RingBuffer const &) = delete;
-    RingBuffer &operator=(RingBuffer const &) = delete;
+    RingBuffer(const RingBuffer &) = delete;
+    RingBuffer &operator=(const RingBuffer &) = delete;
 
     ~RingBuffer()
     {

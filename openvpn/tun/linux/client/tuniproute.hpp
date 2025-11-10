@@ -53,7 +53,7 @@ inline IP::Addr cvt_pnr_ip_v4(const std::string &hexaddr)
     parse_hex(v, hexaddr);
     if (v.size() != 4)
         throw tun_linux_error("bad hex address");
-    IPv4::Addr ret = IPv4::Addr::from_bytes(v.data());
+    const IPv4::Addr ret = IPv4::Addr::from_bytes(v.data());
     return IP::Addr::from_ipv4(ret);
 }
 
@@ -75,7 +75,7 @@ inline void add_del_route(const std::string &addr_str,
         if (flags & R_ADD_SYS)
         {
             // ip route add 2001:db8:1::/48 via 2001:db8:1::1
-            Command::Ptr add(new Command);
+            const Command::Ptr add(new Command);
             add->argv.push_back("/sbin/ip");
             add->argv.push_back("-6");
             add->argv.push_back("route");
@@ -91,7 +91,7 @@ inline void add_del_route(const std::string &addr_str,
             create = add;
 
             // for the destroy command, copy the add command but replace "add" with "delete"
-            Command::Ptr del(add->copy());
+            const Command::Ptr del(add->copy());
             del->argv[3] = "del";
             destroy = del;
         }
@@ -108,7 +108,7 @@ inline void add_del_route(const std::string &addr_str,
         if (flags & R_ADD_SYS)
         {
             // ip route add 192.0.2.128/25 via 192.0.2.1
-            Command::Ptr add(new Command);
+            const Command::Ptr add(new Command);
             add->argv.push_back("/sbin/ip");
             add->argv.push_back("-4");
             add->argv.push_back("route");
@@ -124,7 +124,7 @@ inline void add_del_route(const std::string &addr_str,
             create = add;
 
             // for the destroy command, copy the add command but replace "add" with "delete"
-            Command::Ptr del(add->copy());
+            const Command::Ptr del(add->copy());
             del->argv[3] = "del";
             destroy = del;
         }
@@ -155,7 +155,7 @@ inline void iface_up(const std::string &iface_name,
                      ActionList &destroy)
 {
     {
-        Command::Ptr add(new Command);
+        const Command::Ptr add(new Command);
         add->argv.push_back("/sbin/ip");
         add->argv.push_back("link");
         add->argv.push_back("set");
@@ -169,7 +169,7 @@ inline void iface_up(const std::string &iface_name,
         create.add(add);
 
         // for the destroy command, copy the add command but replace "up" with "down"
-        Command::Ptr del(add->copy());
+        const Command::Ptr del(add->copy());
         del->argv[4] = "down";
         destroy.add(del);
     }
@@ -189,7 +189,7 @@ inline void iface_config(const std::string &iface_name,
     // Set IPv4 Interface
     if (local4)
     {
-        Command::Ptr add(new Command);
+        const Command::Ptr add(new Command);
         add->argv.push_back("/sbin/ip");
         add->argv.push_back("-4");
         add->argv.push_back("addr");
@@ -207,7 +207,7 @@ inline void iface_config(const std::string &iface_name,
         create.add(add);
 
         // for the destroy command, copy the add command but replace "add" with "delete"
-        Command::Ptr del(add->copy());
+        const Command::Ptr del(add->copy());
         del->argv[3] = "del";
         destroy.add(del);
 
@@ -218,7 +218,7 @@ inline void iface_config(const std::string &iface_name,
     // Set IPv6 Interface
     if (local6 && !pull.block_ipv6)
     {
-        Command::Ptr add(new Command);
+        const Command::Ptr add(new Command);
         add->argv.push_back("/sbin/ip");
         add->argv.push_back("-6");
         add->argv.push_back("addr");
@@ -229,7 +229,7 @@ inline void iface_config(const std::string &iface_name,
         create.add(add);
 
         // for the destroy command, copy the add command but replace "add" with "delete"
-        Command::Ptr del(add->copy());
+        const Command::Ptr del(add->copy());
         del->argv[3] = "del";
         destroy.add(del);
 
@@ -332,7 +332,7 @@ struct TunMethods
                                         ActionList &create,
                                         ActionList &destroy)
     {
-        LinuxGW46 gw(true);
+        const LinuxGW46 gw(true);
 
         if (!ipv6 && gw.v4.defined())
             add_del_route(address, 32, gw.v4.addr().to_string(), gw.dev(), R_ADD_SYS, rtvec, create, destroy);

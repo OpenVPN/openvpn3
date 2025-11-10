@@ -126,7 +126,7 @@ inline BufferPtr read_binary_linear(const std::string &filename,
 // Read a text file as a std::string, throw error if file is binary
 inline std::string read_text(const std::string &filename, const std::uint64_t max_size = 0)
 {
-    BufferPtr bp = read_binary(filename, max_size);
+    const BufferPtr bp = read_binary(filename, max_size);
     if (bp->contains_null())
         OPENVPN_THROW(file_is_binary, "file is binary: " << filename);
     return std::string((const char *)bp->c_data(), bp->size());
@@ -135,7 +135,7 @@ inline std::string read_text(const std::string &filename, const std::uint64_t ma
 // Read a UTF-8 file as a std::string, throw errors if file is binary or malformed UTF-8
 inline std::string read_text_utf8(const std::string &filename, const std::uint64_t max_size = 0)
 {
-    BufferPtr bp = read_binary(filename, max_size);
+    const BufferPtr bp = read_binary(filename, max_size);
 
     // check if binary
     if (bp->contains_null())
@@ -198,7 +198,7 @@ inline void write_binary_list(const std::string &filename, const BUFLIST &buflis
 // Write std::string to file
 inline void write_string(const std::string &filename, const std::string &str)
 {
-    BufferPtr buf = buf_from_string(str);
+    const BufferPtr buf = buf_from_string(str);
     write_binary(filename, *buf);
 }
 

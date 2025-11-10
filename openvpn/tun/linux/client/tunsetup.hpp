@@ -117,7 +117,7 @@ class Setup : public TunBuilderSetup::Base
         remove_cmds_bypass_gw->execute(os);
         remove_cmds_bypass_gw->clear();
 
-        ActionList::Ptr add_cmds = new ActionList();
+        const ActionList::Ptr add_cmds = new ActionList();
         TUNMETHODS::add_bypass_route(tun_iface_name, address, ipv6, nullptr, *add_cmds, *remove_cmds_bypass_gw);
 
         // add gateway bypass route
@@ -146,7 +146,7 @@ class Setup : public TunBuilderSetup::Base
             tun_iface_name = conf->iface_name;
         }
 
-        ActionList::Ptr add_cmds = new ActionList();
+        const ActionList::Ptr add_cmds = new ActionList();
         ActionList::Ptr remove_cmds_new = new ActionListReversed();
 
         // configure tun properties
@@ -197,7 +197,7 @@ class Setup : public TunBuilderSetup::Base
         if (conf->txqueuelen)
         {
             struct ifreq netifr;
-            ScopedFD ctl_fd(socket(AF_INET, SOCK_DGRAM, 0));
+            const ScopedFD ctl_fd(socket(AF_INET, SOCK_DGRAM, 0));
 
             if (ctl_fd.defined())
             {

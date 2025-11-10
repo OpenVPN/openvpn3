@@ -120,7 +120,7 @@ TEST(Dns, OptionsMerger)
 {
     OptionList pushed;
     OptionList config;
-    DnsOptionsMerger merger;
+    const DnsOptionsMerger merger;
 
     pushed.parse_from_config("dns server 1 address ::1", nullptr);
     config.parse_from_config("dns server 1 address 1.1.1.1\n"
@@ -146,25 +146,25 @@ TEST(Dns, DnsAddressTostring)
      *   [2001:db8:1234::1]:53
      */
 
-    DnsAddress ipv4_addr("192.168.0.1");
+    const DnsAddress ipv4_addr("192.168.0.1");
     EXPECT_STREQ(ipv4_addr.to_string().c_str(), "192.168.0.1");
-    DnsAddress parse_ipv4_addr(ipv4_addr.to_string());
+    const DnsAddress parse_ipv4_addr(ipv4_addr.to_string());
     EXPECT_STREQ(parse_ipv4_addr.to_string().c_str(), "192.168.0.1");
 
-    DnsAddress ipv4_port("192.168.20.1:9876");
+    const DnsAddress ipv4_port("192.168.20.1:9876");
     EXPECT_STREQ(ipv4_port.to_string().c_str(), "192.168.20.1:9876");
-    DnsAddress parse_ipv4_port(ipv4_port.to_string());
+    const DnsAddress parse_ipv4_port(ipv4_port.to_string());
     EXPECT_STREQ(parse_ipv4_port.to_string().c_str(), "192.168.20.1:9876");
 
-    DnsAddress ipv6_addr("2001:db8:5678::1");
+    const DnsAddress ipv6_addr("2001:db8:5678::1");
     EXPECT_STREQ(ipv6_addr.to_string().c_str(), "2001:db8:5678::1");
-    DnsAddress parse_ipv6_addr(ipv6_addr.to_string());
+    const DnsAddress parse_ipv6_addr(ipv6_addr.to_string());
     EXPECT_STREQ(parse_ipv6_addr.to_string().c_str(), "2001:db8:5678::1")
         << "parse_ipv6_addr failed";
 
-    DnsAddress ipv6_port("[2001:db8:1234::1]:5678");
+    const DnsAddress ipv6_port("[2001:db8:1234::1]:5678");
     EXPECT_STREQ(ipv6_port.to_string().c_str(), "[2001:db8:1234::1]:5678");
-    DnsAddress parse_ipv6_port(ipv6_port.to_string());
+    const DnsAddress parse_ipv6_port(ipv6_port.to_string());
     EXPECT_STREQ(parse_ipv6_port.to_string().c_str(), "[2001:db8:1234::1]:5678")
         << "parse_ipv6_port failed";
 
@@ -383,7 +383,7 @@ TEST(Dns, ToStringMinValuesSet)
     OptionList config;
     config.parse_from_config("dns server 10 address 1::1\n", nullptr);
     config.update_map();
-    DnsOptionsParser dns(config, false);
+    const DnsOptionsParser dns(config, false);
     ASSERT_EQ(dns.to_string(),
               "DNS Servers:\n"
               "  Priority: 10\n"
@@ -397,7 +397,7 @@ TEST(Dns, ToStringValuesFromDhcpOptions)
     OptionList config;
     config.parse_from_config("dhcp-option DNS6 1::1\n", nullptr);
     config.update_map();
-    DnsOptionsParser dns(config, false);
+    const DnsOptionsParser dns(config, false);
     ASSERT_EQ(dns.to_string(),
               "DNS Servers:\n"
               "  Priority: 0\n"
@@ -423,7 +423,7 @@ TEST(Dns, ToStringAllValuesSet)
         "dns server 20 dnssec yes\n",
         nullptr);
     config.update_map();
-    DnsOptionsParser dns(config, false);
+    const DnsOptionsParser dns(config, false);
     ASSERT_EQ(dns.to_string(),
               "DNS Servers:\n"
               "  Priority: 10\n"
@@ -458,8 +458,8 @@ TEST(Dns, JsonRoundtripMinValuesSet)
     OptionList config;
     config.parse_from_config("dns server 10 address 1::1\n", nullptr);
     config.update_map();
-    DnsOptionsParser toJson(config, false);
-    Json::Value json = toJson.to_json();
+    const DnsOptionsParser toJson(config, false);
+    const Json::Value json = toJson.to_json();
     Json::StreamWriterBuilder builder;
     builder["indentation"] = "  ";
     ASSERT_EQ(Json::writeString(builder, json),
@@ -494,8 +494,8 @@ TEST(Dns, JsonRoundtripValuesFromDhcpOption)
     OptionList config;
     config.parse_from_config("dhcp-option DNS6 1::1\n", nullptr);
     config.update_map();
-    DnsOptionsParser toJson(config, false);
-    Json::Value json = toJson.to_json();
+    const DnsOptionsParser toJson(config, false);
+    const Json::Value json = toJson.to_json();
     Json::StreamWriterBuilder builder;
     builder["indentation"] = "  ";
     ASSERT_EQ(Json::writeString(builder, json),
@@ -542,8 +542,8 @@ TEST(Dns, JsonRoundtripAllValuesSet)
         "dns server 20 dnssec yes\n",
         nullptr);
     config.update_map();
-    DnsOptionsParser toJson(config, false);
-    Json::Value json = toJson.to_json();
+    const DnsOptionsParser toJson(config, false);
+    const Json::Value json = toJson.to_json();
     Json::StreamWriterBuilder builder;
     builder["indentation"] = "  ";
     ASSERT_EQ(Json::writeString(builder, json),

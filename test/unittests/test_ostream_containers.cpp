@@ -10,7 +10,7 @@ using namespace openvpn;
 // simple use case example; cases will mostly look like this
 TEST(OstreamContainer, SimpleVectorInt)
 {
-    std::vector<int> vi{2, 4, 6, 8};
+    const std::vector<int> vi{2, 4, 6, 8};
     std::ostringstream oss;
 
     oss << C2os::cast(vi);

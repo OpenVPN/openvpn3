@@ -202,7 +202,7 @@ class Addr // NOTE: must be union-legal, so default constructor does not initial
     static Addr from_string(const std::string &ipstr, const TITLE &title)
     {
         openvpn_io::error_code ec;
-        openvpn_io::ip::address_v4 a = openvpn_io::ip::make_address_v4(ipstr, ec);
+        const openvpn_io::ip::address_v4 a = openvpn_io::ip::make_address_v4(ipstr, ec);
         if (ec)
             throw ipv4_exception(IP::internal::format_error(ipstr, title, "v4", ec));
         return from_asio(a);

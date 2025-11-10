@@ -29,7 +29,7 @@ class RandomByteStore
             res.rt = rng();
             n_bytes = SIZE;
         }
-        unsigned char ret = res.bytes[0];
+        const unsigned char ret = res.bytes[0];
         res.rt >>= 8;
         --n_bytes;
         return ret;

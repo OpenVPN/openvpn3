@@ -59,8 +59,8 @@ std::string test_cert = "-----BEGIN CERTIFICATE-----\n"
 
 TEST(OpenSSLX509GetSubject, OldFormat)
 {
-    OpenSSLPKI::X509 x509crt(test_cert, "Embedded Test Server Cert");
-    std::string expect(
+    const OpenSSLPKI::X509 x509crt(test_cert, "Embedded Test Server Cert");
+    const std::string expect(
         "/C=US/ST=CA/O=OpenVPN-TEST/CN=server-1.example.net/"
         "emailAddress=example-server@example.net");
 
@@ -70,8 +70,8 @@ TEST(OpenSSLX509GetSubject, OldFormat)
 
 TEST(OpenSSLX509GetSubject, NewFormat)
 {
-    OpenSSLPKI::X509 x509crt(test_cert, "Embedded Test Server Cert");
-    std::string expect(
+    const OpenSSLPKI::X509 x509crt(test_cert, "Embedded Test Server Cert");
+    const std::string expect(
         "C=US, ST=CA, O=OpenVPN-TEST, CN=server-1.example.net, "
         "emailAddress=example-server@example.net");
 
@@ -80,23 +80,23 @@ TEST(OpenSSLX509GetSubject, NewFormat)
 
 TEST(OpenSSLX509GetSerial, Numeric)
 {
-    OpenSSLPKI::X509 x509crt(test_cert, "Embedded Test Server Cert");
-    std::string expect("395452524166311612932");
+    const OpenSSLPKI::X509 x509crt(test_cert, "Embedded Test Server Cert");
+    const std::string expect("395452524166311612932");
 
     ASSERT_EQ(OpenSSLPKI::x509_get_serial(x509crt.obj()), expect);
 }
 
 TEST(OpenSSLX509GetSerial, Hexadecimal)
 {
-    OpenSSLPKI::X509 x509crt(test_cert, "Embedded Test Server Cert");
-    std::string expect("15:70:01:97:88:30:94:92:04");
+    const OpenSSLPKI::X509 x509crt(test_cert, "Embedded Test Server Cert");
+    const std::string expect("15:70:01:97:88:30:94:92:04");
 
     ASSERT_EQ(OpenSSLPKI::x509_get_serial_hex(x509crt.obj()), expect);
 }
 
 TEST(OpenSSLX509GetField, BasicChecks)
 {
-    OpenSSLPKI::X509 x509crt(test_cert, "Embedded Test Server Cert");
+    const OpenSSLPKI::X509 x509crt(test_cert, "Embedded Test Server Cert");
 
     ASSERT_EQ(OpenSSLPKI::x509_get_field(x509crt.obj(), NID_commonName),
               "server-1.example.net");
@@ -117,14 +117,14 @@ TEST(OpenSSLX509GetField, BasicChecks)
 
 TEST(OpenSSLX509GetField, Signature)
 {
-    OpenSSLPKI::X509 x509crt(test_cert, "Embedded Test Server Cert");
+    const OpenSSLPKI::X509 x509crt(test_cert, "Embedded Test Server Cert");
 
     ASSERT_EQ(OpenSSLPKI::x509_get_signature_algorithm(x509crt.obj()), "RSA-SHA256");
 }
 
 TEST(X509GetFingerprint, Output)
 {
-    OpenSSLPKI::X509 x509crt(test_cert, "Embedded Test Server Cert");
+    const OpenSSLPKI::X509 x509crt(test_cert, "Embedded Test Server Cert");
     const std::vector<uint8_t> fingerprint = {
         // clang-format off
         0x44, 0xF5, 0xA6, 0x4D, 0x4A, 0xCB, 0x65, 0xE1,

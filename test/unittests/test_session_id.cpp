@@ -60,7 +60,7 @@ TEST(Sessid, Test3)
 
 TEST(Sessid, Test4)
 {
-    SSLLib::RandomAPI rng;
+    const SSLLib::RandomAPI rng;
     const SessionID128 x;
     const SessionID128 a("YmtN7B2edrDRlefk3vQ_YQ..");
     const SessionID128 b("YmtN7B2edrDRlefk3vQ_YA..");
@@ -184,7 +184,7 @@ static void tryit(RandomAPI &rng, TokenEncryptDecrypt &encdec)
 
 TEST(Sessid, TokenEncrypt)
 {
-    StrongRandomAPI::Ptr rng(new SSLLib::RandomAPI());
+    const StrongRandomAPI::Ptr rng(new SSLLib::RandomAPI());
     const TokenEncrypt::Key key(*rng);
     TokenEncryptDecrypt encdec(key);
 

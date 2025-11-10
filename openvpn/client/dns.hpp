@@ -224,7 +224,7 @@ struct DnsOptionsParser : public DnsOptions
                     for (size_t i = 2; i < o.size(); ++i)
                     {
                         using StrVec = std::vector<std::string>;
-                        StrVec domains = Split::by_space<StrVec, StandardLex, SpaceMatch, Split::NullLimit>(o.get(i, 256));
+                        const StrVec domains = Split::by_space<StrVec, StandardLex, SpaceMatch, Split::NullLimit>(o.get(i, 256));
                         if (ignore_values)
                         {
                             continue;

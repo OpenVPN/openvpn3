@@ -61,7 +61,7 @@ class Ptb
         if ((buf.offset() < sizeof(ICMPv6)) || (buf.capacity() < (sizeof(ICMPv6) + data_size)))
             return;
 
-        IPv6Header *ipv6 = (IPv6Header *)buf.c_data();
+        const IPv6Header *ipv6 = (IPv6Header *)buf.c_data();
 
         uint8_t *b = buf.prepend_alloc(sizeof(ICMPv6));
         ICMPv6 *icmp = (ICMPv6 *)b;
@@ -97,7 +97,7 @@ class Ptb
         if ((buf.offset() < sizeof(ICMPv4)) || (buf.capacity() < (sizeof(ICMPv4) + data_size)))
             return;
 
-        IPv4Header *ipv4 = (IPv4Header *)buf.c_data();
+        const IPv4Header *ipv4 = (IPv4Header *)buf.c_data();
 
         uint8_t *b = buf.prepend_alloc(sizeof(ICMPv4));
         ICMPv4 *icmp = (ICMPv4 *)b;

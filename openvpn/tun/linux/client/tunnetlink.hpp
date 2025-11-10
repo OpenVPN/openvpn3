@@ -517,7 +517,7 @@ inline void add_del_route(const std::string &addr_str,
         if (flags & R_ADD_SYS)
         {
             // ip route add 2001:db8:1::/48 via 2001:db8:1::1
-            NetlinkRoute6::Ptr add(new NetlinkRoute6);
+            const NetlinkRoute6::Ptr add(new NetlinkRoute6);
             add->route.addr = net;
             add->route.prefix_len = prefix_len;
             add->gw = IPv6::Addr::from_string(gateway_str);
@@ -527,7 +527,7 @@ inline void add_del_route(const std::string &addr_str,
 
             create = add;
             // for the destroy command, copy the add command but replace "add" with "delete"
-            NetlinkRoute6::Ptr del(add->copy());
+            const NetlinkRoute6::Ptr del(add->copy());
             del->add = false;
             destroy = del;
         }
@@ -544,7 +544,7 @@ inline void add_del_route(const std::string &addr_str,
         if (flags & R_ADD_SYS)
         {
             // ip route add 192.0.2.128/25 via 192.0.2.1
-            NetlinkRoute4::Ptr add(new NetlinkRoute4);
+            const NetlinkRoute4::Ptr add(new NetlinkRoute4);
             add->route.addr = net;
             add->route.prefix_len = prefix_len;
             add->gw = IPv4::Addr::from_string(gateway_str);
@@ -554,7 +554,7 @@ inline void add_del_route(const std::string &addr_str,
 
             create = add;
             // for the destroy command, copy the add command but replace "add" with "delete"
-            NetlinkRoute4::Ptr del(add->copy());
+            const NetlinkRoute4::Ptr del(add->copy());
             del->add = false;
             destroy = del;
         }
@@ -586,14 +586,14 @@ inline void iface_up(const std::string &iface_name,
                      ActionList &destroy)
 {
     {
-        NetlinkLinkSet::Ptr add(new NetlinkLinkSet);
+        const NetlinkLinkSet::Ptr add(new NetlinkLinkSet);
         add->dev = iface_name;
         add->up = true;
         add->mtu = mtu;
 
         create.add(add);
         // for the destroy command, copy the add command but replace "up" with "down"
-        NetlinkLinkSet::Ptr del(add->copy());
+        const NetlinkLinkSet::Ptr del(add->copy());
         del->up = false;
         destroy.add(del);
     }
@@ -613,7 +613,7 @@ inline void iface_config(const std::string &iface_name,
     // Set IPv4 Interface
     if (local4)
     {
-        NetlinkAddr4::Ptr add(new NetlinkAddr4);
+        const NetlinkAddr4::Ptr add(new NetlinkAddr4);
         add->addr = IPv4::Addr::from_string(local4->address);
         add->prefixlen = local4->prefix_length;
         add->broadcast = IPv4::Addr::from_string(local4->address)
@@ -628,7 +628,7 @@ inline void iface_config(const std::string &iface_name,
         create.add(add);
 
         // for the destroy command, copy the add command but replace "add" with "delete"
-        NetlinkAddr4::Ptr del(add->copy());
+        const NetlinkAddr4::Ptr del(add->copy());
         del->add = false;
         destroy.add(del);
 
@@ -647,7 +647,7 @@ inline void iface_config(const std::string &iface_name,
     // Set IPv6 Interface
     if (local6 && !pull.block_ipv6)
     {
-        NetlinkAddr6::Ptr add(new NetlinkAddr6);
+        const NetlinkAddr6::Ptr add(new NetlinkAddr6);
         add->addr = IPv6::Addr::from_string(local6->address);
         add->prefixlen = local6->prefix_length;
         add->dev = iface_name;
@@ -656,7 +656,7 @@ inline void iface_config(const std::string &iface_name,
         create.add(add);
 
         // for the destroy command, copy the add command but replace "add" with "delete"
-        NetlinkAddr6::Ptr del(add->copy());
+        const NetlinkAddr6::Ptr del(add->copy());
         del->add = false;
         destroy.add(del);
 
@@ -729,7 +729,7 @@ struct TunMethods
         // Process exclude routes
         if (!pull.exclude_routes.empty())
         {
-            LinuxGW46Netlink gw(iface_name);
+            const LinuxGW46Netlink gw(iface_name);
 
             for (const auto &route : pull.exclude_routes)
             {
@@ -810,7 +810,7 @@ struct TunMethods
                                         ActionList &create,
                                         ActionList &destroy)
     {
-        LinuxGW46Netlink gw(tun_iface_name, address);
+        const LinuxGW46Netlink gw(tun_iface_name, address);
 
         if (!ipv6 && gw.v4.defined())
             add_del_route(address,

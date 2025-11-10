@@ -57,7 +57,7 @@ class MemQStream : public MemQBase
                 // Any residual space remaining in most recently pushed buffer?
                 if (!q.empty())
                 {
-                    BufferPtr &qb = q.back();
+                    const BufferPtr &qb = q.back();
                     const size_t write_size = std::min(b.size(), fc.remaining_payload(*qb));
                     const unsigned char *from = b.read_alloc(write_size);
                     qb->write(from, write_size);
@@ -89,7 +89,7 @@ class MemQStream : public MemQBase
             const size_t remaining = b.remaining();
             if (!remaining)
                 break;
-            BufferPtr &qf = q.front();
+            const BufferPtr &qf = q.front();
             const size_t read_size = std::min(remaining, qf->size());
             unsigned char *to = b.write_alloc(read_size);
             qf->read(to, read_size);

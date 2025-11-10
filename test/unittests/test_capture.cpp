@@ -28,7 +28,7 @@ TEST(Misc, Capture)
     dns_options.servers[0] = std::move(server);
     dns_options.search_domains = {DnsDomain("yonan.net"), DnsDomain("openvpn.net")};
 
-    TunBuilderCapture::Ptr tbc(new TunBuilderCapture);
+    const TunBuilderCapture::Ptr tbc(new TunBuilderCapture);
 
     tbc->tun_builder_set_remote_address("52.7.171.249", false);
     tbc->tun_builder_add_address("1.2.3.4", 24, "10.10.0.1", false, false);
@@ -56,7 +56,7 @@ TEST(Misc, Capture)
     // OPENVPN_LOG("TEXT #1:\n" << tbc->to_string());
 
     // const std::string fn1 = "cap1.txt";
-    Json::Value j1 = tbc->to_json();
+    const Json::Value j1 = tbc->to_json();
     const std::string j1_txt = j1.toStyledString();
 
     // OPENVPN_LOG("writing to " << fn1);
@@ -65,9 +65,9 @@ TEST(Misc, Capture)
     // OPENVPN_LOG("JSON #1:\n" << j1_txt);
 
     // const std::string fn2 = "cap2.txt";
-    TunBuilderCapture::Ptr tbc2 = TunBuilderCapture::from_json(j1);
+    const TunBuilderCapture::Ptr tbc2 = TunBuilderCapture::from_json(j1);
     tbc2->validate();
-    Json::Value j2 = tbc2->to_json();
+    const Json::Value j2 = tbc2->to_json();
     const std::string j2_txt = j2.toStyledString();
     // OPENVPN_LOG("writing to " << fn2);
     // write_string(fn2, j2_txt);
@@ -875,7 +875,7 @@ RC_GTEST_PROP(WINSServer, FromInvalidJsonThrows, (const std::string &title))
 
 RC_GTEST_PROP(TunBuilderCapture, SetsRemoteAddress, (const std::string &address, const bool ipv6))
 {
-    TunBuilderCapture::Ptr tbc(new TunBuilderCapture);
+    const TunBuilderCapture::Ptr tbc(new TunBuilderCapture);
     RC_ASSERT(tbc->tun_builder_set_remote_address(address, ipv6));
     RC_ASSERT(tbc->remote_address.address == address);
     RC_ASSERT(tbc->remote_address.ipv6 == ipv6);

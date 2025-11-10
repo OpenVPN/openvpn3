@@ -79,7 +79,7 @@ double thread_runtime = 0;
 
 void update_thread_runtime(double val)
 {
-    std::lock_guard<std::mutex> ug(update_guard);
+    const std::lock_guard<std::mutex> ug(update_guard);
     thread_runtime += val;
 }
 

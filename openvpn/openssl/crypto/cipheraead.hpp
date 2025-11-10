@@ -94,7 +94,7 @@ class CipherContextAEAD
     {
         free_cipher_context();
         unsigned int ckeysz = 0;
-        CIPHER_unique_ptr ciph(cipher_type(libctx, alg, ckeysz), EVP_CIPHER_free);
+        const CIPHER_unique_ptr ciph(cipher_type(libctx, alg, ckeysz), EVP_CIPHER_free);
 
         if (!ciph)
             OPENVPN_THROW(openssl_gcm_error, CryptoAlgs::name(alg) << ": not usable");
@@ -268,7 +268,7 @@ class CipherContextAEAD
     static bool is_supported(SSLLib::Ctx libctx, const CryptoAlgs::Type alg)
     {
         unsigned int keysize = 0;
-        CIPHER_unique_ptr cipher(cipher_type(libctx, alg, keysize), EVP_CIPHER_free);
+        const CIPHER_unique_ptr cipher(cipher_type(libctx, alg, keysize), EVP_CIPHER_free);
         return (bool)cipher;
     }
 

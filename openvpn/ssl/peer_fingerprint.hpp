@@ -99,7 +99,7 @@ struct PeerFingerprints
             while (std::getline(fps, fp))
             {
                 // Ignore empty lines and comments in fingerprint blocks
-                std::string trimmed = string::trim_copy(fp);
+                const std::string trimmed = string::trim_copy(fp);
                 if (trimmed.empty() || trimmed.starts_with("#") || trimmed.starts_with(";"))
                 {
                     continue;

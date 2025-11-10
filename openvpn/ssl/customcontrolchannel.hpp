@@ -197,7 +197,7 @@ class AppControlMessageReceiver
             throw parse_acc_message{"Discarding malformed custom app control message"};
         }
 
-        for (char const &c : flags)
+        for (const char &c : flags)
         {
             switch (c)
             {

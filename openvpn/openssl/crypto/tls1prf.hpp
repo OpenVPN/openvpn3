@@ -38,13 +38,13 @@ class TLS1PRF
         using EVP_KDF_ptr = std::unique_ptr<EVP_KDF, decltype(&::EVP_KDF_free)>;
         using EVP_KDF_CTX_ptr = std::unique_ptr<EVP_KDF_CTX, decltype(&::EVP_KDF_CTX_free)>;
 
-        EVP_KDF_ptr kdf{::EVP_KDF_fetch(NULL, "TLS1-PRF", NULL), ::EVP_KDF_free};
+        const EVP_KDF_ptr kdf{::EVP_KDF_fetch(NULL, "TLS1-PRF", NULL), ::EVP_KDF_free};
         if (!kdf)
         {
             return false;
         }
 
-        EVP_KDF_CTX_ptr kctx{::EVP_KDF_CTX_new(kdf.get()), ::EVP_KDF_CTX_free};
+        const EVP_KDF_CTX_ptr kctx{::EVP_KDF_CTX_new(kdf.get()), ::EVP_KDF_CTX_free};
 
         if (!kctx)
         {

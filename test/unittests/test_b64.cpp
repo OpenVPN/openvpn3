@@ -42,7 +42,7 @@ std::string ssllib_b64enc(const char *text, size_t textlen)
     BIO_write(bio, text, (int)textlen);
     EXPECT_TRUE(BIO_flush(bio) == 1);
     const char *encdata;
-    long len = BIO_get_mem_data(bio, &encdata);
+    const long len = BIO_get_mem_data(bio, &encdata);
 
     /* If there is nothing to encode OpenSSL gives back a nullptr */
     if (len == 0)
@@ -81,8 +81,8 @@ std::string ssllib_b64enc(const char *text, size_t textlen)
 void b64_test(const Base64 &b64, const std::string &text)
 {
     const std::string enc = b64.encode(text);
-    std::string dec = b64.decode(enc);
-    std::string libenc = ssllib_b64enc(text.c_str(), text.size());
+    const std::string dec = b64.decode(enc);
+    const std::string libenc = ssllib_b64enc(text.c_str(), text.size());
 
     EXPECT_EQ(text, dec) << "Encode/Decode results differ";
     EXPECT_EQ(enc, libenc) << "Encode differs from Crypto lib result";
@@ -92,9 +92,9 @@ void b64_test_binary(const Base64 &b64, const char *data, unsigned int len)
 {
     auto enc = b64.encode(data, len);
 
-    std::unique_ptr<char[]> decdata(new char[len]);
-    size_t decode_len = b64.decode(decdata.get(), len, enc);
-    std::string libenc = ssllib_b64enc(data, len);
+    const std::unique_ptr<char[]> decdata(new char[len]);
+    const size_t decode_len = b64.decode(decdata.get(), len, enc);
+    const std::string libenc = ssllib_b64enc(data, len);
 
     EXPECT_EQ(enc, libenc) << "Encode differs from Crypto lib result";
 

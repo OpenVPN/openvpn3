@@ -22,7 +22,7 @@ namespace openvpn {
 template <typename ErrorCode>
 inline std::string errinfo(ErrorCode err)
 {
-    openvpn_io::error_code e(err, openvpn_io::system_category());
+    const openvpn_io::error_code e(err, openvpn_io::system_category());
     return e.message();
 }
 

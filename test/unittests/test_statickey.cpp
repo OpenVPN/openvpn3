@@ -32,12 +32,12 @@ TEST(Statickey, Key1)
     // This test only tests if loading a static key works
     OpenVPNStaticKey sk;
     sk.parse(std::string(key_text));
-    std::string rend = sk.render();
+    const std::string rend = sk.render();
 }
 
 TEST(Statickey, Key2)
 {
-    StrongRandomAPI::Ptr rng(new SSLLib::RandomAPI());
+    const StrongRandomAPI::Ptr rng(new SSLLib::RandomAPI());
     const size_t key_len = 16;
     StaticKey sk1;
     sk1.init_from_rng(*rng, key_len);
@@ -79,7 +79,7 @@ TEST(Statickey, Move)
     OpenVPNStaticKey sk;
     sk.parse(std::string(key_text));
 
-    StaticSinkBase::Ptr ss(new StaticSink());
+    const StaticSinkBase::Ptr ss(new StaticSink());
     ss->init(sk.slice(OpenVPNStaticKey::CIPHER | OpenVPNStaticKey::ENCRYPT | OpenVPNStaticKey::INVERSE));
     ASSERT_EQ(
         "a2a54bd892fa20edbcfe4fe1fa8a786c5c1102a3b53e294c729b37a24842f9c9b72018b990aff058bbeeaf18f586cd5cd70475328caed6d9662937a3c970f253",

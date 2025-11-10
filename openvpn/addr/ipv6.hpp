@@ -101,7 +101,7 @@ class Addr // NOTE: must be union-legal, so default constructor does not initial
     static Addr from_string(const std::string &ipstr, const TITLE &title)
     {
         openvpn_io::error_code ec;
-        openvpn_io::ip::address_v6 a = openvpn_io::ip::make_address_v6(ipstr, ec);
+        const openvpn_io::ip::address_v6 a = openvpn_io::ip::make_address_v6(ipstr, ec);
         if (ec)
             throw ipv6_exception(IP::internal::format_error(ipstr, title, "v6", ec));
         return from_asio(a);
@@ -128,7 +128,7 @@ class Addr // NOTE: must be union-legal, so default constructor does not initial
     std::string to_string() const
     {
         const openvpn_io::ip::address_v6 a = to_asio();
-        std::string ret = a.to_string();
+        const std::string ret = a.to_string();
 #ifdef UNIT_TEST
         return string::to_lower_copy(ret);
 #else

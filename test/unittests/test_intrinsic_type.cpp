@@ -68,7 +68,7 @@ TEST(IntrinsicType, LogicNot)
 TEST(IntrinsicType, LogicOr0)
 {
     auto a = Thing1(1);
-    Thing1 b(2);
+    const Thing1 b(2);
 
     EXPECT_FALSE(a == b);
 
@@ -81,9 +81,9 @@ TEST(IntrinsicType, LogicOr0)
 TEST(IntrinsicType, LogicOr1)
 {
     auto a = Thing1(1);
-    Thing1 b(2);
+    const Thing1 b(2);
     constexpr Thing1 c(3);
-    Thing1 d(4);
+    const Thing1 d(4);
 
     EXPECT_FALSE(a == b);
 
@@ -99,7 +99,7 @@ TEST(IntrinsicType, LogicOr1)
 TEST(IntrinsicType, LogicAnd0)
 {
     auto a = Thing1(1);
-    Thing1 b(2);
+    const Thing1 b(2);
 
     EXPECT_FALSE(a == b);
 
@@ -111,8 +111,8 @@ TEST(IntrinsicType, LogicAnd0)
 
 TEST(IntrinsicType, LogicAnd1)
 {
-    Thing1 a(1);
-    Thing1 b(2);
+    const Thing1 a(1);
+    const Thing1 b(2);
     constexpr Thing1 c(3);
 
     EXPECT_FALSE(a == b);
@@ -129,7 +129,7 @@ TEST(IntrinsicType, LogicAnd1)
 TEST(IntrinsicType, MathAdd0)
 {
     auto a = Thing1(1);
-    Thing1 b(2);
+    const Thing1 b(2);
 
     EXPECT_FALSE(a == b);
 
@@ -141,10 +141,10 @@ TEST(IntrinsicType, MathAdd0)
 
 TEST(IntrinsicType, MathAdd1)
 {
-    Thing1 a(1);
-    Thing1 b(2);
+    const Thing1 a(1);
+    const Thing1 b(2);
     constexpr Thing1 c(3);
-    Thing1 d(4);
+    const Thing1 d(4);
 
     EXPECT_FALSE(a == b);
 
@@ -160,7 +160,7 @@ TEST(IntrinsicType, MathAdd1)
 TEST(IntrinsicType, MathSub0)
 {
     auto a = Thing1(1);
-    Thing1 b(2);
+    const Thing1 b(2);
 
     EXPECT_FALSE(a == b);
 
@@ -172,10 +172,10 @@ TEST(IntrinsicType, MathSub0)
 
 TEST(IntrinsicType, MathSub1)
 {
-    Thing1 a(1);
-    Thing1 b(2);
+    const Thing1 a(1);
+    const Thing1 b(2);
     constexpr Thing1 c(3);
-    Thing1 d(4);
+    const Thing1 d(4);
 
     EXPECT_FALSE(a == b);
 
@@ -191,7 +191,7 @@ TEST(IntrinsicType, MathSub1)
 TEST(IntrinsicType, MathMul0)
 {
     auto a = Thing1(1);
-    Thing1 b(2);
+    const Thing1 b(2);
 
     EXPECT_FALSE(a == b);
 
@@ -203,10 +203,10 @@ TEST(IntrinsicType, MathMul0)
 
 TEST(IntrinsicType, MathMul1)
 {
-    Thing1 a(1);
-    Thing1 b(2);
+    const Thing1 a(1);
+    const Thing1 b(2);
     constexpr Thing1 c(3);
-    Thing1 d(4);
+    const Thing1 d(4);
 
     EXPECT_FALSE(a == b);
 
@@ -222,7 +222,7 @@ TEST(IntrinsicType, MathMul1)
 TEST(IntrinsicType, MathDiv0)
 {
     auto a = Thing1(4);
-    Thing1 b(2);
+    const Thing1 b(2);
 
     EXPECT_FALSE(a == b);
 
@@ -234,10 +234,10 @@ TEST(IntrinsicType, MathDiv0)
 
 TEST(IntrinsicType, MathDiv1)
 {
-    Thing1 a(120);
-    Thing1 b(2);
+    const Thing1 a(120);
+    const Thing1 b(2);
     constexpr Thing1 c(3);
-    Thing1 d(4);
+    const Thing1 d(4);
 
     EXPECT_FALSE(a == b);
 

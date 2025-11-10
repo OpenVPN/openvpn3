@@ -122,7 +122,7 @@ class ChallengeResponse : public RC<thread_unsafe_refcount>
 
     static void validate_dynamic(const std::string &cookie)
     {
-        ChallengeResponse cr(cookie);
+        const ChallengeResponse cr(cookie);
     }
 
     std::string construct_dynamic_password(const std::string &response) const

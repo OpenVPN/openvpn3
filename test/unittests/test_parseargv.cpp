@@ -125,8 +125,8 @@ static void extract_ifconfig(const OptionList &opt)
 {
     const Option &o = opt.get("ifconfig");
     o.exact_args(3);
-    std::string ip = IP::Addr::validate(o.ref(1), "ifconfig-ip");
-    std::string mask = IP::Addr::validate(o.ref(2), "ifconfig-net");
+    const std::string ip = IP::Addr::validate(o.ref(1), "ifconfig-ip");
+    const std::string mask = IP::Addr::validate(o.ref(2), "ifconfig-net");
     ASSERT_EQ("5.5.8.4", ip);
     ASSERT_EQ("255.255.252.0", mask);
 }
@@ -221,7 +221,7 @@ static void options_csv_test(const std::string &str, const std::string &elem)
 
     if (!elem.empty())
     {
-        OptionList::IndexMap::const_iterator e = olist.map().find(elem);
+        const OptionList::IndexMap::const_iterator e = olist.map().find(elem);
         ASSERT_TRUE(e != olist.map().end());
     }
 }

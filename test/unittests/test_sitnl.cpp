@@ -60,10 +60,10 @@ class SitnlTest : public testing::Test
     static void SetUpTestSuite()
     {
         // different distros have ip tool in different places
-        std::vector<std::string> paths{"/bin/ip", "/sbin/ip", "/usr/bin/ip", "/usr/sbin/ip"};
+        const std::vector<std::string> paths{"/bin/ip", "/sbin/ip", "/usr/bin/ip", "/usr/sbin/ip"};
         for (const auto &path : paths)
         {
-            std::ifstream f(path);
+            const std::ifstream f(path);
             if (f)
             {
                 path_to_ip = path;
@@ -126,7 +126,7 @@ class SitnlTest : public testing::Test
     void ip_a_show_dev(CALLBACK cb)
     {
         // get addrs with "ip a show dev"
-        RedirectPipe::InOut pipe;
+        const RedirectPipe::InOut pipe;
         Argv argv;
         argv.emplace_back(path_to_ip);
         argv.emplace_back("a");
@@ -140,7 +140,7 @@ class SitnlTest : public testing::Test
     void ip_route_get(std::string dst, CALLBACK cb)
     {
         // get route with "ip route get"
-        RedirectPipe::InOut pipe;
+        const RedirectPipe::InOut pipe;
         Argv argv;
         argv.emplace_back(path_to_ip);
         argv.emplace_back("route");
@@ -253,7 +253,7 @@ TEST_F(SitnlTest, TestAddRoute6)
                  {
 	  if (v1[0] == dst || v1[0] == dst_trunc)
 	  {
-	    std::string dst_out = (v1[0] == dst) ? dst : dst_trunc;
+	     const std::string  dst_out = (v1[0] == dst) ? dst : dst_trunc;
 	    called = true;
 	    v1.resize(7);
 	    // iproute 4.15 (Ubuntu 18)

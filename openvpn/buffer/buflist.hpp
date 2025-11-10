@@ -71,7 +71,7 @@ struct BufferCollection : public COLLECTION<BufferPtr>
 
     std::string to_string() const
     {
-        BufferPtr bp = join();
+        const BufferPtr bp = join();
         return buf_to_string(*bp);
     }
 
@@ -93,7 +93,7 @@ struct BufferCollection : public COLLECTION<BufferPtr>
             // special optimization if buf data fits in
             // back() unused tail capacity -- if so, append
             // buf to existing back().
-            BufferPtr &b = back();
+            const BufferPtr &b = back();
             const size_t r = b->remaining(tailroom);
             if (s < r)
             {

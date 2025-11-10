@@ -238,7 +238,7 @@ I/+4kAlXuAKdhsXohHeBhC2ijg/kTOMDxEbEVv+SkCIUyM+dB8UtlPKOH9HEL5Xi
 
 TEST(SslctxUt, CreateConfig)
 {
-    SSLLib::SSLAPI::Config::Ptr config = new SSLLib::SSLAPI::Config;
+    const SSLLib::SSLAPI::Config::Ptr config = new SSLLib::SSLAPI::Config;
     // Do not log extra data during unit test
     config->set_debug_level(0);
     EXPECT_TRUE(config);
@@ -246,10 +246,10 @@ TEST(SslctxUt, CreateConfig)
 
 TEST(SslctxUt, ConfigNewFactoryServer)
 {
-    SSLLib::SSLAPI::Config::Ptr config = new SSLLib::SSLAPI::Config;
+    const SSLLib::SSLAPI::Config::Ptr config = new SSLLib::SSLAPI::Config;
     EXPECT_TRUE(config);
 
-    StrongRandomAPI::Ptr rng(new SSLLib::RandomAPI());
+    const StrongRandomAPI::Ptr rng(new SSLLib::RandomAPI());
     config->set_rng(rng);
 
     config->set_mode(Mode(Mode::SERVER));
@@ -269,10 +269,10 @@ TEST(SslctxUt, ConfigNewFactoryServer)
 
 TEST(SslctxUt, ConfigNewFactoryClient)
 {
-    SSLLib::SSLAPI::Config::Ptr config = new SSLLib::SSLAPI::Config;
+    const SSLLib::SSLAPI::Config::Ptr config = new SSLLib::SSLAPI::Config;
     EXPECT_TRUE(config);
 
-    StrongRandomAPI::Ptr rng(new SSLLib::RandomAPI());
+    const StrongRandomAPI::Ptr rng(new SSLLib::RandomAPI());
     config->set_rng(rng);
 
     config->set_mode(Mode(Mode::CLIENT));
@@ -327,7 +327,7 @@ static inline bool xfer_oneway(SSLAPI &sender, SSLAPI &recv, const std::string &
 {
     if (sender.read_ciphertext_ready())
     {
-        BufferPtr buf = sender.read_ciphertext();
+        const BufferPtr buf = sender.read_ciphertext();
         recv.write_ciphertext(buf);
         std::cout << out << buf->size() << " bytes\n";
         return true;
@@ -362,10 +362,10 @@ static inline auto MakeClient(Frame::Ptr frame,
                               const std::string &cert,
                               const std::string &ca = "")
 {
-    SSLLib::SSLAPI::Config::Ptr config = new SSLLib::SSLAPI::Config;
+    const SSLLib::SSLAPI::Config::Ptr config = new SSLLib::SSLAPI::Config;
     EXPECT_TRUE(config);
 
-    StrongRandomAPI::Ptr rng(new SSLLib::RandomAPI());
+    const StrongRandomAPI::Ptr rng(new SSLLib::RandomAPI());
     config->set_rng(rng);
 
     config->set_mode(Mode(Mode::CLIENT));
@@ -391,11 +391,11 @@ static inline auto MakeClient(Frame::Ptr frame,
 
 static inline auto MakeServer(Frame::Ptr frame, const std::string &pvt_key, const std::string &cert)
 {
-    SSLLib::SSLAPI::Config::Ptr config = new SSLLib::SSLAPI::Config;
+    const SSLLib::SSLAPI::Config::Ptr config = new SSLLib::SSLAPI::Config;
     config->enable_legacy_algorithms(false);
     EXPECT_TRUE(config);
 
-    StrongRandomAPI::Ptr rng(new SSLLib::RandomAPI());
+    const StrongRandomAPI::Ptr rng(new SSLLib::RandomAPI());
     config->set_rng(rng);
 
     config->set_mode(Mode(Mode::SERVER));

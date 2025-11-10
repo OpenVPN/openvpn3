@@ -107,7 +107,7 @@ class Addr
                             const Version required_version)
     {
         openvpn_io::error_code ec;
-        openvpn_io::ip::address a = openvpn_io::ip::make_address(ipstr, ec);
+        const openvpn_io::ip::address a = openvpn_io::ip::make_address(ipstr, ec);
         if (ec)
             OPENVPN_IP_THROW(internal::format_error(ipstr, title, "", ec));
         const Addr ret = from_asio(a);

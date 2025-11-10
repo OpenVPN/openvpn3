@@ -31,7 +31,7 @@ TEST(Misc, Tempfile)
 
 TEST(Misc, TempfileName)
 {
-    TempFile tf(getTempDirPath("tempfile-XXXXXX"), true);
+    const TempFile tf(getTempDirPath("tempfile-XXXXXX"), true);
     auto fn = tf.filename();
     ASSERT_NE(std::string::npos, fn.find("tempfile-"));
     ASSERT_EQ(std::string::npos, fn.find("XXXXXX"));
@@ -39,7 +39,7 @@ TEST(Misc, TempfileName)
 
 TEST(Misc, TempfileName6Xs)
 {
-    TempFile tf(getTempDirPath("tempXXXXXXfile"), true);
+    const TempFile tf(getTempDirPath("tempXXXXXXfile"), true);
     auto fn = tf.filename();
     ASSERT_NE(std::string::npos, fn.find("temp"));
     ASSERT_NE(std::string::npos, fn.find("file"));
@@ -48,7 +48,7 @@ TEST(Misc, TempfileName6Xs)
 
 TEST(Misc, TempfileName7Xs)
 {
-    TempFile tf(getTempDirPath("tempXXXXXXXfile"), true);
+    const TempFile tf(getTempDirPath("tempXXXXXXXfile"), true);
     auto fn = tf.filename();
     ASSERT_NE(std::string::npos, fn.find("temp"));
     ASSERT_NE(std::string::npos, fn.find("file"));
@@ -57,7 +57,7 @@ TEST(Misc, TempfileName7Xs)
 
 TEST(Misc, TempfileName6X6X)
 {
-    TempFile tf(getTempDirPath("tempXXXXXXfile-XXXXXX"), true);
+    const TempFile tf(getTempDirPath("tempXXXXXXfile-XXXXXX"), true);
     auto fn = tf.filename();
     ASSERT_NE(std::string::npos, fn.find("temp"));
     ASSERT_NE(std::string::npos, fn.find("file"));

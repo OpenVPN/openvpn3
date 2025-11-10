@@ -20,7 +20,7 @@ void testcase(PIDRecv &pr,
               const PacketIDData::data_id_t pkt_id,
               const Error::Type expected_status)
 {
-    bool wide = pr.length() > 4;
+    const bool wide = pr.length() > 4;
     const PacketIDDataConstruct pid(pkt_id, wide);
     const Error::Type status = pr.do_test_add(pid, t);
     // OPENVPN_LOG("[" << t << "] id=" << pkt_id << ' ' << Error::name(status));
@@ -30,7 +30,7 @@ void testcase(PIDRecv &pr,
 void do_packet_id_recv_test_short_ids(bool usewide)
 {
     using PIDRecv = PacketIDDataReceiveType<3, 5>;
-    SessionStats::Ptr stats(new SessionStats());
+    const SessionStats::Ptr stats(new SessionStats());
     PIDRecv pr;
     pr.init("test", 0, usewide);
 
@@ -64,7 +64,7 @@ TEST(Misc, DoPacketIdRecvTestLongIds)
 {
     using PIDRecv = PacketIDDataReceiveType<3, 5>;
     PIDRecv pr;
-    SessionStats::Ptr stats{new SessionStats()};
+    const SessionStats::Ptr stats{new SessionStats()};
     pr.init("test", 0, true);
 
     testcase(pr, 40, 0xfffffffe, Error::SUCCESS);
@@ -109,7 +109,7 @@ void perfiter(const long n,
     MTRand urand;
     std::vector<bool> bv(n);
     long high = 0;
-    SessionStats::Ptr stats(new SessionStats());
+    const SessionStats::Ptr stats(new SessionStats());
     PIDRecv pr;
     pr.init("test", 0, false);
 

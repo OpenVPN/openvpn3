@@ -92,8 +92,8 @@ inline double cpu_time(const bool thread = false)
         {
             throw Exception("getrusage() call failed: " + std::string(strerror(errno)));
         }
-        double utime = static_cast<double>(usage.ru_utime.tv_sec) + (static_cast<double>(usage.ru_utime.tv_usec / 1000000));
-        double stime = static_cast<double>(usage.ru_stime.tv_sec) + (static_cast<double>(usage.ru_stime.tv_usec / 1000000));
+        const double utime = static_cast<double>(usage.ru_utime.tv_sec) + (static_cast<double>(usage.ru_utime.tv_usec / 1000000));
+        const double stime = static_cast<double>(usage.ru_stime.tv_sec) + (static_cast<double>(usage.ru_stime.tv_usec / 1000000));
 
         return utime + stime;
     }

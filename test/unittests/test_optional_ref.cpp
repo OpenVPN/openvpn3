@@ -130,7 +130,7 @@ TEST(OptionalRefSuite, ValueOrDefaultLvalue)
 {
     auto o = openvpn::optional<int &>(std::nullopt);
     EXPECT_FALSE(o);
-    int i = 42;
+    const int i = 42;
     EXPECT_EQ(o.value_or(i), i);
 }
 
