@@ -143,7 +143,7 @@ class ProfileMerge
                 profile_dir = !profile_dir_override.empty() ? profile_dir_override : path::dirname(profile_path);
                 basename_ = path::basename(profile_path);
                 const std::string ext = path::ext(basename_);
-                if (profile_ext.empty() || string::strcasecmp(ext, profile_ext) == 0)
+                if (profile_ext.empty() || string::strcasecmp(ext, profile_ext) == 0 || profile_path.rfind("/dev/fd/", 0) == 0)
                 {
                     orig_profile_content = read_text_utf8(profile_path, max_size);
                     total_size = orig_profile_content.size();
