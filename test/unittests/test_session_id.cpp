@@ -60,7 +60,6 @@ TEST(Sessid, Test3)
 
 TEST(Sessid, Test4)
 {
-    const SSLLib::RandomAPI rng;
     const SessionID128 x;
     const SessionID128 a("YmtN7B2edrDRlefk3vQ_YQ..");
     const SessionID128 b("YmtN7B2edrDRlefk3vQ_YA..");

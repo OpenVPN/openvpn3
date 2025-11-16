@@ -126,7 +126,6 @@ class SitnlTest : public testing::Test
     void ip_a_show_dev(CALLBACK cb)
     {
         // get addrs with "ip a show dev"
-        const RedirectPipe::InOut pipe;
         Argv argv;
         argv.emplace_back(path_to_ip);
         argv.emplace_back("a");
@@ -140,7 +139,6 @@ class SitnlTest : public testing::Test
     void ip_route_get(std::string dst, CALLBACK cb)
     {
         // get route with "ip route get"
-        const RedirectPipe::InOut pipe;
         Argv argv;
         argv.emplace_back(path_to_ip);
         argv.emplace_back("route");
