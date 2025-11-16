@@ -54,7 +54,7 @@ static const char *input[] = {
     // clang-format on
 };
 
-TEST(argv, parse)
+TEST(Argv, Parse)
 {
     const OptionList opt = OptionList::parse_from_argv_static(string::from_argv(sizeof(input) / sizeof(char *),
                                                                                 const_cast<char **>(input),
@@ -67,7 +67,7 @@ static const char config[] = "listen 1.2.3.4 1000 tcp 2\n"
                              "listen ::0 8000 tcp\n"
                              "listen sock/ststrack-%s.sock unix-stream\n";
 
-TEST(argv, portoffset1)
+TEST(Argv, Portoffset1)
 {
     const OptionList opt1 = OptionList::parse_from_config_static(config, nullptr);
     const Listen::List ll1(opt1, "listen", Listen::List::Nominal, 4);
@@ -88,7 +88,7 @@ TEST(argv, portoffset1)
     EXPECT_EQ(exp2, ll2.to_string());
 }
 
-TEST(argv, portoffset2)
+TEST(Argv, Portoffset2)
 {
     const OptionList opt = OptionList::parse_from_config_static(config, nullptr);
     const Listen::List ll(opt, "listen", Listen::List::Nominal, 4);
@@ -131,7 +131,7 @@ static void extract_ifconfig(const OptionList &opt)
     ASSERT_EQ("255.255.252.0", mask);
 }
 
-TEST(argv, parsetest)
+TEST(Argv, Parsetest)
 {
     const std::string opt_csv = "explicit-exit-notify,topology subnet,route-delay 5 30,dhcp-pre-release,dhcp-renew,dhcp-release,route-metric 101,ping 5,ping-restart 40,redirect-gateway def1,redirect-gateway bypass-dhcp,redirect-gateway autolocal,route-gateway 5.5.8.1,dhcp-option DNS 172.16.0.23,register-dns,auth-token SESS_ID_wJdhHMc7tr9GwbMNEW6b+A==,comp-lzo no,ifconfig 5.5.8.4 255.255.252.0";
     OptionList opt;
@@ -226,7 +226,7 @@ static void options_csv_test(const std::string &str, const std::string &elem)
     }
 }
 
-TEST(argv, parsetest1)
+TEST(Argv, Parsetest1)
 {
     csv_test("this,is,,a,\"foo,bar\",test");
     space_test(R"(  this is a "foo \\ bar" test   of something \"rather\" grt  )", "this\nis\na\nfoo \\ bar\ntest\nof\nsomething\n\"rather\"\ngrt\n");
@@ -235,7 +235,7 @@ TEST(argv, parsetest1)
                      "");
 }
 
-TEST(argv, QuotesTest)
+TEST(Argv, QuotesTest)
 {
     auto str = "\"abc,def\",\'abc,def\',\"abc',def\",\'abc\"def\',\'abc\"";
     std::vector<std::string> list = Split::by_char<std::vector<std::string>, StandardLex, Split::NullLimit>(str, ',');

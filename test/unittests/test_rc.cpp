@@ -162,12 +162,12 @@ void test()
     ASSERT_EQ(expected_output, testLog->stopCollecting());
 }
 
-TEST(misc, RCthreadUnsafe)
+TEST(Misc, RCthreadUnsafe)
 {
     test<TestType<RCWeak<thread_unsafe_refcount>>>();
 }
 
-TEST(misc, RCthreadSafe)
+TEST(Misc, RCthreadSafe)
 {
     test<TestType<RCWeak<thread_safe_refcount>>>();
 }

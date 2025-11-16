@@ -3,7 +3,7 @@
 
 #include <openvpn/tun/builder/capture.hpp>
 
-TEST(tun_builder, to_string_zero)
+TEST(TunBuilder, ToStringZero)
 {
     auto rb = openvpn::TunBuilderCapture::RouteBase();
 

@@ -30,7 +30,7 @@ static const uint8_t icmp6_packet[] = {
 
 static bool verbose = false;
 
-TEST(IPAddr, icmp6csum)
+TEST(IPAddr, Icmp6csum)
 {
     const ICMPv6 *icmp = (const ICMPv6 *)icmp6_packet;
     const size_t len = sizeof(icmp6_packet);
@@ -48,7 +48,7 @@ TEST(IPAddr, icmp6csum)
     ASSERT_TRUE(csum == 0) << "checksum=" << csum << " but should be zero";
 }
 
-TEST(IPAddr, pool)
+TEST(IPAddr, Pool)
 {
     IP::Pool pool;
     pool.add_range(IP::Range(IP::Addr::from_string("1.2.3.4"), 16));
@@ -171,7 +171,7 @@ void do_shift_tests(const std::vector<test_case> &test_vectors, bool leftshift)
 
 
 /* test vectors are generated with gen_ip_shifts.py */
-TEST(IPAddr, left_shift)
+TEST(IPAddr, LeftShift)
 {
     std::vector<test_case> tests{{0, {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0x0, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff}},
                                  {1, {0x22, 0x44, 0x66, 0x88, 0xaa, 0xcc, 0xef, 0x11, 0x32, 0x1, 0x55, 0x77, 0x99, 0xbb, 0xdd, 0xfe}},
@@ -189,7 +189,7 @@ TEST(IPAddr, left_shift)
     do_shift_tests(tests, true);
 }
 
-TEST(IPAddr, left_shift_random)
+TEST(IPAddr, LeftShiftRandom)
 {
     std::vector<test_case> tests{
         {0, {0xbc, 0x46, 0xc, 0xcb, 0x8f, 0x85, 0x25, 0x9a, 0x74, 0x91, 0xd4, 0x80, 0xed, 0x2d, 0xe8, 0xe0}},
@@ -208,7 +208,7 @@ TEST(IPAddr, left_shift_random)
     do_shift_tests(tests, true);
 }
 
-TEST(IPAddr, right_shift)
+TEST(IPAddr, RightShift)
 {
     std::vector<test_case> tests{
         {0, {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0x0, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff}},
@@ -227,7 +227,7 @@ TEST(IPAddr, right_shift)
     do_shift_tests(tests, false);
 }
 
-TEST(IPAddr, right_shift_random)
+TEST(IPAddr, RightShiftRandom)
 {
     std::vector<test_case> tests{{0, {0x6d, 0xfb, 0x4a, 0x15, 0xb3, 0x6a, 0xd8, 0x25, 0x42, 0x83, 0x27, 0x83, 0xa9, 0x27, 0x2d, 0x3}},
                                  {1, {0x36, 0xfd, 0xa5, 0xa, 0xd9, 0xb5, 0x6c, 0x12, 0xa1, 0x41, 0x93, 0xc1, 0xd4, 0x93, 0x96, 0x81}},
@@ -245,7 +245,7 @@ TEST(IPAddr, right_shift_random)
     do_shift_tests(tests, false);
 }
 
-TEST(IPAddr, mapped_v4)
+TEST(IPAddr, MappedV4)
 {
     IP::Addr v6mapped{"::ffff:2332:123a"};
 

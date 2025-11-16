@@ -21,7 +21,7 @@ void validate(const ValidateCreds::Type type, const bool expected_result, const 
     EXPECT_EQ(actual_result, expected_result);
 }
 
-TEST(misc, creds1)
+TEST(Misc, Creds1)
 {
     validate(ValidateCreds::USERNAME, true, "foobar", true);
     validate(ValidateCreds::PASSWORD, true, "xxx\nyyy", false);
@@ -49,7 +49,7 @@ void validate_creds(std::string username, const std::string &password, const boo
     EXPECT_EQ(actual_result, expected_result);
 }
 
-TEST(misc, creds2)
+TEST(Misc, Creds2)
 {
     validate_creds("foo", "bar", true, true);
     validate_creds("", "bar", false, true);
@@ -70,7 +70,7 @@ void validate_utf8(const std::string &str, const size_t max_len_flags, const boo
     EXPECT_EQ(actual_result, expected_result);
 }
 
-TEST(misc, creds3)
+TEST(Misc, Creds3)
 {
     validate_utf8("", 0, true);
     validate_utf8("test", 0, true);

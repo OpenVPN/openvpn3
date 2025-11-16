@@ -124,7 +124,7 @@ nJ2lYJU6Un/10asIbvPuW/mIPX64b24D5EI=\n\
 -----END CERTIFICATE-----\n\
 ";
 
-TEST(authcert_openssl, ca)
+TEST(AuthcertOpenssl, Ca)
 {
     AuthCert ac;
     OpenSSLContext::load_cert_info_into_authcert(ac, ca_str);
@@ -134,7 +134,7 @@ TEST(authcert_openssl, ca)
     ASSERT_EQ(ac.to_string(), "CN=PG-MT-Test SN=7c:b8:49:01:03:b5:ed:06:ae:4f:24:c4:0c:ee:75:f3:34:9f:e3:2d ISSUER_FP=1d7dad803066f6d18771fb42b45a21618bb261cc");
 }
 
-TEST(authcert_openssl, cert)
+TEST(AuthcertOpenssl, Cert)
 {
     AuthCert ac;
     OpenSSLContext::load_cert_info_into_authcert(ac, cert_str);
@@ -144,7 +144,7 @@ TEST(authcert_openssl, cert)
     ASSERT_EQ(ac.to_string(), "CN=test-server SN=01 ISSUER_FP=d79cbf8db337fdb401d63a3a905a7bf712f693c1");
 }
 
-TEST(authcert_openssl, cert64)
+TEST(AuthcertOpenssl, Cert64)
 {
     AuthCert ac;
     OpenSSLContext::load_cert_info_into_authcert(ac, cert64_str);
@@ -154,7 +154,7 @@ TEST(authcert_openssl, cert64)
     ASSERT_EQ(ac.to_string(), "CN=test-server-64-bit-serial SN=01:23:45:67:89:ab:cd:ef ISSUER_FP=c62493563a3c04f6fbd839ef499394400a60ac55");
 }
 
-TEST(authcert_openssl, sn_0)
+TEST(AuthcertOpenssl, Sn0)
 {
     AuthCert ac("sn_0", 0);
     ASSERT_TRUE(ac.defined());
@@ -163,7 +163,7 @@ TEST(authcert_openssl, sn_0)
     ASSERT_EQ(ac.to_string(), "CN=sn_0 SN=00 ISSUER_FP=0000000000000000000000000000000000000000");
 }
 
-TEST(authcert_openssl, sn_1)
+TEST(AuthcertOpenssl, Sn1)
 {
     AuthCert ac("sn_1", 1);
     ASSERT_TRUE(ac.defined());
@@ -172,7 +172,7 @@ TEST(authcert_openssl, sn_1)
     ASSERT_EQ(ac.to_string(), "CN=sn_1 SN=01 ISSUER_FP=0000000000000000000000000000000000000000");
 }
 
-TEST(authcert_openssl, sn_255)
+TEST(AuthcertOpenssl, Sn255)
 {
     AuthCert ac("sn_255", 255);
     ASSERT_TRUE(ac.defined());
@@ -181,7 +181,7 @@ TEST(authcert_openssl, sn_255)
     ASSERT_EQ(ac.to_string(), "CN=sn_255 SN=ff ISSUER_FP=0000000000000000000000000000000000000000");
 }
 
-TEST(authcert_openssl, sn_256)
+TEST(AuthcertOpenssl, Sn256)
 {
     AuthCert ac("sn_256", 256);
     ASSERT_TRUE(ac.defined());
@@ -190,7 +190,7 @@ TEST(authcert_openssl, sn_256)
     ASSERT_EQ(ac.to_string(), "CN=sn_256 SN=01:00 ISSUER_FP=0000000000000000000000000000000000000000");
 }
 
-TEST(authcert_openssl, sn_32bit_pre)
+TEST(AuthcertOpenssl, Sn32bitPre)
 {
     AuthCert ac("sn_32bit_pre", 4294967295LL);
     ASSERT_TRUE(ac.defined());
@@ -199,7 +199,7 @@ TEST(authcert_openssl, sn_32bit_pre)
     ASSERT_EQ(ac.to_string(), "CN=sn_32bit_pre SN=ff:ff:ff:ff ISSUER_FP=0000000000000000000000000000000000000000");
 }
 
-TEST(authcert_openssl, sn_32bit_post)
+TEST(AuthcertOpenssl, Sn32bitPost)
 {
     AuthCert ac("sn_32bit_post", 4294967296LL);
     ASSERT_TRUE(ac.defined());
@@ -208,7 +208,7 @@ TEST(authcert_openssl, sn_32bit_post)
     ASSERT_EQ(ac.to_string(), "CN=sn_32bit_post SN=01:00:00:00:00 ISSUER_FP=0000000000000000000000000000000000000000");
 }
 
-TEST(authcert_openssl, sn_64bit)
+TEST(AuthcertOpenssl, Sn64bit)
 {
     AuthCert ac("sn_64bit", 81985529216486895LL);
     ASSERT_TRUE(ac.defined());
@@ -217,14 +217,14 @@ TEST(authcert_openssl, sn_64bit)
     ASSERT_EQ(ac.to_string(), "CN=sn_64bit SN=01:23:45:67:89:ab:cd:ef ISSUER_FP=0000000000000000000000000000000000000000");
 }
 
-TEST(authcert_openssl, empty)
+TEST(AuthcertOpenssl, Empty)
 {
     AuthCert ac;
     ASSERT_FALSE(ac.defined());
     ASSERT_FALSE(ac.sn_defined());
 }
 
-TEST(authcert_openssl, neg)
+TEST(AuthcertOpenssl, Neg)
 {
     AuthCert ac;
     OpenSSLContext::load_cert_info_into_authcert(ac, cert_neg_str);
@@ -246,7 +246,7 @@ static void verify_serial_parse(const std::string &parse, const std::string &exp
         THROW_FMT("verify_serial_parse: roundtrip failed (to_string) parse=%s expected=%s actual=[%s,%s]", parse, expected, ser.to_string(), ser1.to_string());
 }
 
-TEST(authcert_openssl, serial_parse)
+TEST(AuthcertOpenssl, SerialParse)
 {
     // successful cases
     verify_serial_parse("0", "00");
@@ -325,21 +325,21 @@ TEST(authcert_openssl, serial_parse)
 
 #ifdef OPENVPN_JSON_INTERNAL
 
-TEST(authcert_openssl, sn_json_1)
+TEST(AuthcertOpenssl, SnJson1)
 {
     const Json::Value jv(81985529216486895ll);
     const AuthCert::Serial ser(jv);
     ASSERT_EQ(ser.to_string(), "01:23:45:67:89:ab:cd:ef");
 }
 
-TEST(authcert_openssl, sn_json_2)
+TEST(AuthcertOpenssl, SnJson2)
 {
     const Json::Value jv("01:23:45:67:89:ab:cd:ef");
     const AuthCert::Serial ser(jv);
     ASSERT_EQ(ser.to_string(), "01:23:45:67:89:ab:cd:ef");
 }
 
-TEST(authcert_openssl, sn_json_type_err)
+TEST(AuthcertOpenssl, SnJsonTypeErr)
 {
     JY_EXPECT_THROW(
         {

@@ -5,7 +5,7 @@
 
 using namespace openvpn;
 
-TEST(misc, pipe)
+TEST(Misc, Pipe)
 {
     RedirectPipe::InOut io;
 

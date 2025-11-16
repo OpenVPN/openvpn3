@@ -37,14 +37,14 @@ OptionList parse_testcfg(std::string &config)
     return opts;
 }
 
-TEST(VerifyX509Name, config_missing_args)
+TEST(VerifyX509Name, ConfigMissingArgs)
 {
     // Missing both needed arguments
     std::string config = "verify-x509-name";
     EXPECT_THROW(VerifyX509Name err_no_args(parse_testcfg(config)), option_error);
 }
 
-TEST(VerifyX509Name, config_incorrect_type)
+TEST(VerifyX509Name, ConfigIncorrectType)
 {
     // Incorrect type
     std::string config = "verify-x509-name localhost nonsense-arg";
@@ -52,7 +52,7 @@ TEST(VerifyX509Name, config_incorrect_type)
                  option_error);
 }
 
-TEST(VerifyX509Name, config_correct_default_type)
+TEST(VerifyX509Name, ConfigCorrectDefaultType)
 {
     // Missing type argument - defaults to complete subject DN
     std::string config = "verify-x509-name \"C=KG, ST=NA, O=OpenVPN-TEST, CN=Test-Server, "
@@ -60,7 +60,7 @@ TEST(VerifyX509Name, config_correct_default_type)
     VerifyX509Name ok_default_subj(parse_testcfg(config));
 }
 
-TEST(VerifyX509Name, config_correct_subject)
+TEST(VerifyX509Name, ConfigCorrectSubject)
 {
     // Correct - type: subject
     std::string config = "verify-x509-name \"C=KG, ST=NA, O=OpenVPN-TEST, CN=Test-Server, "
@@ -68,14 +68,14 @@ TEST(VerifyX509Name, config_correct_subject)
     VerifyX509Name ok_subj(parse_testcfg(config));
 }
 
-TEST(VerifyX509Name, config_correct_name)
+TEST(VerifyX509Name, ConfigCorrectName)
 {
     // Correct - type: name
     std::string config = "verify-x509-name localhost name";
     VerifyX509Name ok_name(parse_testcfg(config));
 }
 
-TEST(VerifyX509Name, config_squote)
+TEST(VerifyX509Name, ConfigSquote)
 {
     // ensure that single quote is not treated as name part
     std::string config = "verify-x509-name 'server.example.org'";
@@ -83,14 +83,14 @@ TEST(VerifyX509Name, config_squote)
     ASSERT_TRUE(verify.verify("server.example.org"));
 }
 
-TEST(VerifyX509Name, config_correct_name_prefix)
+TEST(VerifyX509Name, ConfigCorrectNamePrefix)
 {
     // Correct - type: name-prefix
     std::string config = "verify-x509-name Server- name-prefix";
     VerifyX509Name ok_name_prefix(parse_testcfg(config));
 }
 
-TEST(VerifyX509Name, test_subject)
+TEST(VerifyX509Name, TestSubject)
 {
     std::string config = "verify-x509-name \"C=KG, ST=NA, O=OpenVPN-TEST, CN=Test-Server, "
                          "emailAddress=me@myhost.mydomain\"";
@@ -119,7 +119,7 @@ TEST(VerifyX509Name, test_subject)
     ASSERT_FALSE(verify_subj.verify("server-1.example.org"));
 }
 
-TEST(VerifyX509Name, test_name)
+TEST(VerifyX509Name, TestName)
 {
     std::string config = "verify-x509-name server-1.example.org name";
     VerifyX509Name verify(parse_testcfg(config));
@@ -129,7 +129,7 @@ TEST(VerifyX509Name, test_name)
     ASSERT_FALSE(verify.verify("server"));
 }
 
-TEST(VerifyX509Name, test_name_prefix)
+TEST(VerifyX509Name, TestNamePrefix)
 {
     std::string config = "verify-x509-name server name-prefix";
     VerifyX509Name verify(parse_testcfg(config));

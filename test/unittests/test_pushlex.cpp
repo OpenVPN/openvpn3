@@ -30,7 +30,7 @@ static std::string get_next(PushLex &pl)
 }
 
 // parse a PUSH_UPDATE message
-TEST(pushlex, test_1)
+TEST(Pushlex, Test1)
 {
     const std::string csv = "PUSH_UPDATE,route 10.9.0.0 255.255.0.0,route 8.8.8.8,route-ipv6 fd69::/64";
     PushLex pl(const_buf_from_string(csv), true);
@@ -41,7 +41,7 @@ TEST(pushlex, test_1)
 }
 
 // parse a PUSH_UPDATE message with tortured StandardLex quoting
-TEST(pushlex, test_2)
+TEST(Pushlex, Test2)
 {
     const std::string csv = "PUSH_UPDATE,echo \"one,two,three\",,route 1.2.3.4,echo \\\",echo \"foo\",echo \\,,echo fin,";
     PushLex pl(const_buf_from_string(csv), true);
@@ -57,7 +57,7 @@ TEST(pushlex, test_2)
 }
 
 // test PushLex with discard_prefix == false
-TEST(pushlex, test_3)
+TEST(Pushlex, Test3)
 {
     const std::string csv = "PUSH_UPDATE,route 10.9.0.0 255.255.0.0,route 8.8.8.8,route-ipv6 fd69::/64";
     PushLex pl(const_buf_from_string(csv), false);
@@ -69,7 +69,7 @@ TEST(pushlex, test_3)
 }
 
 // test PushLex with a null message
-TEST(pushlex, test_4)
+TEST(Pushlex, Test4)
 {
     const std::string csv = "PUSH_UPDATE,";
     PushLex pl(const_buf_from_string(csv), true);
@@ -77,7 +77,7 @@ TEST(pushlex, test_4)
 }
 
 // test PushLex with a null buffer
-TEST(pushlex, test_5)
+TEST(Pushlex, Test5)
 {
     ConstBuffer cbuf;
     PushLex pl(cbuf, true);
@@ -86,7 +86,7 @@ TEST(pushlex, test_5)
 
 // test that PushLex throws an exception when prefix
 // is unrecognized
-TEST(pushlex, test_exception_1)
+TEST(Pushlex, TestException1)
 {
     JY_EXPECT_THROW(
         {
@@ -99,7 +99,7 @@ TEST(pushlex, test_exception_1)
 
 // test that PushLex throws an exception when prefix
 // is not followed by a comma (",")
-TEST(pushlex, test_exception_2)
+TEST(Pushlex, TestException2)
 {
     JY_EXPECT_THROW(
         {

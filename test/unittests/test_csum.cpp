@@ -28,7 +28,7 @@ std::uint16_t ip_checksum_slow(const void *ip, size_t size)
     return static_cast<uint16_t>(~cksum);
 }
 
-TEST(misc, stress_csum)
+TEST(Misc, StressCsum)
 {
     RandomAPI::Ptr prng(new MTRand);
     BufferAllocated buf(256);

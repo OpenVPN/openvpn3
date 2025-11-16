@@ -346,7 +346,7 @@ SSLLib::SSLAPI::Config::Ptr CreateClientConfig(const std::string &pvtKey,
     return config;
 }
 
-TEST(AccCertCheckSsl, SslApiBuilder_ssl_handshake)
+TEST(AccCertCheckSsl, SslApiBuilderSslHandshake)
 {
     auto server = SslApiBuilder(CreateServerConfig(pvt_key_txt,
                                                    cert_txt,
@@ -370,7 +370,7 @@ TEST(AccCertCheckSsl, SslApiBuilder_ssl_handshake)
     }
 }
 
-TEST(AccCertCheckSsl, AccHandshaker_ssl_handshake)
+TEST(AccCertCheckSsl, AccHandshakerSslHandshake)
 {
     auto server = AccHandshaker(CreateServerConfig(pvt_key_txt,
                                                    cert_txt,
@@ -391,7 +391,7 @@ TEST(AccCertCheckSsl, AccHandshaker_ssl_handshake)
     }
 }
 
-TEST(AccCertCheckSsl, AccHandshaker_ssl_handshake_no_cli_ca)
+TEST(AccCertCheckSsl, AccHandshakerSslHandshakeNoCliCa)
 {
     auto server = AccHandshaker(CreateServerConfig(pvt_key_txt,
                                                    cert_txt,
@@ -412,7 +412,7 @@ TEST(AccCertCheckSsl, AccHandshaker_ssl_handshake_no_cli_ca)
     }
 }
 
-TEST(AccCertCheckSsl, AccHandshaker_ssl_handshake_fail)
+TEST(AccCertCheckSsl, AccHandshakerSslHandshakeFail)
 {
     auto server = AccHandshaker(CreateServerConfig(fail_pvt_key_txt,
                                                    fail_cert_txt,

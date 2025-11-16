@@ -8,7 +8,7 @@
 using namespace openvpn;
 
 // simple use case example; cases will mostly look like this
-TEST(ostream_container, simple_vector_int)
+TEST(OstreamContainer, SimpleVectorInt)
 {
     std::vector<int> vi{2, 4, 6, 8};
     std::ostringstream oss;
@@ -80,7 +80,7 @@ const TestItem<ssi> set_int_tests[] = {
     TestItem<ssi>({}, "[]"),
 };
 
-TEST(ostream_container, set_int)
+TEST(OstreamContainer, SetInt)
 {
     generic_test(set_int_tests);
 
@@ -99,7 +99,7 @@ const TestItem<sls> list_string_tests[] = {
     TestItem<sls>({"Institute has", "the finest", "professors"}, "[Institute has, the finest, professors]"),
 };
 
-TEST(ostream_container, list_string)
+TEST(OstreamContainer, ListString)
 {
     generic_test(list_string_tests);
     generic_ptr_test(list_string_tests);
@@ -111,7 +111,7 @@ const TestItem<svc> vector_complex_tests[] = {
     TestItem<svc>({{-5, 0}, {18, 500}, {1e6, 32}}, "[(-5,0), (18,500), (1e+06,32)]"),
 };
 
-TEST(ostream_container, vector_complex)
+TEST(OstreamContainer, VectorComplex)
 {
     generic_test(vector_complex_tests);
     generic_ptr_test(vector_complex_tests);
@@ -137,7 +137,7 @@ const TestItem<sdm> deque_custom_tests[] = {
     TestItem<sdm>({{-5, 0}, {18, 500}, {1e6, 32}}, "[-5+i0, 18+i500, 1e+06+i32]"),
 };
 
-TEST(ostream_container, deque_custom)
+TEST(OstreamContainer, DequeCustom)
 {
     generic_test(deque_custom_tests);
     generic_ptr_test(deque_custom_tests);

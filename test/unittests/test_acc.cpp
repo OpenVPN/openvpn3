@@ -35,7 +35,7 @@ static AppControlMessageConfig genACMC()
     return acmc;
 }
 
-TEST(customcontrolchannel, msgroundtrip)
+TEST(Customcontrolchannel, Msgroundtrip)
 {
     auto acmc = genACMC();
 
@@ -59,7 +59,7 @@ TEST(customcontrolchannel, msgroundtrip)
     ASSERT_EQ(recv_proto, "flower");
 }
 
-TEST(customcontrolchannel, msgroundtripascii)
+TEST(Customcontrolchannel, Msgroundtripascii)
 {
     auto acmc = genACMC();
 
@@ -85,7 +85,7 @@ TEST(customcontrolchannel, msgroundtripascii)
     ASSERT_EQ(recv_proto, "flower");
 }
 
-TEST(customcontrolchannel, msgroundtriponepacket)
+TEST(Customcontrolchannel, Msgroundtriponepacket)
 {
     auto acmc = genACMC();
 
@@ -106,7 +106,7 @@ TEST(customcontrolchannel, msgroundtriponepacket)
     ASSERT_EQ(recv_proto, "flower");
 }
 
-TEST(customcontrolchannel, tinymessage)
+TEST(Customcontrolchannel, Tinymessage)
 {
     std::string request{"I want a cookie!"};
     auto acmc = genACMC();
@@ -117,7 +117,7 @@ TEST(customcontrolchannel, tinymessage)
     EXPECT_EQ(cmsgs.at(0), std::string("ACC,fortune,16,A,I want a cookie!"));
 }
 
-TEST(customcontrolchannel, acctostr)
+TEST(Customcontrolchannel, Acctostr)
 {
     auto acmc = genACMC();
 
@@ -125,7 +125,7 @@ TEST(customcontrolchannel, acctostr)
     EXPECT_EQ(desc, "protocols foo flower, msg_size 140, encoding ascii base64");
 }
 
-TEST(customcontrolchannel, recv_with_nul)
+TEST(Customcontrolchannel, RecvWithNul)
 {
     std::string control_msg{"ACC,fortune,64,6,InsgIm1lIjogImZyb2ciLCAAeGZm/SJtc2ciOiAiSSBhbSAAS2VybWl0IiB9Ig=="};
 
@@ -145,7 +145,7 @@ TEST(customcontrolchannel, recv_with_nul)
     ASSERT_EQ(recv_proto, "fortune");
 }
 
-TEST(customcontrolchannel, send_with_nul)
+TEST(Customcontrolchannel, SendWithNul)
 {
     auto acmc = genACMC();
     acmc.supported_protocols.push_back("fortune");
@@ -162,7 +162,7 @@ TEST(customcontrolchannel, send_with_nul)
     EXPECT_EQ(cmsgs[0], expected_control_msg);
 }
 
-TEST(customcontrolchannel, test_incorrect_len)
+TEST(Customcontrolchannel, TestIncorrectLen)
 {
     std::string control_msg{"ACC,fortune,62,6,InsgIm1lIjogImZyb2ciLCAAeGZm/SJtc2ciOiAiSSBhbSAAS2VybWl0IiB9Ig=="};
 
@@ -173,7 +173,7 @@ TEST(customcontrolchannel, test_incorrect_len)
         parse_acc_message);
 }
 
-TEST(customcontrolchannel, test_wrong_header)
+TEST(Customcontrolchannel, TestWrongHeader)
 {
     std::string control_msg{"ABC,fortune,64,6,InsgIm1lIjogImZyb2ciLCAAeGZm/SJtc2ciOiAiSSBhbSAAS2VybWl0IiB9Ig=="};
 
@@ -184,7 +184,7 @@ TEST(customcontrolchannel, test_wrong_header)
         parse_acc_message);
 }
 
-TEST(customcontrolchannel, test_unsupported_encoding)
+TEST(Customcontrolchannel, TestUnsupportedEncoding)
 {
     std::string control_msg{"ACC,fortune,64,Q,InsgIm1lIjogImZyb2ciLCAAeGZm/SJtc2ciOiAiSSBhbSAAS2VybWl0IiB9Ig=="};
 
@@ -195,7 +195,7 @@ TEST(customcontrolchannel, test_unsupported_encoding)
         parse_acc_message);
 }
 
-TEST(customcontrolchannel, test_missing_message)
+TEST(Customcontrolchannel, TestMissingMessage)
 {
     std::string control_msg{"ABC,fortune,64,6"};
 

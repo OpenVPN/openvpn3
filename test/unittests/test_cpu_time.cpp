@@ -107,7 +107,7 @@ static void workload(const uint16_t multiplier)
 }
 
 
-TEST(CPUTime, cpu_time_pid)
+TEST(CPUTime, CpuTimePid)
 {
     // Measure the runtime of the workload
     MEASURE(start, chk_start, false);
@@ -180,7 +180,7 @@ void run_threads(const uint8_t num_threads)
 }
 
 
-TEST(CPUTime, cpu_time_thread_1)
+TEST(CPUTime, CpuTimeThread1)
 {
     // Meassure running a single worker thread
     MEASURE(parent_start, chk_parent_start, false);
@@ -200,7 +200,7 @@ TEST(CPUTime, cpu_time_thread_1)
 }
 
 
-TEST(CPUTime, cpu_time_thread_numcores)
+TEST(CPUTime, CpuTimeThreadNumcores)
 {
     // Use number of available cores
     auto num_cores = std::min(std::thread::hardware_concurrency(), 1U);

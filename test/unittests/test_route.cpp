@@ -26,7 +26,7 @@ void test_route_parse(const std::string &rstr, const std::string &expected, bool
     }
 }
 
-TEST(IPAddr, routeSet)
+TEST(IPAddr, RouteSet)
 {
     std::set<IP::Route> routes;
     routes.emplace("1.2.3.4/24");
@@ -67,7 +67,7 @@ void test_split(const LIST &rtlist, const std::string &expected)
     ASSERT_EQ(expected, out.str());
 }
 
-TEST(IPAddr, routeList4)
+TEST(IPAddr, RouteList4)
 {
     IP::Route4List routes;
     routes.emplace_back("1.2.3.4/24");
@@ -82,7 +82,7 @@ TEST(IPAddr, routeList4)
     test_split(routes, "1.2.3.0/24 1.2.3.0/25 1.2.3.128/25\n128.0.0.0/1 128.0.0.0/2 192.0.0.0/2\n");
 }
 
-TEST(IPAddr, routeList6)
+TEST(IPAddr, RouteList6)
 {
     IP::Route6List routes;
     routes.emplace_back("1:2:3:4:5:6:dead:beef/64");
@@ -93,7 +93,7 @@ TEST(IPAddr, routeList6)
     test_split(routes, "cafe:babe::/64 cafe:babe::/65 cafe:babe:0:0:8000::/65\n");
 }
 
-TEST(IPAddr, routeList)
+TEST(IPAddr, RouteList)
 {
     IP::RouteList routes;
     routes.emplace_back("1.2.3.4/24");
@@ -114,7 +114,7 @@ TEST(IPAddr, routeList)
                        "cafe:babe::/64 cafe:babe::/65 cafe:babe:0:0:8000::/65\n");
 }
 
-TEST(IPAddr, parseRoutes)
+TEST(IPAddr, ParseRoutes)
 {
     test_route_parse("1.2.3.4", "1.2.3.4/32", false);
     test_route_parse("192.168.4.0/24", "192.168.4.0/24", false);

@@ -242,24 +242,24 @@ void runTest(comppair alg, bool verbose = false)
 
 namespace unittests {
 #ifdef HAVE_SNAPPY
-TEST(Compression, snappy)
+TEST(Compression, Snappy)
 {
     runTest(comppair::snappy);
 }
 #endif
 #ifdef HAVE_LZO
-TEST(Compression, lzo)
+TEST(Compression, Lzo)
 {
     runTest(comppair::lzo);
 }
 
-TEST(Compression, lzoasym)
+TEST(Compression, Lzoasym)
 {
     runTest(comppair::lzoasym);
 }
 #endif
 #ifdef HAVE_LZ4
-TEST(Compression, lz4)
+TEST(Compression, Lz4)
 {
     runTest(comppair::lz4);
 }

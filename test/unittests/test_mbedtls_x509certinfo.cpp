@@ -57,7 +57,7 @@ std::string test_cert = "-----BEGIN CERTIFICATE-----\n"
                         "fYFKjF0w1F5ftfpCbucSMbqt\n"
                         "-----END CERTIFICATE-----\n";
 
-TEST(mbedTLS_x509_get_subject, old_format)
+TEST(MbedTLSX509GetSubject, OldFormat)
 {
     MbedTLSPKI::X509Cert x509crt(test_cert, "Embedded Test Server Cert", true);
     std::string expect(
@@ -68,7 +68,7 @@ TEST(mbedTLS_x509_get_subject, old_format)
     ASSERT_EQ(MbedTLSPKI::x509_get_subject(x509crt.get(), false), expect);
 }
 
-TEST(mbesTLS_x509_get_subject, new_format)
+TEST(MbesTLSX509GetSubject, NewFormat)
 {
     MbedTLSPKI::X509Cert x509crt(test_cert, "Embedded Test Server Cert", true);
     std::string expect(
@@ -78,7 +78,7 @@ TEST(mbesTLS_x509_get_subject, new_format)
     ASSERT_EQ(MbedTLSPKI::x509_get_subject(x509crt.get(), true), expect);
 }
 
-TEST(mbedTLS_x509_get_common_name, basic_check)
+TEST(MbedTLSX509GetCommonName, BasicCheck)
 {
     MbedTLSPKI::X509Cert x509crt(test_cert, "Embedded Test Server Cert", true);
 

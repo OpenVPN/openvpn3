@@ -27,7 +27,7 @@ const char key_text[] = "-----BEGIN OpenVPN Static key V1-----\n"
                         "f7591ead4710bd0e74c0b37e37c84374\n"
                         "-----END OpenVPN Static key V1-----\n";
 
-TEST(statickey, key1)
+TEST(Statickey, Key1)
 {
     // This test only tests if loading a static key works
     OpenVPNStaticKey sk;
@@ -35,7 +35,7 @@ TEST(statickey, key1)
     std::string rend = sk.render();
 }
 
-TEST(statickey, key2)
+TEST(Statickey, Key2)
 {
     StrongRandomAPI::Ptr rng(new SSLLib::RandomAPI());
     const size_t key_len = 16;
@@ -74,7 +74,7 @@ class StaticSink : public StaticSinkBase
     StaticKey k;
 };
 
-TEST(statickey, move)
+TEST(Statickey, Move)
 {
     OpenVPNStaticKey sk;
     sk.parse(std::string(key_text));

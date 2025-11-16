@@ -22,7 +22,7 @@ using namespace openvpn;
 #include <openssl/opensslv.h>
 #endif
 
-TEST(ssl, sslciphersuites)
+TEST(Ssl, Sslciphersuites)
 {
     SSLFactoryAPI::Ptr sslfact;
     SSLLib::SSLAPI::Config::Ptr sslcfg(new SSLLib::SSLAPI::Config);
@@ -44,7 +44,7 @@ TEST(ssl, sslciphersuites)
 #endif
 }
 
-TEST(ssl, sslciphers)
+TEST(Ssl, Sslciphers)
 {
     StrongRandomAPI::Ptr rng(new FakeSecureRand);
 
@@ -65,7 +65,7 @@ TEST(ssl, sslciphers)
     testLog->setPrintOutput(previousLogOutput);
 }
 
-TEST(ssl, tls_groups)
+TEST(Ssl, TlsGroups)
 {
     StrongRandomAPI::Ptr rng(new FakeSecureRand);
 
@@ -97,7 +97,7 @@ TEST(ssl, tls_groups)
 }
 
 #ifdef USE_OPENSSL
-TEST(ssl, translate_ciphers_openssl)
+TEST(Ssl, TranslateCiphersOpenssl)
 {
     bool previousLogOutput = testLog->isStdoutEnabled();
     testLog->setPrintOutput(false);
@@ -111,7 +111,7 @@ TEST(ssl, translate_ciphers_openssl)
 #endif
 
 #if defined(USE_OPENSSL) && OPENSSL_VERSION_NUMBER >= 0x30000000L
-TEST(ssl, enablelegacyProvider)
+TEST(Ssl, EnablelegacyProvider)
 {
     StrongRandomAPI::Ptr rng(new FakeSecureRand);
 

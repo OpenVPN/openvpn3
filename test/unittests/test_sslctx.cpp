@@ -236,7 +236,7 @@ I/+4kAlXuAKdhsXohHeBhC2ijg/kTOMDxEbEVv+SkCIUyM+dB8UtlPKOH9HEL5Xi
 +BpDSqO6Bha5+NAVUU7OdDsnzRwSWaD6lwIBAgICAOE=
 -----END DH PARAMETERS-----)";
 
-TEST(sslctx_ut, create_config)
+TEST(SslctxUt, CreateConfig)
 {
     SSLLib::SSLAPI::Config::Ptr config = new SSLLib::SSLAPI::Config;
     // Do not log extra data during unit test
@@ -244,7 +244,7 @@ TEST(sslctx_ut, create_config)
     EXPECT_TRUE(config);
 }
 
-TEST(sslctx_ut, config_new_factory_server)
+TEST(SslctxUt, ConfigNewFactoryServer)
 {
     SSLLib::SSLAPI::Config::Ptr config = new SSLLib::SSLAPI::Config;
     EXPECT_TRUE(config);
@@ -267,7 +267,7 @@ TEST(sslctx_ut, config_new_factory_server)
     EXPECT_TRUE(server);
 }
 
-TEST(sslctx_ut, config_new_factory_client)
+TEST(SslctxUt, ConfigNewFactoryClient)
 {
     SSLLib::SSLAPI::Config::Ptr config = new SSLLib::SSLAPI::Config;
     EXPECT_TRUE(config);
@@ -414,7 +414,7 @@ static inline auto MakeServer(Frame::Ptr frame, const std::string &pvt_key, cons
     return std::make_tuple(config, factory_server, server);
 }
 
-TEST(sslctx_ut, handshake)
+TEST(SslctxUt, Handshake)
 {
     Frame::Ptr frame(new Frame(Frame::Context(128, 4096, 4096 - 128, 0, 16, BufAllocFlags::NO_FLAGS)));
     auto [serverconfig, serverfactory, server] = MakeServer(frame, pvt_key_txt, cert_txt);
@@ -441,7 +441,7 @@ TEST(sslctx_ut, handshake)
     }
 }
 
-TEST(sslctx_ut, ca_handshake)
+TEST(SslctxUt, CaHandshake)
 {
     Frame::Ptr frame(new Frame(Frame::Context(128, 4096, 4096 - 128, 0, 16, BufAllocFlags::NO_FLAGS)));
     auto [serverconfig, serverfactory, server] = MakeServer(frame, pvt_key_txt, cert_txt);
@@ -468,7 +468,7 @@ TEST(sslctx_ut, ca_handshake)
     }
 }
 
-TEST(sslctx_ut, handshake_fail)
+TEST(SslctxUt, HandshakeFail)
 {
     Frame::Ptr frame(new Frame(Frame::Context(128, 4096, 4096 - 128, 0, 16, BufAllocFlags::NO_FLAGS)));
     auto [serverconfig, serverfactory, server] = MakeServer(frame, fail_pvt_key_txt, fail_cert_txt);
@@ -493,7 +493,7 @@ TEST(sslctx_ut, handshake_fail)
     FAIL();
 }
 
-TEST(sslctx_ut, clienthello)
+TEST(SslctxUt, Clienthello)
 {
     /* Checks that a server context correctly responds to a TLS 1.3 client hello */
     uint8_t clienthello[] = {

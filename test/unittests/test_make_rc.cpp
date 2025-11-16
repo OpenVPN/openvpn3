@@ -32,21 +32,21 @@ void f_val(test1 t1, int i)
 }
 
 // The `direct_enable` test verifies that an RcEnable object can be created directly.
-TEST(make_rc, direct_enable)
+TEST(MakeRc, DirectEnable)
 {
     auto rct1 = RcEnable<test1>::Create();
     EXPECT_EQ(rct1->i, 0);
 }
 
 // The `simple` test verifies that a reference-counted object can be created using `make_rc`.
-TEST(make_rc, simple)
+TEST(MakeRc, Simple)
 {
     auto rct1 = make_rc<test1>();
     EXPECT_EQ(rct1->i, 0);
 }
 
 // The `move_init` test verifies that a reference-counted object can be created by moving an existing object.
-TEST(make_rc, move_init)
+TEST(MakeRc, MoveInit)
 {
     auto t = test1();
     EXPECT_EQ(t.i, 0);
@@ -57,7 +57,7 @@ TEST(make_rc, move_init)
 
 // The `move_init_call` test verifies that a reference-counted object can be created by moving an existing object
 // and passed to a function.
-TEST(make_rc, move_init_call)
+TEST(MakeRc, MoveInitCall)
 {
     auto t = test1();
     EXPECT_EQ(t.i, 0);
@@ -66,21 +66,21 @@ TEST(make_rc, move_init_call)
 }
 
 // Calls using ref
-TEST(make_rc, call_value)
+TEST(MakeRc, CallValue)
 {
     auto rct1 = RcEnable<test1>::Create();
     f_ref(*rct1, 0);
 }
 
 // Calls using sliced value
-TEST(make_rc, call_slice)
+TEST(MakeRc, CallSlice)
 {
     auto rct1 = RcEnable<test1>::Create();
     f_val(*rct1, 0);
 }
 
 // make_rc TS
-TEST(make_rc, simple_ts)
+TEST(MakeRc, SimpleTs)
 {
     auto rct1 = make_rc<test1, RC<thread_safe_refcount>>();
     EXPECT_EQ(rct1->i, 0);

@@ -90,7 +90,7 @@ constexpr const char *laterne_signd = "-----BEGIN PKCS7-----\n"
                                       "-----END PKCS7-----";
 
 
-TEST(OpenSSL, verify_broken_pkcs7)
+TEST(OpenSSL, VerifyBrokenPkcs7)
 {
     std::list<OpenSSLPKI::X509> certs;
 
@@ -104,7 +104,7 @@ TEST(OpenSSL, verify_broken_pkcs7)
         "OpenSSLSign::verify_pkcs7: verification failed");
 }
 
-TEST(OpenSSL, verify_valid_pkcs7)
+TEST(OpenSSL, VerifyValidPkcs7)
 {
     std::list<OpenSSLPKI::X509> certs;
 
@@ -113,7 +113,7 @@ TEST(OpenSSL, verify_valid_pkcs7)
     EXPECT_NO_THROW(OpenSSLSign::verify_pkcs7(certs, laterne_sig, laterne));
 }
 
-TEST(OpenSSL, verify_nodetach_pkcs7)
+TEST(OpenSSL, VerifyNodetachPkcs7)
 {
     std::list<OpenSSLPKI::X509> certs;
 

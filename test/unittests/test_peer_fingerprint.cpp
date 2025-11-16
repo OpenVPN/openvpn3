@@ -26,7 +26,7 @@ std::vector<uint8_t> test_fingerprint = {
     // clang-format on
 };
 
-TEST(PeerFingerprint, parse_config)
+TEST(PeerFingerprint, ParseConfig)
 {
     OptionList cfg;
     cfg.parse_from_config(
@@ -68,7 +68,7 @@ TEST(PeerFingerprint, parse_config)
 }
 
 
-TEST(PeerFingerprint, malformed)
+TEST(PeerFingerprint, Malformed)
 {
     OptionList cfg;
     cfg.parse_from_config(
@@ -116,7 +116,7 @@ TEST(PeerFingerprint, malformed)
 }
 
 
-TEST(PeerFingerprint, stringify)
+TEST(PeerFingerprint, Stringify)
 {
     std::string hex_fp("01:f5:a6:4d:4a:cb:65:e1:8a:9f:55:89:7f:77:a0:79:aa:fb:cc:a1:37:2f:d8:b3:47:aa:9d:e3:d0:76:b1:55");
     PeerFingerprint fp(hex_fp, test_fingerprint.size());
@@ -124,7 +124,7 @@ TEST(PeerFingerprint, stringify)
 }
 
 
-TEST(PeerFingerprint, match_empty)
+TEST(PeerFingerprint, MatchEmpty)
 {
     PeerFingerprint fp(test_fingerprint);
     PeerFingerprints fps;
@@ -133,7 +133,7 @@ TEST(PeerFingerprint, match_empty)
 }
 
 
-TEST(PeerFingerprint, match)
+TEST(PeerFingerprint, Match)
 {
     OptionList cfg;
     cfg.parse_from_config(
@@ -149,7 +149,7 @@ TEST(PeerFingerprint, match)
     ASSERT_EQ(fps.match(fp), true);
 }
 
-TEST(PeerFingerprint, no_match)
+TEST(PeerFingerprint, NoMatch)
 {
     OptionList cfg;
     cfg.parse_from_config(

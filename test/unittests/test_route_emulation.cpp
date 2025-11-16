@@ -182,7 +182,7 @@ TEST_F(RouteEmulationTest, ExcludeSubnetsNoDefault)
     ASSERT_EQ(tb->routes.at(0), "2500:1000::/33");
 }
 
-TEST_F(RouteEmulationTest, excludeServer)
+TEST_F(RouteEmulationTest, ExcludeServer)
 {
     setup(false, true);
     emu->add_default_routes(true, true);
@@ -205,7 +205,7 @@ TEST_F(RouteEmulationTest, excludeServer)
     ASSERT_TRUE(tb->containsIP("::4.3.2.1"));
 }
 
-TEST_F(RouteEmulationTest, nestedIPRoutes)
+TEST_F(RouteEmulationTest, NestedIPRoutes)
 {
     // This sets up a number of routes that are all included in each
 

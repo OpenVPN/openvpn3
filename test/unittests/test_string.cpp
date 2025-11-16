@@ -15,90 +15,90 @@
 
 using namespace openvpn;
 
-TEST(ovpn_string_suite, test_args_to_string_empty)
+TEST(OvpnStringSuite, TestArgsToStringEmpty)
 {
     const auto str = string::args_to_string(", ");
     EXPECT_EQ(str, "");
 }
 
-TEST(ovpn_string_suite, test_args_to_string_one)
+TEST(OvpnStringSuite, TestArgsToStringOne)
 {
     const auto str = string::args_to_string(", ", "a");
     EXPECT_EQ(str, "a");
 }
 
-TEST(ovpn_string_suite, test_args_to_string_two)
+TEST(OvpnStringSuite, TestArgsToStringTwo)
 {
     const auto str = string::args_to_string(", ", "a", "b");
     EXPECT_EQ(str, "a, b");
 }
 
-TEST(ovpn_string_suite, test_args_to_string_three)
+TEST(OvpnStringSuite, TestArgsToStringThree)
 {
     const auto str = string::args_to_string(", ", "a", "b", "c");
     EXPECT_EQ(str, "a, b, c");
 }
 
-TEST(ovpn_string_suite, test_args_to_string_four)
+TEST(OvpnStringSuite, TestArgsToStringFour)
 {
     const auto str = string::args_to_string(", ", "a", "b", "c", "d");
     EXPECT_EQ(str, "a, b, c, d");
 }
 
-TEST(ovpn_string_suite, test_args_to_string_two_mixed)
+TEST(OvpnStringSuite, TestArgsToStringTwoMixed)
 {
     const auto str = string::args_to_string(", ", "a", 1);
     EXPECT_EQ(str, "a, 1");
 }
 
-TEST(ovpn_string_suite, test_args_to_string_three_mixed)
+TEST(OvpnStringSuite, TestArgsToStringThreeMixed)
 {
     const auto str = string::args_to_string("", "a", 1, "b");
     EXPECT_EQ(str, "a1b");
 }
 
-TEST(ovpn_string_suite, test_format_safe_empty)
+TEST(OvpnStringSuite, TestFormatSafeEmpty)
 {
     const auto str = string::format_safe("");
     EXPECT_TRUE(str);
     EXPECT_EQ(*str, "");
 }
 
-TEST(ovpn_string_suite, test_format_safe_zero)
+TEST(OvpnStringSuite, TestFormatSafeZero)
 {
     const auto str = string::format_safe("a");
     EXPECT_TRUE(str);
     EXPECT_EQ(*str, "a");
 }
 
-TEST(ovpn_string_suite, test_format_safe_one)
+TEST(OvpnStringSuite, TestFormatSafeOne)
 {
     const auto str = string::format_safe("a {}", 1);
     EXPECT_TRUE(str);
     EXPECT_EQ(*str, "a 1");
 }
 
-TEST(ovpn_string_suite, test_format_safe_two)
+TEST(OvpnStringSuite, TestFormatSafeTwo)
 {
     const auto str = string::format_safe("a {} {}", 1, 2);
     EXPECT_TRUE(str);
     EXPECT_EQ(*str, "a 1 2");
 }
 
-TEST(ovpn_string_suite, test_format_safe_three)
+TEST(OvpnStringSuite, TestFormatSafeThree)
 {
     const auto str = string::format_safe("a {} {} {}", 1, "2", 3);
     EXPECT_TRUE(str);
     EXPECT_EQ(*str, "a 1 2 3");
 }
 
-TEST(ovpn_string_suite, test_format_safe_malformed)
+TEST(OvpnStringSuite, TestFormatSafeMalformed)
 {
     const auto str = string::format_safe("a } {} {} {}", 1, "2", 3);
     EXPECT_FALSE(str);
 }
 
-TEST(ovpn_string_suite, test_format_safe_malformed2)
+TEST(OvpnStringSuite, TestFormatSafeMalformed2)
 {
     const auto str = string::format_safe("a {} {} {} {}", 1, "2", 3);
     EXPECT_FALSE(str);

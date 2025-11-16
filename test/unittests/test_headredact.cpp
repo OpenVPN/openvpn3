@@ -46,13 +46,13 @@ static const std::string out2 = "HEADERS: POST /pg HTTP/1.1\r\n"
                                 "         Accept: */*\r\n"
                                 "         \r\n";
 
-TEST(http, headredact1)
+TEST(Http, Headredact1)
 {
     const std::string out = HTTP::headers_redact(in1);
     ASSERT_EQ(out, out1);
 }
 
-TEST(http, headredact2)
+TEST(Http, Headredact2)
 {
     const std::string out = HTTP::headers_redact(in2);
     ASSERT_EQ(out, out2);

@@ -26,7 +26,7 @@ namespace PacketID {
 using id_t = openvpn::reliable::id_t;
 }
 
-TEST(reliable, ack)
+TEST(Reliable, Ack)
 {
     std::string expected{"0400000021000000160000000b00000001\n"};
     std::ostringstream actual;
@@ -62,7 +62,7 @@ TEST(reliable, ack)
     EXPECT_EQ(actual2.str(), expected2);
 }
 
-TEST(reliable, ack_dup)
+TEST(Reliable, AckDup)
 {
     std::ostringstream actual;
     ReliableAck ack{};
@@ -107,7 +107,7 @@ TEST(reliable, ack_dup)
     EXPECT_EQ(actual.str(), expected3);
 }
 
-TEST(reliable, simple_packet)
+TEST(Reliable, SimplePacket)
 {
     ReliableAck ack{};
 
@@ -330,7 +330,7 @@ struct test_params
     unsigned int drop_prob;
 };
 
-TEST(reliable, simulation)
+TEST(Reliable, Simulation)
 {
     MTRand rand;
     std::vector<test_params> sim_cases = {
@@ -373,7 +373,7 @@ TEST(reliable, simulation)
 // to show the ranges of test parameters, relsize, wiresize, reorder_prob, and
 // drop_prob that the original author inttended
 
-TEST(reliable, test1)
+TEST(Reliable, Test1)
 {
   MTRand rand;
   const Time base = Time::now();
@@ -383,7 +383,7 @@ TEST(reliable, test1)
   test(rand, base, end, step, end_sends, 4, 4, 10, 16);
 }
 
-TEST(reliable, test2)
+TEST(Reliable, Test2)
 {
   MTRand rand;
   const Time base = Time::now();

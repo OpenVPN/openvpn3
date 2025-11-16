@@ -34,7 +34,7 @@ struct test_optional
     int i = 0;
 };
 
-TEST(optional_ref_suite, simple)
+TEST(OptionalRefSuite, Simple)
 {
     int i = 42;
     auto o = openvpn::optional<int &>(i);
@@ -43,7 +43,7 @@ TEST(optional_ref_suite, simple)
     EXPECT_EQ(*o, i);
 }
 
-TEST(optional_ref_suite, simple_const)
+TEST(OptionalRefSuite, SimpleConst)
 {
     const int i = 42;
     auto o = openvpn::optional<const int &>(i);
@@ -52,7 +52,7 @@ TEST(optional_ref_suite, simple_const)
     EXPECT_EQ(*o, i);
 }
 
-TEST(optional_ref_suite, assign_to)
+TEST(OptionalRefSuite, AssignTo)
 {
     int i = 42;
     auto o = openvpn::optional<int &>(i);
@@ -64,7 +64,7 @@ TEST(optional_ref_suite, assign_to)
     EXPECT_EQ(*o, j);
 }
 
-TEST(optional_ref_suite, assign_thru)
+TEST(OptionalRefSuite, AssignThru)
 {
     int i = 42;
     auto o = openvpn::optional<int &>(i);
@@ -74,7 +74,7 @@ TEST(optional_ref_suite, assign_thru)
     EXPECT_EQ(i, 96);
 }
 
-TEST(optional_ref_suite, assign_ptr_thru)
+TEST(OptionalRefSuite, AssignPtrThru)
 {
     int i = 42;
     auto o = openvpn::optional<int &>(&i);
@@ -84,21 +84,21 @@ TEST(optional_ref_suite, assign_ptr_thru)
     EXPECT_EQ(i, 96);
 }
 
-TEST(optional_ref_suite, invalid)
+TEST(OptionalRefSuite, Invalid)
 {
     auto o = openvpn::optional<int &>();
     EXPECT_THROW(o.value(), std::runtime_error);
     EXPECT_THROW(*o, std::runtime_error);
 }
 
-TEST(optional_ref_suite, invalid_nullopt)
+TEST(OptionalRefSuite, InvalidNullopt)
 {
     auto o = openvpn::optional<int &>(std::nullopt);
     EXPECT_THROW(o.value(), std::runtime_error);
     EXPECT_THROW(*o, std::runtime_error);
 }
 
-TEST(optional_ref_suite, assign_nullopt)
+TEST(OptionalRefSuite, AssignNullopt)
 {
     int i = 42;
     auto o = openvpn::optional<int &>(i);
@@ -111,7 +111,7 @@ TEST(optional_ref_suite, assign_nullopt)
 }
 
 
-TEST(optional_ref_suite, value_or)
+TEST(OptionalRefSuite, ValueOr)
 {
     int i = 42;
     auto o = openvpn::optional<int &>(i);
@@ -119,14 +119,14 @@ TEST(optional_ref_suite, value_or)
     EXPECT_EQ(o.value_or(96), 42);
 }
 
-TEST(optional_ref_suite, value_or_default)
+TEST(OptionalRefSuite, ValueOrDefault)
 {
     auto o = openvpn::optional<int &>(std::nullopt);
     EXPECT_FALSE(o);
     EXPECT_EQ(o.value_or(42), 42);
 }
 
-TEST(optional_ref_suite, value_or_default_lvalue)
+TEST(OptionalRefSuite, ValueOrDefaultLvalue)
 {
     auto o = openvpn::optional<int &>(std::nullopt);
     EXPECT_FALSE(o);
@@ -134,7 +134,7 @@ TEST(optional_ref_suite, value_or_default_lvalue)
     EXPECT_EQ(o.value_or(i), i);
 }
 
-TEST(optional_ref_suite, deref)
+TEST(OptionalRefSuite, Deref)
 {
     auto t = test_optional();
     auto o = openvpn::optional<test_optional &>(t);
@@ -143,7 +143,7 @@ TEST(optional_ref_suite, deref)
     EXPECT_EQ(o->i, 42);
 }
 
-TEST(optional_ref_suite, deref_invalid)
+TEST(OptionalRefSuite, DerefInvalid)
 {
     auto o = openvpn::optional<test_optional &>();
     EXPECT_FALSE(o);

@@ -29,7 +29,7 @@ auto g(const ThingT &t)
     return ThingT(t * 4);
 }
 
-TEST(IntrinsicType, overload1)
+TEST(IntrinsicType, Overload1)
 {
     // EXPECT_EQ(f(2), 4); // fails, no match
     // EXPECT_EQ(f(int(2)), int(4)); // fails, no match
@@ -37,7 +37,7 @@ TEST(IntrinsicType, overload1)
     EXPECT_EQ(f(Thing2(2)), Thing2(6));
 }
 
-TEST(IntrinsicType, template_inst)
+TEST(IntrinsicType, TemplateInst)
 {
     EXPECT_EQ(g(2), 8);
     EXPECT_EQ(g(Thing1(2)), Thing1(8));
@@ -49,14 +49,14 @@ inline auto f(const int t)
     return t;
 }
 
-TEST(IntrinsicType, overload2)
+TEST(IntrinsicType, Overload2)
 {
     EXPECT_EQ(f(2), 2); // now it's fine
     EXPECT_EQ(f(f(Thing1(1))), Thing1(4));
     EXPECT_EQ(f(f(Thing2(1))), Thing2(9));
 }
 
-TEST(IntrinsicType, logic_not)
+TEST(IntrinsicType, LogicNot)
 {
     auto a = Thing1(1);
 
@@ -65,7 +65,7 @@ TEST(IntrinsicType, logic_not)
     EXPECT_TRUE(a == Thing1(~1));
 }
 
-TEST(IntrinsicType, logic_or_0)
+TEST(IntrinsicType, LogicOr0)
 {
     auto a = Thing1(1);
     Thing1 b(2);
@@ -78,7 +78,7 @@ TEST(IntrinsicType, logic_or_0)
     EXPECT_TRUE(b == Thing1(2));
 }
 
-TEST(IntrinsicType, logic_or_1)
+TEST(IntrinsicType, LogicOr1)
 {
     auto a = Thing1(1);
     Thing1 b(2);
@@ -96,7 +96,7 @@ TEST(IntrinsicType, logic_or_1)
     EXPECT_EQ(f(a | b), Thing1(6));
 }
 
-TEST(IntrinsicType, logic_and_0)
+TEST(IntrinsicType, LogicAnd0)
 {
     auto a = Thing1(1);
     Thing1 b(2);
@@ -109,7 +109,7 @@ TEST(IntrinsicType, logic_and_0)
     EXPECT_TRUE(b == Thing1(2));
 }
 
-TEST(IntrinsicType, logic_and_1)
+TEST(IntrinsicType, LogicAnd1)
 {
     Thing1 a(1);
     Thing1 b(2);
@@ -126,7 +126,7 @@ TEST(IntrinsicType, logic_and_1)
     EXPECT_EQ(f(a & c), Thing1(2));
 }
 
-TEST(IntrinsicType, math_add_0)
+TEST(IntrinsicType, MathAdd0)
 {
     auto a = Thing1(1);
     Thing1 b(2);
@@ -139,7 +139,7 @@ TEST(IntrinsicType, math_add_0)
     EXPECT_TRUE(b == Thing1(2));
 }
 
-TEST(IntrinsicType, math_add_1)
+TEST(IntrinsicType, MathAdd1)
 {
     Thing1 a(1);
     Thing1 b(2);
@@ -157,7 +157,7 @@ TEST(IntrinsicType, math_add_1)
     EXPECT_EQ(f(a + c), Thing1(8));
 }
 
-TEST(IntrinsicType, math_sub_0)
+TEST(IntrinsicType, MathSub0)
 {
     auto a = Thing1(1);
     Thing1 b(2);
@@ -170,7 +170,7 @@ TEST(IntrinsicType, math_sub_0)
     EXPECT_TRUE(b == Thing1(2));
 }
 
-TEST(IntrinsicType, math_sub_1)
+TEST(IntrinsicType, MathSub1)
 {
     Thing1 a(1);
     Thing1 b(2);
@@ -188,7 +188,7 @@ TEST(IntrinsicType, math_sub_1)
     EXPECT_EQ(f(a - c), Thing1(-4));
 }
 
-TEST(IntrinsicType, math_mul_0)
+TEST(IntrinsicType, MathMul0)
 {
     auto a = Thing1(1);
     Thing1 b(2);
@@ -201,7 +201,7 @@ TEST(IntrinsicType, math_mul_0)
     EXPECT_EQ(b, Thing1(2));
 }
 
-TEST(IntrinsicType, math_mul_1)
+TEST(IntrinsicType, MathMul1)
 {
     Thing1 a(1);
     Thing1 b(2);
@@ -219,7 +219,7 @@ TEST(IntrinsicType, math_mul_1)
     EXPECT_EQ(f(a * c), Thing1(6));
 }
 
-TEST(IntrinsicType, math_div_0)
+TEST(IntrinsicType, MathDiv0)
 {
     auto a = Thing1(4);
     Thing1 b(2);
@@ -232,7 +232,7 @@ TEST(IntrinsicType, math_div_0)
     EXPECT_EQ(b, Thing1(2));
 }
 
-TEST(IntrinsicType, math_div_1)
+TEST(IntrinsicType, MathDiv1)
 {
     Thing1 a(120);
     Thing1 b(2);

@@ -145,17 +145,17 @@ void test_dh()
 
 static bool verbose_output = false;
 
-TEST(PKI, crl)
+TEST(PKI, Crl)
 {
     override_logOutput(verbose_output, test_cert_crl);
 }
 
-TEST(PKI, pkey)
+TEST(PKI, Pkey)
 {
     override_logOutput(verbose_output, test_pkey);
 }
 
-TEST(PKI, dh)
+TEST(PKI, Dh)
 {
     override_logOutput(verbose_output, test_dh);
 }

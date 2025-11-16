@@ -60,7 +60,7 @@ void do_packet_id_recv_test_short_ids(bool usewide)
     testcase(pr, 41, 0xffffffff, Error::SUCCESS);
 }
 
-TEST(misc, do_packet_id_recv_test_long_ids)
+TEST(Misc, DoPacketIdRecvTestLongIds)
 {
     using PIDRecv = PacketIDDataReceiveType<3, 5>;
     PIDRecv pr;
@@ -80,12 +80,12 @@ TEST(misc, do_packet_id_recv_test_long_ids)
 }
 
 
-TEST(misc, pktid_test_data_32bit)
+TEST(Misc, PktidTestData32bit)
 {
     do_packet_id_recv_test_short_ids(false);
 }
 
-TEST(misc, pktid_test_data_64bit)
+TEST(Misc, PktidTestData64bit)
 {
     do_packet_id_recv_test_short_ids(true);
 }
@@ -169,7 +169,7 @@ class PacketIDDataSendTest : public openvpn::PacketIDDataSend
     }
 };
 
-TEST(misc, pktid_32_bit_overrun_32bit_counter)
+TEST(Misc, Pktid32BitOverrun32bitCounter)
 {
     PacketIDDataSendTest pidsend{false, 0xfffffffc};
 
@@ -183,7 +183,7 @@ TEST(misc, pktid_32_bit_overrun_32bit_counter)
 }
 
 
-TEST(misc, pktid_32_bit_overrun_64bit_counter)
+TEST(Misc, Pktid32BitOverrun64bitCounter)
 {
     PacketIDDataSendTest pidsend{true, 0xfffffffd};
 
@@ -201,7 +201,7 @@ TEST(misc, pktid_32_bit_overrun_64bit_counter)
 }
 
 
-TEST(misc, pktid_64_bit_overrun_64bit_counter)
+TEST(Misc, Pktid64BitOverrun64bitCounter)
 {
     PacketIDDataSendTest pidsend{true, 0xfffffffffffffffc};
 
@@ -214,7 +214,7 @@ TEST(misc, pktid_64_bit_overrun_64bit_counter)
     EXPECT_THROW(ret = pidsend.next(), PacketIDDataSend::packet_id_wrap);
 }
 
-TEST(misc, pktid_32_bit_warn)
+TEST(Misc, Pktid32BitWarn)
 {
     PacketIDDataSendTest pidsend{false, 0xfefffffe};
 
@@ -232,7 +232,7 @@ TEST(misc, pktid_32_bit_warn)
     EXPECT_TRUE(pidsend.wrap_warning());
 }
 
-TEST(misc, pktid_64_bit_warn_32bit)
+TEST(Misc, Pktid64BitWarn32bit)
 {
     // Test we are not warning at 32bit
     PacketIDDataSendTest pidsend{true, 0xfefffffe};
@@ -252,7 +252,7 @@ TEST(misc, pktid_64_bit_warn_32bit)
 }
 
 
-TEST(misc, pktid_data_perf)
+TEST(Misc, PktidDataPerf)
 {
     {
         long count = 0;

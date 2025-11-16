@@ -52,7 +52,7 @@ const std::string expected = "7\n"
                              "EX1: bad foo\n"
                              "EX2: this prog is done 4 U\n";
 
-TEST(misc, format)
+TEST(Misc, Format)
 {
     std::ostringstream os;
 

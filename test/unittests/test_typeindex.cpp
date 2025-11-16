@@ -103,7 +103,7 @@ static Vec create_vec()
 } // namespace
 
 // simple test of self()
-TEST(typeindex, test)
+TEST(Typeindex, Test)
 {
     using StringWrap = Wrapper<std::string>;
 
@@ -124,7 +124,7 @@ TEST(typeindex, test)
 #ifndef INSTRUMENTATION_SLOWDOWN
 
 // test performance of self() as alternative to dynamic_cast
-TEST(typeindex, perf_test_fast)
+TEST(Typeindex, PerfTestFast)
 {
     using StringWrap = Wrapper<std::string>;
 
@@ -147,7 +147,7 @@ TEST(typeindex, perf_test_fast)
 }
 
 // as a control, test performance of dynamic_cast
-TEST(typeindex, perf_test_dynamic)
+TEST(Typeindex, PerfTestDynamic)
 {
     using StringWrap = Wrapper<std::string>;
 

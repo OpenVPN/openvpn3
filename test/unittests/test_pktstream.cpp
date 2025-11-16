@@ -116,22 +116,22 @@ static void do_test(const bool grow, const bool verbose)
         OPENVPN_LOG("count=" << count);
 }
 
-TEST(pktstream, test_16)
+TEST(Pktstream, Test16)
 {
     do_test<PacketStream<std::uint16_t>>(false, false);
 }
 
-TEST(pktstream, test_32)
+TEST(Pktstream, Test32)
 {
     do_test<PacketStream<std::uint32_t>>(false, false);
 }
 
-TEST(pktstream, test_16_residual)
+TEST(Pktstream, Test16Residual)
 {
     do_test<PacketStreamResidual<std::uint16_t>>(true, false);
 }
 
-TEST(pktstream, test_32_residual)
+TEST(Pktstream, Test32Residual)
 {
     do_test<PacketStreamResidual<std::uint32_t>>(true, false);
 }
@@ -171,12 +171,12 @@ static void validate_size_test()
     validate_size<PKTSTREAM>(grow, 2049, false);  // exceeded payload, but okay with growable buffer
 }
 
-TEST(pktstream, validate_size_16)
+TEST(Pktstream, ValidateSize16)
 {
     validate_size_test<PacketStream<std::uint16_t>>();
 }
 
-TEST(pktstream, validate_size_32)
+TEST(Pktstream, ValidateSize32)
 {
     validate_size_test<PacketStream<std::uint32_t>>();
 }

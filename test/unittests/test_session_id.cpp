@@ -7,7 +7,7 @@
 
 using namespace openvpn;
 
-TEST(sessid, test1)
+TEST(Sessid, Test1)
 {
     SSLLib::RandomAPI rng;
 
@@ -36,7 +36,7 @@ TEST(sessid, test1)
         }
     }
 }
-TEST(sessid, test2)
+TEST(Sessid, Test2)
 {
     SSLLib::RandomAPI rng;
     {
@@ -52,13 +52,13 @@ TEST(sessid, test2)
     }
 }
 
-TEST(sessid, test3)
+TEST(Sessid, Test3)
 {
     const SessionID64 ns;
     ASSERT_FALSE(ns.defined()) << "FAIL default constructed SessionID is defined";
 }
 
-TEST(sessid, test4)
+TEST(Sessid, Test4)
 {
     SSLLib::RandomAPI rng;
     const SessionID128 x;
@@ -95,7 +95,7 @@ TEST(sessid, test4)
     ASSERT_FALSE(s2) << "test4: shouldn't have found s2";
 }
 
-TEST(sessid, speed)
+TEST(Sessid, Speed)
 {
     SSLLib::RandomAPI rng;
 
@@ -158,7 +158,7 @@ std::string test(Session *session)
     return "Name: " + nam + " SessID: " + sid.to_string();
 }
 
-TEST(sessid, refscope1)
+TEST(Sessid, Refscope1)
 {
     FakeSecureRand fake_rng(0x42);
     Session sess(fake_rng);
@@ -182,7 +182,7 @@ static void tryit(RandomAPI &rng, TokenEncryptDecrypt &encdec)
     ASSERT_TRUE(::memcmp(data1, data3, TokenEncrypt::Key::SIZE) == 0);
 }
 
-TEST(sessid, tokenEncrypt)
+TEST(Sessid, TokenEncrypt)
 {
     StrongRandomAPI::Ptr rng(new SSLLib::RandomAPI());
     const TokenEncrypt::Key key(*rng);

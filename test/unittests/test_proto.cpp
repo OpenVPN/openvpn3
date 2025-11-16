@@ -1242,7 +1242,7 @@ class ProtoUnitTest : public testing::Test
     }
 };
 
-TEST_F(ProtoUnitTest, base_single_thread_tls_ekm)
+TEST_F(ProtoUnitTest, BaseSingleThreadTlsEkm)
 {
     if (!openvpn::SSLLib::SSLAPI::support_key_material_export())
         GTEST_SKIP_("our mbed TLS implementation does not support TLS EKM");
@@ -1254,7 +1254,7 @@ TEST_F(ProtoUnitTest, base_single_thread_tls_ekm)
     EXPECT_EQ(ret, 0);
 }
 
-TEST_F(ProtoUnitTest, base_single_thread_no_tls_ekm)
+TEST_F(ProtoUnitTest, BaseSingleThreadNoTlsEkm)
 {
     int ret = 0;
 
@@ -1267,7 +1267,7 @@ TEST_F(ProtoUnitTest, base_single_thread_no_tls_ekm)
 // so we can't set mismatched client and server TLS versions.
 // For now, just test this for OPENSSL which is full-featured.
 #ifdef USE_OPENSSL
-TEST_F(ProtoUnitTest, base_single_thread_tls_version_mismatch)
+TEST_F(ProtoUnitTest, BaseSingleThreadTlsVersionMismatch)
 {
     int ret = test(1, false, true);
     EXPECT_NE(ret, 0);
@@ -1275,26 +1275,26 @@ TEST_F(ProtoUnitTest, base_single_thread_tls_version_mismatch)
 #endif
 
 #ifdef USE_TLS_CRYPT_V2
-TEST_F(ProtoUnitTest, base_single_thread_tls_crypt_v2_with_embedded_serverkey)
+TEST_F(ProtoUnitTest, BaseSingleThreadTlsCryptV2WithEmbeddedServerkey)
 {
     int ret = test_retry(1, N_RETRIES, false, false, "tls-crypt-v2-client-with-serverkey.key");
     EXPECT_EQ(ret, 0);
 }
 
-TEST_F(ProtoUnitTest, base_single_thread_tls_crypt_v2_with_missing_embedded_serverkey)
+TEST_F(ProtoUnitTest, BaseSingleThreadTlsCryptV2WithMissingEmbeddedServerkey)
 {
     int ret = test(1, false, false, "tls-crypt-v2-client-with-missing-serverkey.key");
     EXPECT_NE(ret, 0);
 }
 
-TEST_F(ProtoUnitTest, base_single_thread_tls_crypt_v2_with_tls_auth_also_active)
+TEST_F(ProtoUnitTest, BaseSingleThreadTlsCryptV2WithTlsAuthAlsoActive)
 {
     int ret = test_retry(1, N_RETRIES, false, false, "tls-crypt-v2-client-with-serverkey.key", true);
     EXPECT_EQ(ret, 0);
 }
 #endif
 
-TEST_F(ProtoUnitTest, base_multiple_thread)
+TEST_F(ProtoUnitTest, BaseMultipleThread)
 {
     unsigned int num_threads = std::thread::hardware_concurrency();
 #if defined(PROTO_N_THREADS) && PROTO_N_THREADS >= 1
@@ -1324,7 +1324,7 @@ TEST_F(ProtoUnitTest, base_multiple_thread)
     EXPECT_THAT(expected_results, ::testing::ContainerEq(results));
 }
 
-TEST(proto, iv_ciphers_aead)
+TEST(Proto, IvCiphersAead)
 {
     CryptoAlgs::allow_default_dc_algs<SSLLib::CryptoAPI>(nullptr, true, false);
 
@@ -1343,7 +1343,7 @@ TEST(proto, iv_ciphers_aead)
     EXPECT_EQ(ivciphers, expectedstr);
 }
 
-TEST(proto, iv_ciphers_non_preferred)
+TEST(Proto, IvCiphersNonPreferred)
 {
     CryptoAlgs::allow_default_dc_algs<SSLLib::CryptoAPI>(nullptr, false, false);
 
@@ -1362,7 +1362,7 @@ TEST(proto, iv_ciphers_non_preferred)
     EXPECT_EQ(ivciphers, expectedstr);
 }
 
-TEST(proto, iv_ciphers_legacy)
+TEST(Proto, IvCiphersLegacy)
 {
 
     /* Need to a whole lot of things to enable legacy provider/OpenSSL context */
@@ -1408,7 +1408,7 @@ TEST(proto, iv_ciphers_legacy)
     EXPECT_EQ(ivciphers, expectedstr);
 }
 
-TEST(proto, controlmessage_invalidchar)
+TEST(Proto, ControlmessageInvalidchar)
 {
     std::string valid_auth_fail{"AUTH_FAILED: go away"};
     std::string valid_auth_fail_newline_end{"AUTH_FAILED: go away\n"};
@@ -1467,7 +1467,7 @@ class EventQueueVector : public openvpn::ClientEvent::Queue
     std::vector<openvpn::ClientEvent::Base::Ptr> events;
 };
 
-TEST(proto, client_proto_check_cc_msg)
+TEST(Proto, ClientProtoCheckCcMsg)
 {
     asio::io_context io_context;
     ClientRandomAPI::Ptr rng_cli(new ClientRandomAPI());

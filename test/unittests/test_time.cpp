@@ -76,7 +76,7 @@ void test_skew(const Time::Duration &dur,
         OPENVPN_LOG("BEFORE=" << dur.to_binary_ms() << " AFTER=" << after.to_binary_ms());
 }
 
-TEST(time, timeskew)
+TEST(Time, Timeskew)
 {
     MTRand::Ptr prng(new MTRand());
     MeanDev md;
@@ -89,7 +89,7 @@ TEST(time, timeskew)
     md.dev.check_mean_range("dev", 1250, 1350);
 }
 
-TEST(time, test1)
+TEST(Time, Test1)
 {
     Time::reset_base();
 
@@ -151,7 +151,7 @@ static void add(const Time::Duration &d1, const Time::Duration &d2)
     ASSERT_EQ(x, d) << "D+D INCONSISTENCY DETECTED";
 }
 
-TEST(time, timeaddsub)
+TEST(Time, Timeaddsub)
 {
     {
         const Time now = Time::now();

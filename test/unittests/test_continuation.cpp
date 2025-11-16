@@ -215,27 +215,27 @@ static void test_prefix_random(const std::string &prefix)
     }
 }
 
-TEST(continuation, test_random_push_reply)
+TEST(Continuation, TestRandomPushReply)
 {
     test_prefix_random("PUSH_REPLY");
 }
 
-TEST(continuation, test_random_push_update)
+TEST(Continuation, TestRandomPushUpdate)
 {
     test_prefix_random("PUSH_UPDATE");
 }
 
-TEST(continuation, test_fragment_push_reply)
+TEST(Continuation, TestFragmentPushReply)
 {
     test_prefix_fragment("PUSH_REPLY");
 }
 
-TEST(continuation, test_fragment_push_update)
+TEST(Continuation, TestFragmentPushUpdate)
 {
     test_prefix_fragment("PUSH_UPDATE");
 }
 
-TEST(continuation, push_update_add)
+TEST(Continuation, PushUpdateAdd)
 {
     OptionListContinuation cc;
 
@@ -252,7 +252,7 @@ TEST(continuation, push_update_add)
     ASSERT_EQ(cc.size(), 5);
 }
 
-TEST(continuation, push_update_add_unsupported)
+TEST(Continuation, PushUpdateAddUnsupported)
 {
     OptionListContinuation cc;
 
@@ -273,7 +273,7 @@ TEST(continuation, push_update_add_unsupported)
     ASSERT_EQ(cc.size(), 5);
 }
 
-TEST(continuation, push_update_remove)
+TEST(Continuation, PushUpdateRemove)
 {
     OptionListContinuation cc;
 
@@ -288,7 +288,7 @@ TEST(continuation, push_update_remove)
     cc.reset_completion();
 }
 
-TEST(continuation, push_update_add_multiple)
+TEST(Continuation, PushUpdateAddMultiple)
 {
     OptionListContinuation cc;
 

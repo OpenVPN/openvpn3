@@ -20,7 +20,7 @@ const std::string short_text = "Lorem\nipsum\r\ndolor\n\r\nsit";
 const std::vector<std::string> short_lines{"Lorem\n", "ipsum\r\n", "dolor\n", "\r\n", "sit"};
 const std::vector<std::string> short_lines_trim{"Lorem", "ipsum", "dolor", "", "sit"};
 
-TEST(SplitLines, no_max_length_no_trim)
+TEST(SplitLines, NoMaxLengthNoTrim)
 {
     SplitLines in(short_text, 0);
     size_t index = 0;
@@ -30,7 +30,7 @@ TEST(SplitLines, no_max_length_no_trim)
     }
 }
 
-TEST(SplitLines, next_no_max_length_no_trim)
+TEST(SplitLines, NextNoMaxLengthNoTrim)
 {
     SplitLines in(short_text, 0);
     size_t index = 0;
@@ -43,7 +43,7 @@ TEST(SplitLines, next_no_max_length_no_trim)
     }
 }
 
-TEST(SplitLines, no_max_length_trim)
+TEST(SplitLines, NoMaxLengthTrim)
 {
     SplitLines in(short_text, 0);
     size_t index = 0;
@@ -54,7 +54,7 @@ TEST(SplitLines, no_max_length_trim)
     }
 }
 
-TEST(SplitLines, next_no_max_length_trim)
+TEST(SplitLines, NextNoMaxLengthTrim)
 {
     SplitLines in(short_text, 0);
     size_t index = 0;
@@ -67,7 +67,7 @@ TEST(SplitLines, next_no_max_length_trim)
     }
 }
 
-TEST(SplitLines, max_length)
+TEST(SplitLines, MaxLength)
 {
     SplitLines in(short_text, 24);
     size_t index = 0;
@@ -78,7 +78,7 @@ TEST(SplitLines, max_length)
     }
 }
 
-TEST(SplitLines, next_max_length)
+TEST(SplitLines, NextMaxLength)
 {
     SplitLines in(short_text, 24);
     size_t index = 0;
@@ -91,7 +91,7 @@ TEST(SplitLines, next_max_length)
     }
 }
 
-TEST(SplitLines, max_length_overflow)
+TEST(SplitLines, MaxLengthOverflow)
 {
     SplitLines in(short_text, 3);
     ASSERT_TRUE(in(true));
@@ -99,14 +99,14 @@ TEST(SplitLines, max_length_overflow)
     ASSERT_THROW(in.line_ref(), SplitLines::overflow_error);
 }
 
-TEST(SplitLines, next_max_length_overflow)
+TEST(SplitLines, NextMaxLengthOverflow)
 {
     SplitLines in(short_text, 3);
     std::string line;
     ASSERT_EQ(in.next(line, true), SplitLines::S_ERROR);
 }
 
-TEST(SplitLines, moved_error)
+TEST(SplitLines, MovedError)
 {
     SplitLines in(short_text);
     ASSERT_TRUE(in(true));

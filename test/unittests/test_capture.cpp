@@ -20,7 +20,7 @@
 
 using namespace openvpn;
 
-TEST(misc, capture)
+TEST(Misc, Capture)
 {
     DnsServer server;
     server.addresses = {DnsAddress("8.8.8.8"), DnsAddress("8.8.4.4:53")};

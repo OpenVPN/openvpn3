@@ -5,7 +5,7 @@
 using namespace openvpn;
 
 
-TEST(psid_cookie, setup)
+TEST(PsidCookie, Setup)
 {
     PsidCookieImpl::pre_threading_setup();
 
@@ -118,7 +118,7 @@ class PsidCookieTest : public testing::Test
 };
 
 
-TEST_F(PsidCookieTest, check_setup)
+TEST_F(PsidCookieTest, CheckSetup)
 {
     PsidCookieImpl *pci_dut = pcookie_impl.get();
     ASSERT_NE(pci_dut, nullptr);
@@ -131,7 +131,7 @@ TEST_F(PsidCookieTest, check_setup)
     EXPECT_TRUE(pci_dut->pcfg_.tls_auth_key.defined());
 }
 
-TEST_F(PsidCookieTest, valid_time)
+TEST_F(PsidCookieTest, ValidTime)
 {
     PsidCookieImpl &pci_dut(*pcookie_impl.get());
     ClientAddressMock cli_addr(*pci_dut.pcfg_.prng);

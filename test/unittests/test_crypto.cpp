@@ -36,7 +36,7 @@ static const char *ipsumlorem = "Lorem ipsum dolor sit amet, consectetur "
                                 "adipisici elit, sed eiusmod tempor incidunt "
                                 "ut labore et dolore magna aliqua.";
 
-TEST(crypto, hmac)
+TEST(Crypto, Hmac)
 {
     uint8_t key[20];
     std::memcpy(key, testkey, sizeof(key));
@@ -215,7 +215,7 @@ void test_datachannel_crypto(bool use_epoch)
     EXPECT_EQ(std::memcmp(work.data(), plaintext, std::strlen(plaintext)), 0);
 }
 
-TEST(crypto, testEpochIterateKey)
+TEST(Crypto, TestEpochIterateKey)
 {
     openvpn::CryptoAlgs::allow_default_dc_algs<openvpn::SSLLib::CryptoAPI>(nullptr, true, false);
 
@@ -276,7 +276,7 @@ TEST(crypto, testEpochIterateKey)
     EXPECT_EQ(std::memcmp(work.data(), plaintext, std::strlen(plaintext)), 0);
 }
 
-TEST(crypto, epoch_derive_data_keys)
+TEST(Crypto, EpochDeriveDataKeys)
 {
     uint8_t epoch_key[32] = {19, 12};
     openvpn::StaticKey e1{epoch_key, 32};
@@ -305,7 +305,7 @@ TEST(crypto, epoch_derive_data_keys)
     EXPECT_EQ(exp_impl_iv, iv_array);
 }
 
-TEST(crypto, aead_cipher_movable)
+TEST(Crypto, AeadCipherMovable)
 {
     openvpn::CryptoAlgs::allow_default_dc_algs<openvpn::SSLLib::CryptoAPI>(nullptr, true, false);
 
@@ -348,18 +348,18 @@ TEST(crypto, aead_cipher_movable)
     ASSERT_EQ(std::memcmp(input, output3, 5), 0);
 }
 
-TEST(crypto, dcaead_data_v2)
+TEST(Crypto, DcaeadDataV2)
 {
     test_datachannel_crypto(false);
 }
 
-TEST(crypto, dcaead_epoch_data)
+TEST(Crypto, DcaeadEpochData)
 {
     /* Epoch data needs more refactoring before adjusting the unit test */
     test_datachannel_crypto(true);
 }
 
-TEST(crypto, hkdf_expand_testa1)
+TEST(Crypto, HkdfExpandTesta1)
 {
     /* RFC 5889 A.1 Test Case 1 */
     // clang-format off
@@ -389,7 +389,7 @@ TEST(crypto, hkdf_expand_testa1)
     ASSERT_EQ(out, okm);
 }
 
-TEST(crypto, hkdf_expand_testa2)
+TEST(Crypto, HkdfExpandTesta2)
 {
     // clang-format off
     /* RFC 5889 A.2 Test Case 2 */
@@ -434,7 +434,7 @@ TEST(crypto, hkdf_expand_testa2)
     ASSERT_EQ(out, okm);
 }
 
-TEST(crypto, ovpn_label_expand_test)
+TEST(Crypto, OvpnLabelExpandTest)
 {
     // clang-format off
     uint8_t secret[32] =
@@ -455,7 +455,7 @@ TEST(crypto, ovpn_label_expand_test)
     EXPECT_EQ(out, out_expected);
 }
 
-TEST(crypto, hkdf_expand_testa3)
+TEST(Crypto, HkdfExpandTesta3)
 {
     /* RFC 5889 A.3 Test Case 3 */
     // clang-format off
@@ -540,7 +540,7 @@ protected:
 };
 
 
-TEST_F(EpochTest, key_generation)
+TEST_F(EpochTest, KeyGeneration)
 {
     /* check the keys look like we expect */
     EXPECT_EQ(dce_.get_future_key(0).epoch, 2);
@@ -550,7 +550,7 @@ TEST_F(EpochTest, key_generation)
 }
 
 
-TEST_F(EpochTest, key_rotation)
+TEST_F(EpochTest, KeyRotation)
 {
 openvpn::SessionStats::Ptr stats{new openvpn::SessionStats{}};
     /* should replace send + key recv */
@@ -592,7 +592,7 @@ dce_.iterate_send_key();
 EXPECT_EQ(dce_.send_ctx_().epoch, 14);
 }
 
-TEST_F(EpochTest, key_receive_lookup)
+TEST_F(EpochTest, KeyReceiveLookup)
 {
 openvpn::SessionStats::Ptr stats{new openvpn::SessionStats{}};
 
@@ -645,7 +645,7 @@ dce_.replace_update_recv_key(8, stats);
     EXPECT_EQ(dce_.lookup_decrypt_key(23), nullptr);
 }
 
-TEST_F(EpochTest, key_overflow)
+TEST_F(EpochTest, KeyOverflow)
 {
     openvpn::SessionStats::Ptr stats{new openvpn::SessionStats{}};
     initDCE(32);

@@ -35,7 +35,7 @@ void realign_test(BufferAllocated &buf, std::size_t headroom)
     std::cout << "Aligning buffer: " << at_misalign << " -> " << at_align_ex << '\n';
 }
 
-TEST(buffer, buffer_alignas)
+TEST(Buffer, BufferAlignas)
 {
     constexpr std::size_t test_lim = std::numeric_limits<std::size_t>::digits;
     for (auto i = std::size_t(0); i < test_lim; ++i)
@@ -46,7 +46,7 @@ TEST(buffer, buffer_alignas)
 }
 
 // test equality of Buffer and ConstBuffer
-TEST(buffer, const_buffer_ref_1)
+TEST(Buffer, ConstBufferRef1)
 {
     static unsigned char hello[] = "hello world";
     Buffer buf(hello, sizeof(hello) - 1, true);
@@ -56,7 +56,7 @@ TEST(buffer, const_buffer_ref_1)
 }
 
 // test equality of BufferAllocatedRc and ConstBuffer
-TEST(buffer, const_buffer_ref_2)
+TEST(Buffer, ConstBufferRef2)
 {
     BufferAllocated buf(64);
     buf_append_string(buf, "hello world");
@@ -66,7 +66,7 @@ TEST(buffer, const_buffer_ref_2)
 }
 
 // test ConstBufferType with an explicitly const type
-TEST(buffer, my_const_buffer_1)
+TEST(Buffer, MyConstBuffer1)
 {
     using MyConstBuffer = ConstBufferType<const char>;
     static const char hello[] = "hello world";
@@ -76,7 +76,7 @@ TEST(buffer, my_const_buffer_1)
 }
 
 // Test read access and bounds check on ConstBufferType
-TEST(buffer, const_buffer_access1)
+TEST(Buffer, ConstBufferAccess1)
 {
     constexpr char data[] = "hello world";
     ConstBufferType<char> cbuf(data, sizeof(data) - 1, true);
@@ -86,7 +86,7 @@ TEST(buffer, const_buffer_access1)
 }
 
 // Test read access and bounds check on ConstBufferType
-TEST(buffer, const_buffer_access2)
+TEST(Buffer, ConstBufferAccess2)
 {
     constexpr char data[] = "hello world";
     ConstBufferType<char> cbuf(data, sizeof(data) - 1, true);
@@ -105,7 +105,7 @@ TEST(buffer, const_buffer_access2)
 }
 
 // Test read access and bounds check on ConstBufferType
-TEST(buffer, const_buffer_access3)
+TEST(Buffer, ConstBufferAccess3)
 {
     constexpr char data[] = "hello world";
     ConstBufferType<char> cbuf(data, sizeof(data) - 1, true);
@@ -124,7 +124,7 @@ TEST(buffer, const_buffer_access3)
 }
 
 // Test read access and bounds check
-TEST(buffer, buffer_access1)
+TEST(Buffer, BufferAccess1)
 {
     char data[] = "hello world";
     BufferType<char> buf(data, sizeof(data) - 1, true);
@@ -134,7 +134,7 @@ TEST(buffer, buffer_access1)
 }
 
 // Test read/write access and bounds check
-TEST(buffer, buffer_access2)
+TEST(Buffer, BufferAccess2)
 {
     char data[] = "hello world";
     BufferType<char> buf(data, sizeof(data) - 1, true);
@@ -146,7 +146,7 @@ TEST(buffer, buffer_access2)
 }
 
 // Test push/pop and bounds check
-TEST(buffer, buffer_access3)
+TEST(Buffer, BufferAccess3)
 {
     char data1[] = "hello world";
     char data2[sizeof(data1)];
@@ -167,7 +167,7 @@ TEST(buffer, buffer_access3)
 }
 
 // Test push/pop and bounds check
-TEST(buffer, buffer_access4)
+TEST(Buffer, BufferAccess4)
 {
     char data1[] = "hello world";
     char data2[sizeof(data1)];
@@ -194,7 +194,7 @@ TEST(buffer, buffer_access4)
 }
 
 // Test read access and bounds check
-TEST(buffer, alloc_buffer_access1)
+TEST(Buffer, AllocBufferAccess1)
 {
     BufferAllocated buf(64);
     buf_append_string(buf, "hello world");
@@ -204,7 +204,7 @@ TEST(buffer, alloc_buffer_access1)
 }
 
 // Test read/write access and bounds check
-TEST(buffer, alloc_buffer_access2)
+TEST(Buffer, AllocBufferAccess2)
 {
     BufferAllocated buf(64, BufAllocFlags::CONSTRUCT_ZERO | BufAllocFlags::DESTRUCT_ZERO);
     buf_append_string(buf, "hello world");
@@ -217,7 +217,7 @@ TEST(buffer, alloc_buffer_access2)
 }
 
 // Test read/write access and bounds check
-TEST(buffer, alloc_buffer_access3)
+TEST(Buffer, AllocBufferAccess3)
 {
     char data[] = "hello world";
     BufferType<char> buf1(data, sizeof(data) - 1, true);
@@ -237,7 +237,7 @@ TEST(buffer, alloc_buffer_access3)
 }
 
 // Test pop_front
-TEST(buffer, alloc_buffer_pop_front)
+TEST(Buffer, AllocBufferPopFront)
 {
     BufferAllocated buf(64);
     buf_append_string(buf, "hello world");
@@ -248,7 +248,7 @@ TEST(buffer, alloc_buffer_pop_front)
 }
 
 // Test advance
-TEST(buffer, alloc_buffer_advance1)
+TEST(Buffer, AllocBufferAdvance1)
 {
     BufferAllocated buf(64);
     buf_append_string(buf, "hello world");
@@ -265,7 +265,7 @@ TEST(buffer, alloc_buffer_advance1)
 }
 
 // Test advance
-TEST(buffer, alloc_buffer_advance2)
+TEST(Buffer, AllocBufferAdvance2)
 {
     constexpr char data[] = "hello world";
     BufferAllocated buf(64);
@@ -275,7 +275,7 @@ TEST(buffer, alloc_buffer_advance2)
 }
 
 // Test advance
-TEST(buffer, alloc_buffer_advance3)
+TEST(Buffer, AllocBufferAdvance3)
 {
     constexpr char data[] = "hello world";
     BufferAllocated buf(64);
@@ -290,7 +290,7 @@ TEST(buffer, alloc_buffer_advance3)
 }
 
 // Test remaining()
-TEST(buffer, alloc_buffer_remaining)
+TEST(Buffer, AllocBufferRemaining)
 {
     BufferAllocated buf(64);
 
@@ -306,7 +306,7 @@ TEST(buffer, alloc_buffer_remaining)
 }
 
 // Test init_headroom()
-TEST(buffer, alloc_buffer_init_headroom)
+TEST(Buffer, AllocBufferInitHeadroom)
 {
     BufferAllocated buf(64);
 
@@ -326,7 +326,7 @@ TEST(buffer, alloc_buffer_init_headroom)
 }
 
 // Test reset_offset()
-TEST(buffer, alloc_buffer_reset_offset)
+TEST(Buffer, AllocBufferResetOffset)
 {
     BufferAllocated buf(64);
 
@@ -350,7 +350,7 @@ TEST(buffer, alloc_buffer_reset_offset)
 }
 
 // Test reset_size()
-TEST(buffer, alloc_buffer_reset_size)
+TEST(Buffer, AllocBufferResetSize)
 {
     BufferAllocated buf(64);
 
@@ -372,7 +372,7 @@ TEST(buffer, alloc_buffer_reset_size)
 }
 
 // Test read()
-TEST(buffer, alloc_buffer_read1)
+TEST(Buffer, AllocBufferRead1)
 {
     constexpr char data[] = "hello world";
     BufferAllocated buf(64);
@@ -385,7 +385,7 @@ TEST(buffer, alloc_buffer_read1)
     EXPECT_EQ(memcmp(raw, data, sizeof(raw)), 0);
 }
 
-TEST(buffer, prepend_alloc)
+TEST(Buffer, PrependAlloc)
 {
     BufferAllocated buf(64);
     buf_append_string(buf, "hello world");
@@ -397,7 +397,7 @@ TEST(buffer, prepend_alloc)
 }
 
 
-TEST(buffer, prepend_alloc_2)
+TEST(Buffer, PrependAlloc2)
 {
     BufferAllocated buf(64);
     EXPECT_EQ(buf.offset(), 0U);
@@ -413,7 +413,7 @@ TEST(buffer, prepend_alloc_2)
 }
 
 
-TEST(buffer, prepend_alloc_fits)
+TEST(Buffer, PrependAllocFits)
 {
     BufferAllocated buf(64);
     EXPECT_EQ(buf.offset(), 0U);
@@ -428,7 +428,7 @@ TEST(buffer, prepend_alloc_fits)
     EXPECT_EQ(buf.remaining(), 48U);
 }
 
-TEST(buffer, prepend_alloc_fail)
+TEST(Buffer, PrependAllocFail)
 {
     BufferAllocated buf(11);
     buf_append_string(buf, "hello world");
@@ -438,7 +438,7 @@ TEST(buffer, prepend_alloc_fail)
     EXPECT_EQ(buf.remaining(), 0U);
 }
 
-TEST(buffer, prepend_alloc_fail2)
+TEST(Buffer, PrependAllocFail2)
 {
     BufferAllocated buf(14);
     buf_append_string(buf, "hello world");
@@ -448,7 +448,7 @@ TEST(buffer, prepend_alloc_fail2)
     EXPECT_EQ(buf.remaining(), 3U);
 }
 
-TEST(buffer, realign)
+TEST(Buffer, Realign)
 {
     BufferAllocated buf(64);
     buf_append_string(buf, "hello world");
@@ -465,7 +465,7 @@ TEST(buffer, realign)
     EXPECT_EQ(buf.c_data_raw()[0], ' ');
 }
 
-TEST(buffer, realign2)
+TEST(Buffer, Realign2)
 {
     BufferAllocated buf(64);
     buf_append_string(buf, "hello world");
@@ -479,7 +479,7 @@ TEST(buffer, realign2)
     EXPECT_EQ(buf.size(), 11U);
 }
 
-TEST(buffer, realign3)
+TEST(Buffer, Realign3)
 {
     BufferAllocated buf(11);
     buf_append_string(buf, "hello world");
@@ -494,7 +494,7 @@ TEST(buffer, realign3)
     EXPECT_EQ(buf.offset(), 5U);
 }
 
-TEST(buffer, realign4)
+TEST(Buffer, Realign4)
 {
     BufferAllocated buf(32);
     buf.realign(7U);
@@ -528,7 +528,7 @@ TEST(buffer, realign4)
    unspecified state."
 */
 
-TEST(buffer, invariants_after_move_safe)
+TEST(Buffer, InvariantsAfterMoveSafe)
 {
     BufferAllocated buf(32);
     buf_append_string(buf, "hello world");
@@ -555,7 +555,7 @@ TEST(buffer, invariants_after_move_safe)
     EXPECT_EQ(buf.remaining(), 0U);
 }
 
-TEST(buffer, push_back_after_move_safe)
+TEST(Buffer, PushBackAfterMoveSafe)
 {
     BufferAllocated buf(32);
     buf_append_string(buf, "hello world");
@@ -574,7 +574,7 @@ TEST(buffer, push_back_after_move_safe)
     EXPECT_EQ(buf[0], 'X');
 }
 
-TEST(buffer, append_after_move_safe)
+TEST(Buffer, AppendAfterMoveSafe)
 {
     BufferAllocated buf(32);
     buf_append_string(buf, "hello world");

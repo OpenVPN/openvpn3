@@ -233,13 +233,13 @@ void test()
 }
 
 // strategy A
-TEST(misc, weak_a)
+TEST(Misc, WeakA)
 {
     test<A::Object, A::Ref>();
 }
 
 // strategy B
-TEST(misc, weak_b)
+TEST(Misc, WeakB)
 {
     test<B::Object, B::Ref>();
 }

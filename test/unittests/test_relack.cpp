@@ -18,7 +18,7 @@ using namespace openvpn;
 using namespace openvpn::reliable;
 namespace orel = openvpn::reliable;
 
-TEST(relack, test_size_1)
+TEST(Relack, TestSize1)
 {
     constexpr size_t ACK_CNT = 11;
 
@@ -29,7 +29,7 @@ TEST(relack, test_size_1)
     EXPECT_EQ(ra.resend_size(), size_t{0});
 }
 
-TEST(relack, test_prepend_1)
+TEST(Relack, TestPrepend1)
 {
     constexpr size_t ACK_CNT = 11;
 
@@ -84,7 +84,7 @@ struct RelSendMck
     std::vector<orel::id_t> mAcks;
 };
 
-TEST(relack, test_ack_1)
+TEST(Relack, TestAck1)
 {
     constexpr size_t ACK_CNT = 9;
 
@@ -111,7 +111,7 @@ TEST(relack, test_ack_1)
     }
 }
 
-TEST(relack, test_ack_2)
+TEST(Relack, TestAck2)
 {
     constexpr size_t ACK_CNT = 9;
 

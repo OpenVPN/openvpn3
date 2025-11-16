@@ -60,7 +60,7 @@ void randapi_signed_min_test(const std::string &test_name)
     } while (0)
 
 
-TEST(misc, randapi_signed_min)
+TEST(Misc, RandapiSignedMin)
 {
     RANDAPI_SIGNED_MIN_TEST(signed char);
     RANDAPI_SIGNED_MIN_TEST(unsigned char);

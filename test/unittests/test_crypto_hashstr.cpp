@@ -7,7 +7,7 @@
 
 using namespace openvpn;
 
-TEST(crypto, hashstr)
+TEST(Crypto, Hashstr)
 {
     const std::string content = read_text_utf8(UNITTEST_SOURCE_DIR "/input/1984.txt");
 

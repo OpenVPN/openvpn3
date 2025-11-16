@@ -136,7 +136,7 @@ TEST(Dns, OptionsMerger)
     ASSERT_EQ(pushed[1].ref(4), "2.2.2.2");
 }
 
-TEST(Dns, DnsAddress_tostring)
+TEST(Dns, DnsAddressTostring)
 {
     /**
      * Supported formats:
@@ -288,7 +288,7 @@ TEST(Dns, ServerInvalidTransport)
     }
 }
 
-TEST(Dns, dhcp_options)
+TEST(Dns, DhcpOptions)
 {
     OptionList config;
     config.parse_from_config(
@@ -319,7 +319,7 @@ TEST(Dns, dhcp_options)
     ASSERT_EQ(dns.servers[0].addresses[1].port, 0U);
 }
 
-TEST(Dns, dhcp_options_with_split_domains)
+TEST(Dns, DhcpOptionsWithSplitDomains)
 {
     OptionList config;
     config.parse_from_config(
@@ -352,7 +352,7 @@ TEST(Dns, dhcp_options_with_split_domains)
     ASSERT_EQ(dns.servers[0].domains[1].domain, "domain1");
 }
 
-TEST(Dns, dhcp_options_ignored)
+TEST(Dns, DhcpOptionsIgnored)
 {
     OptionList config;
     config.parse_from_config(

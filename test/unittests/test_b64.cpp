@@ -104,7 +104,7 @@ void b64_test_binary(const Base64 &b64, const char *data, unsigned int len)
         << "Encode/Decode results differ";
 }
 
-TEST(Base64, tooshortdest)
+TEST(Base64, Tooshortdest)
 {
     const Base64 b64;
     auto enc = b64.encode(std::string("abc"));
@@ -119,7 +119,7 @@ void b64_test_bad_decode(const Base64 &b64, const std::string &text)
     EXPECT_THROW(b64.decode(dec, text), Base64::base64_decode_error);
 }
 
-TEST(Base64, baddecode)
+TEST(Base64, Baddecode)
 {
     const Base64 b64;
 
@@ -132,7 +132,7 @@ TEST(Base64, baddecode)
     b64_test_bad_decode(b64, "01*=");
 }
 
-TEST(Base64, encode)
+TEST(Base64, Encode)
 {
     const Base64 b64;
 
@@ -160,7 +160,7 @@ TEST(Base64, encode)
     b64_test(b64, "???x>>>>>>>>>?????????????x>>");
 }
 
-TEST(Base64, binary_data)
+TEST(Base64, BinaryData)
 {
 
     const Base64 b64;

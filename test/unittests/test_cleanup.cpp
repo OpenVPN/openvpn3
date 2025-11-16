@@ -9,7 +9,7 @@
 
 using namespace openvpn;
 
-TEST(misc, cleanup)
+TEST(Misc, Cleanup)
 {
 
     bool ran_cleanup = false;

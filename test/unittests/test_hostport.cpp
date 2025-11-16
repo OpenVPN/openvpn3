@@ -35,7 +35,7 @@ static void test(const std::string &str,
     }
 }
 
-TEST(misc, host_port)
+TEST(Misc, HostPort)
 {
     test("foo.bar.gov", "", false, "", "", 0, false);
     test("foo.bar.gov", "1234", false, "foo.bar.gov", "1234", 1234, true);

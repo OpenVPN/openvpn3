@@ -24,7 +24,7 @@ static void compare(const SafeString &s1, const SafeString &s2, const bool expec
     ASSERT_NE(s1 != s2.to_string(), expect_eq);
 }
 
-TEST(safestr, test_1)
+TEST(Safestr, Test1)
 {
     SafeString a("mybigsecret");
     SafeString b("mybigsekret");

@@ -27,7 +27,7 @@ void testcase(PIDRecv &pr,
     ASSERT_EQ(status, expected_status);
 }
 
-TEST(misc, pktid_test_control)
+TEST(Misc, PktidTestControl)
 {
     using PIDRecv = PacketIDControlReceiveType<3, 5>;
     SessionStats::Ptr stats(new SessionStats());
@@ -154,7 +154,7 @@ void perf(long &count)
     perfiter<ORDER, EXPIRE>(20000, 4, PIDRecv::REPLAY_WINDOW_SIZE / 2, 10, count);
 }
 
-TEST(misc, pktid_control_perf)
+TEST(Misc, PktidControlPerf)
 {
     long count = 0;
     perf<3, 5>(count);

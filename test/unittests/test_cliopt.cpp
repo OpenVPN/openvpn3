@@ -61,12 +61,12 @@ void load_client_config(const std::string &config_content)
     ClientOptions cliopt(options, config);
 }
 
-TEST_P(ValidConfigs, valid_config)
+TEST_P(ValidConfigs, ValidConfig)
 {
     load_client_config(GetParam());
 }
 
-TEST_P(InvalidConfigs, config_throws_option_error)
+TEST_P(InvalidConfigs, ConfigThrowsOptionError)
 {
     OVPN_EXPECT_THROW(
         load_client_config(GetParam().first),
@@ -74,7 +74,7 @@ TEST_P(InvalidConfigs, config_throws_option_error)
         GetParam().second);
 }
 
-TEST(config, missingRequiredOption)
+TEST(Config, MissingRequiredOption)
 {
     ParseClientConfig conf = ParseClientConfig::parse("mode server");
     EXPECT_EQ(conf.error(), true);
@@ -93,7 +93,7 @@ INSTANTIATE_TEST_SUITE_P(
         config_error{minimalConfig + "key-method 1", "Only 'key-method 2' is supported"},
         config_error{minimalConfig + "fragment", "sorry, 'fragment' directive is not supported"}));
 
-TEST(config, parse_unknown_option)
+TEST(Config, ParseUnknownOption)
 {
     OVPN_EXPECT_THROW(
         load_client_config(minimalConfig + "bikeshed-color green"),
@@ -116,7 +116,7 @@ INSTANTIATE_TEST_SUITE_P(
         minimalConfig + "tun-ipv6\n",
         minimalConfig + "opt-verify\n"));
 
-TEST(config, parse_management)
+TEST(Config, ParseManagement)
 {
     OVPN_EXPECT_THROW(
         load_client_config(minimalConfig + "management-is-blue"),
@@ -129,7 +129,7 @@ TEST(config, parse_management)
         "OpenVPN management interface is not supported by this client");
 }
 
-TEST(config, duplicate_options_sets)
+TEST(Config, DuplicateOptionsSets)
 {
     /* Do the whole dance to get a ClientOption object to access the list */
     OptionList options;
@@ -170,7 +170,7 @@ TEST(config, duplicate_options_sets)
     }
 }
 
-TEST(config, dco_compatibility)
+TEST(Config, DcoCompatibility)
 {
     for (auto optname : ClientOptions::dco_incompatible_opts)
     {
@@ -195,7 +195,7 @@ TEST(config, dco_compatibility)
     }
 }
 
-TEST(config, server_cert_in_eval)
+TEST(Config, ServerCertInEval)
 {
     ClientAPI::Config api_config;
     api_config.content = minimalConfig;
@@ -207,7 +207,7 @@ TEST(config, server_cert_in_eval)
 }
 
 
-TEST(config, server_options_present_in_error_msg)
+TEST(Config, ServerOptionsPresentInErrorMsg)
 {
     std::vector<std::string> server_options = {"server 10.0.0.0 255.255.255.0",
                                                "push \"foo bar\""};
@@ -224,7 +224,7 @@ TEST(config, server_options_present_in_error_msg)
     }
 }
 
-TEST(config, unknown_options_present_in_error_msg)
+TEST(Config, UnknownOptionsPresentInErrorMsg)
 {
     std::vector<std::string> server_options = {"make-a-lot-of-noise", "water-the-plants"};
 
@@ -240,7 +240,7 @@ TEST(config, unknown_options_present_in_error_msg)
     }
 }
 
-TEST(config, multiple_option_errors)
+TEST(Config, MultipleOptionErrors)
 {
     std::ostringstream os;
     os << "OpenVPN management interface is not supported by this client: management\n";
@@ -274,7 +274,7 @@ INSTANTIATE_TEST_SUITE_P(
         config_error{certconfig + "\nremote 1.2.3.4\npull\n",
                      "option_error: Neither 'client' nor both 'tls-client' and 'pull' options declared. OpenVPN3 client only supports --client mode."}));
 
-TEST(config, meta_option_in_content)
+TEST(Config, MetaOptionInContent)
 {
     OptionList options;
     auto cfg = minimalConfig + "\n# OVPN_ACCESS_SERVER_AAA=BBB";

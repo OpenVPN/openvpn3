@@ -13,7 +13,7 @@ std::string content1 = "It was a bright cold day in April, and the clocks\n"
 
 std::string content2 = "To be or not to be, that is the question?\n";
 
-TEST(misc, tempfile)
+TEST(Misc, Tempfile)
 {
     TempFile tf(getTempDirPath("tempfile-XXXXXX"), true);
 
@@ -29,7 +29,7 @@ TEST(misc, tempfile)
     ASSERT_EQ(s2, content2);
 }
 
-TEST(misc, tempfile_name)
+TEST(Misc, TempfileName)
 {
     TempFile tf(getTempDirPath("tempfile-XXXXXX"), true);
     auto fn = tf.filename();
@@ -37,7 +37,7 @@ TEST(misc, tempfile_name)
     ASSERT_EQ(std::string::npos, fn.find("XXXXXX"));
 }
 
-TEST(misc, tempfile_name_6Xs)
+TEST(Misc, TempfileName6Xs)
 {
     TempFile tf(getTempDirPath("tempXXXXXXfile"), true);
     auto fn = tf.filename();
@@ -46,7 +46,7 @@ TEST(misc, tempfile_name_6Xs)
     ASSERT_EQ(std::string::npos, fn.find("XXXXXX"));
 }
 
-TEST(misc, tempfile_name_7Xs)
+TEST(Misc, TempfileName7Xs)
 {
     TempFile tf(getTempDirPath("tempXXXXXXXfile"), true);
     auto fn = tf.filename();
@@ -55,7 +55,7 @@ TEST(misc, tempfile_name_7Xs)
     ASSERT_EQ(std::string::npos, fn.find("XXXXXX"));
 }
 
-TEST(misc, tempfile_name_6X6X)
+TEST(Misc, TempfileName6X6X)
 {
     TempFile tf(getTempDirPath("tempXXXXXXfile-XXXXXX"), true);
     auto fn = tf.filename();

@@ -47,7 +47,7 @@ inline int prefix_len(const IPv4::Addr::base_type mask)
         return 32;
 }
 
-TEST(IPAddr, test32)
+TEST(IPAddr, Test32)
 {
     for (unsigned int i = 1; i <= 32; ++i)
     {
@@ -60,7 +60,7 @@ TEST(IPAddr, test32)
     }
 }
 
-TEST(IPAddr, prefixlen)
+TEST(IPAddr, Prefixlen)
 {
     for (unsigned int i = 0; i <= 32; ++i)
     {

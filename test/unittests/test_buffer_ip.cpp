@@ -18,7 +18,7 @@ static std::string to_hex(const std::uint32_t value)
     return os.str();
 }
 
-TEST(buffer_ip, unsigned_decimal)
+TEST(BufferIp, UnsignedDecimal)
 {
     using Decimal = BufferFormat::UnsignedDecimal<std::uint32_t>;
     for (int i = -1000; i < 1000; ++i)
@@ -29,7 +29,7 @@ TEST(buffer_ip, unsigned_decimal)
     }
 }
 
-TEST(buffer_ip, hex)
+TEST(BufferIp, Hex)
 {
     using Hex = BufferFormat::Hex<std::uint32_t>;
     for (int i = -1000; i < 1000; ++i)
@@ -46,7 +46,7 @@ static constexpr int ITER = 10000;
 static constexpr int ITER = 1000000;
 #endif
 
-TEST(buffer_ip, ipv4)
+TEST(BufferIp, Ipv4)
 {
     MTRand::Ptr prng(new MTRand());
     for (int count = 0; count < ITER; ++count)
@@ -65,7 +65,7 @@ TEST(buffer_ip, ipv4)
     }
 }
 
-TEST(buffer_ip, ipv6)
+TEST(BufferIp, Ipv6)
 {
     MTRand::Ptr prng(new MTRand());
     for (int count = 0; count < ITER; ++count)

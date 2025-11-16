@@ -59,7 +59,7 @@ void splitjoin(const std::string &p1)
     out << "splitjoin p1='" << p1 << "' dir='" << d << "' bn='" << b << "' p2='" << p2 << "'\n";
 }
 
-TEST(path, test1)
+TEST(Path, Test1)
 {
     out.clear();
     out.str("");
@@ -137,7 +137,7 @@ void test_contained(const std::string &path, const bool expected)
     ASSERT_EQ(contained, expected);
 }
 
-TEST(path, test2)
+TEST(Path, Test2)
 {
     test_contained("", false);
     test_contained(".", true);

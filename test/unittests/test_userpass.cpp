@@ -94,7 +94,7 @@ const std::vector<unsigned int> flag_combos_nofile{
     UserPass::OPT_REQUIRED | UserPass::USERNAME_REQUIRED | UserPass::PASSWORD_REQUIRED,
 };
 
-TEST(UserPass, missing)
+TEST(UserPass, Missing)
 {
     for (auto flags : flag_combos_missing_okay)
     {
@@ -146,7 +146,7 @@ TEST(UserPass, missing)
     }
 }
 
-TEST(UserPass, noargs)
+TEST(UserPass, Noargs)
 {
     for (auto flags : flag_combos_noargs_okay)
     {
@@ -198,7 +198,7 @@ TEST(UserPass, noargs)
     }
 }
 
-TEST(UserPass, user_only)
+TEST(UserPass, UserOnly)
 {
     for (auto flags : flag_combos_pw_not_required)
     {
@@ -272,7 +272,7 @@ TEST(UserPass, user_only)
     }
 }
 
-TEST(UserPass, user_pass)
+TEST(UserPass, UserPass)
 {
     for (auto flags : flag_combos_nofile)
     {
@@ -302,7 +302,7 @@ TEST(UserPass, user_pass)
     }
 }
 
-TEST(UserPass, parse_file_user_only)
+TEST(UserPass, ParseFileUserOnly)
 {
     for (auto flags : flag_combos_pw_not_required)
     {
@@ -337,7 +337,7 @@ TEST(UserPass, parse_file_user_only)
     }
 }
 
-TEST(UserPass, parse_file_user_pass)
+TEST(UserPass, ParseFileUserPass)
 {
     for (auto flags : flag_combos_nofile)
     {
@@ -354,7 +354,7 @@ TEST(UserPass, parse_file_user_pass)
     }
 }
 
-TEST(UserPass, parse_file_overflow)
+TEST(UserPass, ParseFileOverflow)
 {
     for (auto flags : flag_combos_nofile)
     {
