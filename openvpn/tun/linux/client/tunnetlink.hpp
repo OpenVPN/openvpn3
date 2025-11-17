@@ -34,9 +34,7 @@ struct NetlinkLinkSet : public Action
 {
     using Ptr = RCPtr<NetlinkLinkSet>;
 
-    NetlinkLinkSet()
-    {
-    }
+    NetlinkLinkSet() = default;
 
     NetlinkLinkSet(std::string dev_arg, bool up_arg, int mtu_arg)
         : dev(dev_arg),
@@ -93,9 +91,7 @@ struct NetlinkAddr4 : public Action
 {
     using Ptr = RCPtr<NetlinkAddr4>;
 
-    NetlinkAddr4()
-    {
-    }
+    NetlinkAddr4() = default;
 
     NetlinkAddr4(std::string dev_arg,
                  IPv4::Addr &addr_arg,
@@ -166,9 +162,7 @@ struct NetlinkAddr6 : public Action
 {
     using Ptr = RCPtr<NetlinkAddr6>;
 
-    NetlinkAddr6()
-    {
-    }
+    NetlinkAddr6() = default;
 
     NetlinkAddr6(std::string dev_arg,
                  IPv6::Addr &addr_arg,
@@ -234,9 +228,7 @@ struct NetlinkAddr4PtP : public Action
 {
     using Ptr = RCPtr<NetlinkAddr4PtP>;
 
-    NetlinkAddr4PtP()
-    {
-    }
+    NetlinkAddr4PtP() = default;
 
     NetlinkAddr4PtP(std::string dev_arg,
                     IPv4::Addr local_arg,
@@ -300,9 +292,7 @@ struct NetlinkRoute4 : public Action
 {
     using Ptr = RCPtr<NetlinkRoute4>;
 
-    NetlinkRoute4()
-    {
-    }
+    NetlinkRoute4() = default;
 
     NetlinkRoute4(IPv4::Addr &dst_arg,
                   int prefixlen_arg,
@@ -372,9 +362,7 @@ struct NetlinkRoute6 : public Action
 {
     using Ptr = RCPtr<NetlinkRoute6>;
 
-    NetlinkRoute6()
-    {
-    }
+    NetlinkRoute6() = default;
 
     NetlinkRoute6(IPv6::Addr &dst_arg,
                   int prefixlen_arg,
