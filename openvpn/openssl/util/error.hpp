@@ -31,20 +31,15 @@ class OpenSSLException : public ExceptionCode
   public:
     OPENVPN_EXCEPTION(ssl_exception_index);
 
-    enum
-    {
-        MAX_ERRORS = 8
-    };
+    static constexpr size_t MAX_ERRORS = 8;
 
     OpenSSLException()
     {
-        ssl_err = -1;
         init_error("OpenSSL");
     }
 
     explicit OpenSSLException(const std::string &error_text) noexcept
     {
-        ssl_err = -1;
         init_error(error_text.c_str());
     }
 
@@ -118,11 +113,10 @@ class OpenSSLException : public ExceptionCode
   private:
     void init_error(const char *error_text)
     {
-        const char *prefix = ": ";
-        std::ostringstream tmp;
+        std::string prefix = ": ";
         char buf[256];
 
-        tmp << error_text;
+        errtxt = error_text;
 
         n_err = 0;
         while (unsigned long err = ERR_get_error())
@@ -131,10 +125,10 @@ class OpenSSLException : public ExceptionCode
                 errstack[n_err++] = err;
             ERR_error_string_n(err, buf, sizeof(buf));
             auto reason = ERR_GET_REASON(err);
-            tmp << prefix << buf;
+            errtxt += prefix + buf;
             if (reason >= SSL_AD_REASON_OFFSET)
             {
-                tmp << "[" << SSL_alert_desc_string_long(reason - SSL_AD_REASON_OFFSET) << "]";
+                errtxt += std::string{"["} + SSL_alert_desc_string_long(reason - SSL_AD_REASON_OFFSET) + "]";
             }
 
             prefix = " / ";
@@ -201,7 +195,6 @@ class OpenSSLException : public ExceptionCode
                 }
             }
         }
-        errtxt = tmp.str();
     }
 
     void init_ssl_error(const int ssl_error, const char *error_text)
@@ -224,10 +217,10 @@ class OpenSSLException : public ExceptionCode
         }
     }
 
-    size_t n_err;
+    size_t n_err = 0;
     unsigned long errstack[MAX_ERRORS];
     std::string errtxt;
-    int ssl_err;
+    int ssl_err = -1;
 };
 
 // return an OpenSSL error string
