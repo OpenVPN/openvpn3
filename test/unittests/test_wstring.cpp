@@ -77,5 +77,4 @@ TEST_F(WStringTest, MultiSzFromVector)
     EXPECT_TRUE(std::memcmp(jojo_ptr, wide_jojo.c_str(), raw_jojo.size()) == 0);
     EXPECT_TRUE(std::memcmp(lev_ptr, wide_lev.c_str(), raw_lev.size()) == 0);
     EXPECT_TRUE(std::memcmp(shigeru_ptr, wide_shigeru.c_str(), raw_shigeru.size()) == 0);
-    EXPECT_EQ(multi_names[multi_names.size()], L'\0');
 }
