@@ -23,8 +23,9 @@ const std::string user_tag(
     "<auth>\n"
     "username\n"
     "</auth>\n");
+const std::string user_file_fn(UNITTEST_SOURCE_DIR "/userpass/user.txt");
 const std::string user_file(
-    "auth " UNITTEST_SOURCE_DIR "/userpass/user.txt\n");
+    "auth " + user_file_fn + "\n");
 const std::vector<std::string> user_only{
     user_simple,
     user_tag,
@@ -34,8 +35,10 @@ const std::string userpass_tag(
     "username\n"
     "password\n"
     "</auth>\n");
+const std::string userpass_file_fn(
+    UNITTEST_SOURCE_DIR "/userpass/userpass.txt");
 const std::string userpass_file(
-    "auth " UNITTEST_SOURCE_DIR "/userpass/userpass.txt\n");
+    "auth " + userpass_file_fn + "\n");
 const std::vector<std::string> user_pass{
     userpass_tag,
     userpass_file,
@@ -146,7 +149,7 @@ TEST(UserPass, Missing)
     }
 }
 
-TEST(UserPass, Noargs)
+TEST(UserPass, NoArgs)
 {
     for (auto flags : flag_combos_noargs_okay)
     {
@@ -232,17 +235,17 @@ TEST(UserPass, UserOnly)
             cfg.parse_from_config(userpass_file, nullptr);
             cfg.update_map();
             UserPass::parse(cfg, optname, flags, user, pass);
-            ASSERT_EQ(user, UNITTEST_SOURCE_DIR "/userpass/userpass.txt") << "flags: " << flags;
+            ASSERT_EQ(user, userpass_file_fn) << "flags: " << flags;
             ASSERT_TRUE(pass.empty()) << "flags: " << flags;
             user = "otheruser";
             pass = "otherpass";
             UserPass::parse(cfg, optname, flags, user, pass);
-            ASSERT_EQ(user, UNITTEST_SOURCE_DIR "/userpass/userpass.txt") << "flags: " << flags;
+            ASSERT_EQ(user, userpass_file_fn) << "flags: " << flags;
             ASSERT_TRUE(pass.empty()) << "flags: " << flags;
             bool ret = UserPass::parse(cfg, optname, flags, &userpass);
             ASSERT_TRUE(ret) << "flags: " << flags;
             ASSERT_EQ(userpass.size(), 1) << "flags: " << flags;
-            ASSERT_EQ(userpass[0], UNITTEST_SOURCE_DIR "/userpass/userpass.txt") << "flags: " << flags;
+            ASSERT_EQ(userpass[0], userpass_file_fn) << "flags: " << flags;
         }
     }
     for (auto flags : flag_combos_pw_required)
@@ -308,12 +311,12 @@ TEST(UserPass, ParseFileUserOnly)
     {
         std::string user;
         std::string pass;
-        UserPass::parse_file(UNITTEST_SOURCE_DIR "/userpass/user.txt", flags, user, pass);
+        UserPass::parse_file(user_file_fn, flags, user, pass);
         ASSERT_EQ(user, "username") << "flags: " << flags;
         ASSERT_TRUE(pass.empty()) << "flags: " << flags;
         user = "otheruser";
         pass = "otherpass";
-        UserPass::parse_file(UNITTEST_SOURCE_DIR "/userpass/user.txt", flags, user, pass);
+        UserPass::parse_file(user_file_fn, flags, user, pass);
         ASSERT_EQ(user, "username") << "flags: " << flags;
         ASSERT_TRUE(pass.empty()) << "flags: " << flags;
     }
@@ -324,13 +327,13 @@ TEST(UserPass, ParseFileUserOnly)
             std::string user;
             std::string pass;
             ASSERT_THROW(
-                UserPass::parse_file(UNITTEST_SOURCE_DIR "/userpass/user.txt", flags, user, pass),
+                UserPass::parse_file(user_file_fn, flags, user, pass),
                 UserPass::creds_error)
                 << "config: " << config_text << "flags: " << flags;
             user = "otheruser";
             pass = "otherpass";
             ASSERT_THROW(
-                UserPass::parse_file(UNITTEST_SOURCE_DIR "/userpass/user.txt", flags, user, pass),
+                UserPass::parse_file(user_file_fn, flags, user, pass),
                 UserPass::creds_error)
                 << "config: " << config_text << "flags: " << flags;
         }
@@ -343,12 +346,12 @@ TEST(UserPass, ParseFileUserPass)
     {
         std::string user;
         std::string pass;
-        UserPass::parse_file(UNITTEST_SOURCE_DIR "/userpass/userpass.txt", flags, user, pass);
+        UserPass::parse_file(userpass_file_fn, flags, user, pass);
         ASSERT_EQ(user, "username") << "flags: " << flags;
         ASSERT_EQ(pass, "password") << "flags: " << flags;
         user = "otheruser";
         pass = "otherpass";
-        UserPass::parse_file(UNITTEST_SOURCE_DIR "/userpass/userpass.txt", flags, user, pass);
+        UserPass::parse_file(userpass_file_fn, flags, user, pass);
         ASSERT_EQ(user, "username") << "flags: " << flags;
         ASSERT_EQ(pass, "password") << "flags: " << flags;
     }
