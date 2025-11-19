@@ -244,9 +244,7 @@ class Frame : public RC<thread_unsafe_refcount>
         size_t adj_capacity_;
     };
 
-    Frame()
-    {
-    }
+    Frame() = default;
 
     explicit Frame(const Context &c)
     {

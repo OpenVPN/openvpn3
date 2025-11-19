@@ -29,9 +29,7 @@ class VPNServerNetblock
 
     struct Netblock
     {
-        Netblock()
-        {
-        }
+        Netblock() = default;
 
         Netblock(const IP::Route &route)
         {
@@ -89,9 +87,7 @@ class VPNServerNetblock
 
     struct ClientNetblock : public Netblock
     {
-        ClientNetblock()
-        {
-        }
+        ClientNetblock() = default;
 
         ClientNetblock(const IP::Route &route)
             : Netblock(route)
@@ -136,9 +132,7 @@ class VPNServerNetblock
         IP::Range range6_;
     };
 
-    VPNServerNetblock()
-    {
-    }
+    VPNServerNetblock() = default;
 
     VPNServerNetblock(const OptionList &opt,
                       const std::string &opt_name,

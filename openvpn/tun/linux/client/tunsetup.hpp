@@ -59,9 +59,7 @@ class Setup : public TunBuilderSetup::Base
     // constructor is required to be able to build.  This is
     // related to the member initialization of the private
     // remove_cmds_bypass_gw and remove_cmds class members.
-    Setup()
-    {
-    }
+    Setup() = default;
 
     struct Config : public TunBuilderSetup::Config
     {

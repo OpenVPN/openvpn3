@@ -28,9 +28,7 @@ OPENVPN_EXCEPTION(url_parse_error);
 class Parse
 {
   public:
-    Parse()
-    {
-    }
+    Parse() = default;
 
     Parse(const std::string &url,
           const bool set_default_port = false,

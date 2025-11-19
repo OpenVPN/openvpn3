@@ -827,9 +827,7 @@ class OptionList : public std::vector<Option>, public RCCopyable<thread_unsafe_r
         }
     };
 
-    OptionList()
-    {
-    }
+    OptionList() = default;
 
     template <typename T, typename... Args>
     explicit OptionList(T first, Args... args)

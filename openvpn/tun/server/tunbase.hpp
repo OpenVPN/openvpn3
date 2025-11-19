@@ -30,9 +30,7 @@ using PostCloseFunc = Function<void(int fd)>;
 // A native reference to a client instance
 struct NativeHandle
 {
-    NativeHandle()
-    {
-    }
+    NativeHandle() = default;
 
     NativeHandle(const int fd_arg, const int peer_id_arg)
         : fd(fd_arg),

@@ -26,9 +26,8 @@ class MemQDgram : public MemQBase
   public:
     OPENVPN_SIMPLE_EXCEPTION(frame_uninitialized);
 
-    MemQDgram()
-    {
-    }
+    MemQDgram() = default;
+
     explicit MemQDgram(const Frame::Ptr &frame)
         : frame_(frame)
     {

@@ -26,9 +26,8 @@ namespace openvpn::HTTP {
 
 struct Header
 {
-    Header()
-    {
-    }
+    Header() = default;
+
     Header(std::string name_arg, std::string value_arg)
         : name(std::move(name_arg)), value(std::move(value_arg))
     {

@@ -138,9 +138,7 @@ class RedirectStd : public RedirectStdFD
     }
 
   protected:
-    RedirectStd()
-    {
-    }
+    RedirectStd() = default;
 
     void open_input(const std::string &fn)
     {
@@ -210,9 +208,7 @@ class RedirectPipe : public RedirectStdFD
         std::string err;
     };
 
-    RedirectPipe()
-    {
-    }
+    RedirectPipe() = default;
 
     RedirectPipe(RedirectStdFD &remote,
                  const unsigned int flags_arg)

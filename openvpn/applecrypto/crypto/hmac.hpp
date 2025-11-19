@@ -51,9 +51,7 @@ class HMACContext
         init(digest, key, key_size);
     }
 
-    ~HMACContext()
-    {
-    }
+    ~HMACContext() = default;
 
     void init(const CryptoAlgs::Type digest, const unsigned char *key, const size_t key_size)
     {

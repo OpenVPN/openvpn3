@@ -78,9 +78,7 @@ class Stop
         int index;
     };
 
-    Stop()
-    {
-    }
+    Stop() = default;
 
     void stop()
     {

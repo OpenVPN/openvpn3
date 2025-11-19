@@ -22,9 +22,7 @@ namespace openvpn {
 class CoarseTime
 {
   public:
-    CoarseTime()
-    {
-    }
+    CoarseTime() = default;
 
     CoarseTime(const Time::Duration &pre, const Time::Duration &post)
         : pre_(pre), post_(post)

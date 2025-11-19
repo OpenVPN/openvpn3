@@ -32,9 +32,7 @@ namespace openvpn::bmq_stream {
 class MemQ : public MemQStream
 {
   public:
-    MemQ()
-    {
-    }
+    MemQ() = default;
 
     long ctrl(BIO *b, int cmd, long num, void *ptr)
     {

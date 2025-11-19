@@ -118,9 +118,7 @@ class ClientConfig : public TunClientFactory
     }
 
   private:
-    ClientConfig()
-    {
-    }
+    ClientConfig() = default;
 };
 
 class Client : public TunClient

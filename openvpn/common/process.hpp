@@ -140,9 +140,7 @@ struct Command : public Action
 {
     using Ptr = RCPtr<Command>;
 
-    Command()
-    {
-    }
+    Command() = default;
 
     Command(Argv argv_arg)
         : argv(std::move(argv_arg))

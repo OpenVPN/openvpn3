@@ -18,9 +18,7 @@
 namespace openvpn::AWS {
 struct Creds
 {
-    Creds()
-    {
-    }
+    Creds() = default;
 
     Creds(std::string access_key_arg,
           std::string secret_key_arg,

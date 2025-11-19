@@ -128,9 +128,8 @@ OPENVPN_SIMPLE_EXCEPTION(receive_sequence);
 
 struct Packet
 {
-    Packet()
-    {
-    }
+    Packet() = default;
+
     explicit Packet(const BufferPtr &buf_arg)
         : buf(buf_arg)
     {

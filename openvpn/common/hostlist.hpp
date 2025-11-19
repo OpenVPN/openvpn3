@@ -26,9 +26,7 @@ namespace openvpn::HostList {
 
 struct Host
 {
-    Host()
-    {
-    }
+    Host() = default;
 
     Host(const std::string &host_arg, const std::string &port_arg)
         : host(host_arg),
@@ -70,9 +68,7 @@ struct Host
 class List : public std::vector<Host>
 {
   public:
-    List()
-    {
-    }
+    List() = default;
 
     List(const OptionList &opt,
          const std::string &directive,

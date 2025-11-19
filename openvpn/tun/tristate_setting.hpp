@@ -25,9 +25,7 @@ class TriStateSetting
         Default,
     };
 
-    TriStateSetting()
-    {
-    }
+    TriStateSetting() = default;
 
     explicit TriStateSetting(const Type t)
         : type_(t)

@@ -98,9 +98,7 @@ class List : public std::vector<Item>
 #endif
     };
 
-    List()
-    {
-    }
+    List() = default;
 
     List(const Item &item)
     {

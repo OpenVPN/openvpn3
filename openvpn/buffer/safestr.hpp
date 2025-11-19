@@ -29,9 +29,7 @@ class SafeString
     static constexpr BufferFlags BUF_FLAGS{BufAllocFlags::DESTRUCT_ZERO | BufAllocFlags::GROW};
 
   public:
-    SafeString()
-    {
-    }
+    SafeString() = default;
 
     SafeString(const char *str, const size_t size)
         : data(size + 1, BUF_FLAGS)

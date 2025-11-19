@@ -29,9 +29,7 @@ OPENVPN_EXCEPTION(korekey_error);
 
 struct Info
 {
-    Info()
-    {
-    }
+    Info() = default;
 
     Info(const CryptoDCContext::Ptr &dc_context_delegate_arg,
          const unsigned int key_id_arg,
@@ -100,9 +98,7 @@ class Key
         }
     }
 
-    Key()
-    {
-    }
+    Key() = default;
 
   protected:
     const unsigned char *verify_key(const char *title, const StaticKey &sk, const size_t size_required)

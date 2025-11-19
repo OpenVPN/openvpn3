@@ -29,9 +29,8 @@ class MemQStream : public MemQBase
   public:
     OPENVPN_SIMPLE_EXCEPTION(frame_uninitialized);
 
-    MemQStream()
-    {
-    }
+    MemQStream() = default;
+
     explicit MemQStream(const Frame::Ptr &frame)
         : frame_(frame)
     {

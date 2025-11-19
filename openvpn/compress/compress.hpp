@@ -164,9 +164,7 @@ class CompressContext
 
     OPENVPN_SIMPLE_EXCEPTION(compressor_unavailable);
 
-    CompressContext()
-    {
-    }
+    CompressContext() = default;
 
     CompressContext(const Type t, const bool asym)
         : asym_(asym) // asym indicates asymmetrical compression where only downlink is compressed

@@ -745,9 +745,7 @@ inline void flush_arp(const DWORD adapter_index,
 
 struct IPNetmask4
 {
-    IPNetmask4()
-    {
-    }
+    IPNetmask4() = default;
 
     IPNetmask4(const TunBuilderCapture &pull, const char *title)
     {

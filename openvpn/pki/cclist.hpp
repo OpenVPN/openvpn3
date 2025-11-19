@@ -32,9 +32,7 @@ class CertCRLListTemplate
   public:
     OPENVPN_EXCEPTION(parse_cert_crl_error);
 
-    CertCRLListTemplate()
-    {
-    }
+    CertCRLListTemplate() = default;
 
     explicit CertCRLListTemplate(const std::string &content, const std::string &title)
     {

@@ -107,9 +107,8 @@ class TLSSessionTicketBase
         friend class OpenSSLContext;
         friend class MbedTLSContext;
 
-        Name()
-        {
-        } // note that default constructor leaves object in an undefined state
+        // note that default constructor leaves object in an undefined state
+        Name() = default;
 
         unsigned char value_[SIZE];
     };
@@ -195,9 +194,8 @@ class TLSSessionTicketBase
         friend class OpenSSLContext;
         friend class MbedTLSContext;
 
-        Key()
-        {
-        } // note that default constructor leaves object in an undefined state
+        // note that default constructor leaves object in an undefined state
+        Key() = default;
 
         unsigned char cipher_value_[CIPHER_KEY_SIZE];
         unsigned char hmac_value_[HMAC_KEY_SIZE];

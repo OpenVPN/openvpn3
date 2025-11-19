@@ -26,9 +26,7 @@ OPENVPN_EXCEPTION(url_parameter_error);
 
 struct Parm
 {
-    Parm()
-    {
-    }
+    Parm() = default;
 
     Parm(const std::string &name_arg, const std::string &value_arg)
         : name(name_arg), value(value_arg)

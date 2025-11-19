@@ -26,9 +26,7 @@ class ProxyAuthenticate : public RC<thread_unsafe_refcount>
   public:
     using Ptr = RCPtr<ProxyAuthenticate>;
 
-    ProxyAuthenticate()
-    {
-    }
+    ProxyAuthenticate() = default;
 
     ProxyAuthenticate(const std::string &line)
     {

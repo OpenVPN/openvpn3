@@ -20,9 +20,7 @@ namespace openvpn {
 // By convention, rng is crypto-strength while prng is not.
 struct Rand2
 {
-    Rand2()
-    {
-    }
+    Rand2() = default;
 
     Rand2(StrongRandomAPI::Ptr rng_arg,
           RandomAPI::Ptr prng_arg)

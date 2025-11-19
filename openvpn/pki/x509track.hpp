@@ -108,9 +108,7 @@ struct Config
 
 struct ConfigSet : public std::vector<Config>
 {
-    ConfigSet()
-    {
-    }
+    ConfigSet() = default;
 
     ConfigSet(const OptionList &opt,
               const bool include_serial,

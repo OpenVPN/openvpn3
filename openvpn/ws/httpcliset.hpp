@@ -433,9 +433,7 @@ class ClientSet : public RC<thread_unsafe_refcount>
       public:
         typedef RCPtr<HostRetry> Ptr;
 
-        HostRetry()
-        {
-        }
+        HostRetry() = default;
 
         template <typename T, typename... Args>
         HostRetry(T first, Args... args)

@@ -35,9 +35,7 @@ class OvpnHMAC
     OPENVPN_SIMPLE_EXCEPTION(ovpn_hmac_context_bad_sizing);
 
   public:
-    OvpnHMAC()
-    {
-    }
+    OvpnHMAC() = default;
 
     OvpnHMAC(const CryptoAlgs::Type digest, const StaticKey &key)
     {

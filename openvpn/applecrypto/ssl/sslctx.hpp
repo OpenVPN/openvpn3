@@ -71,9 +71,7 @@ class AppleSSLContext : public SSLFactoryAPI
       public:
         typedef RCPtr<Config> Ptr;
 
-        Config()
-        {
-        }
+        Config() = default;
 
         void load_identity(const std::string &subject_match)
         {
