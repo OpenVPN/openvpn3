@@ -569,7 +569,7 @@ class OvpnDcoWinClient : public Client,
         return nullptr;
     }
 
-    virtual SessionStats::DCOTransportSource::Data dco_transport_stats_delta() override
+    SessionStats::DCOTransportSource::Data dco_transport_stats_delta() override
     {
         if (halt)
         {

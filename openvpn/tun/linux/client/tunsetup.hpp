@@ -71,7 +71,7 @@ class Setup : public TunBuilderSetup::Base
         bool dco = false;
 
 #ifdef HAVE_JSON
-        virtual Json::Value to_json() override
+        Json::Value to_json() override
         {
             Json::Value root(Json::objectValue);
             root["iface_name"] = Json::Value(iface_name);
@@ -82,7 +82,7 @@ class Setup : public TunBuilderSetup::Base
             return root;
         };
 
-        virtual void from_json(const Json::Value &root, const std::string &title) override
+        void from_json(const Json::Value &root, const std::string &title) override
         {
             json::assert_dict(root, title);
             json::to_string(root, iface_name, "iface_name", title);

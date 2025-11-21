@@ -34,7 +34,7 @@ class LogBaseSimpleMac : public LogBase
                          "LogBaseSimple for macOS/iOS initialized");
     }
 
-    virtual void log(const std::string &str) override
+    void log(const std::string &str) override
     {
         std::lock_guard<std::mutex> lock(mutex);
         os_log_with_type(OS_LOG_DEFAULT,

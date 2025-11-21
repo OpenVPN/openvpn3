@@ -29,7 +29,7 @@ class LogBaseSimple : public LogBase
     {
     }
 
-    virtual void log(const std::string &str) override
+    void log(const std::string &str) override
     {
         const std::string ts = date_time();
         {

@@ -907,7 +907,7 @@ class ActionSetAdapterDomainSuffix : public Action
     {
     }
 
-    virtual void execute(std::ostream &os) override
+    void execute(std::ostream &os) override
     {
         os << to_string() << "\n";
 
@@ -936,7 +936,7 @@ class ActionSetAdapterDomainSuffix : public Action
             OPENVPN_THROW(tun_win_util, "ActionSetAdapterDomainSuffix: error writing Domain registry key: " << reg_key_name);
     }
 
-    virtual std::string to_string() const override
+    std::string to_string() const override
     {
         return "Set adapter domain suffix: '" + search_domain + "' " + tap_guid;
     }
@@ -1207,7 +1207,7 @@ class ActionDeleteAllRoutesOnInterface : public Action
     {
     }
 
-    virtual void execute(std::ostream &os) override
+    void execute(std::ostream &os) override
     {
         os << to_string() << "\n";
 
@@ -1217,7 +1217,7 @@ class ActionDeleteAllRoutesOnInterface : public Action
         actions->execute(os);
     }
 
-    virtual std::string to_string() const override
+    std::string to_string() const override
     {
         return "ActionDeleteAllRoutesOnInterface iface_index=" + std::to_string(iface_index);
     }

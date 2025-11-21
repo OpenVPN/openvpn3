@@ -70,12 +70,12 @@ class TCPLink : public LinkCommon<Protocol,
 
   private:
     // Called by LinkCommon
-    virtual void from_app_send_buffer(BufferPtr &buf) override
+    void from_app_send_buffer(BufferPtr &buf) override
     {
         Base::queue_send_buffer(buf);
     }
 
-    virtual void recv_buffer(PacketFrom::SPtr &pfp, const size_t bytes_recvd) override
+    void recv_buffer(PacketFrom::SPtr &pfp, const size_t bytes_recvd) override
     {
         bool requeue = true;
         OPENVPN_LOG_TCPLINK_VERBOSE("TCP recv raw="

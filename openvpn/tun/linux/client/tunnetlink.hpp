@@ -52,7 +52,7 @@ struct NetlinkLinkSet : public Action
         return ret;
     }
 
-    virtual void execute(std::ostream &os) override
+    void execute(std::ostream &os) override
     {
         if (dev.empty())
         {
@@ -75,7 +75,7 @@ struct NetlinkLinkSet : public Action
         }
     }
 
-    virtual std::string to_string() const override
+    std::string to_string() const override
     {
         std::ostringstream os;
         os << "netlink iface " << dev << " link set " << up << " mtu " << mtu;
@@ -117,7 +117,7 @@ struct NetlinkAddr4 : public Action
         return ret;
     }
 
-    virtual void execute(std::ostream &os) override
+    void execute(std::ostream &os) override
     {
         if (dev.empty())
         {
@@ -142,7 +142,7 @@ struct NetlinkAddr4 : public Action
         }
     }
 
-    virtual std::string to_string() const override
+    std::string to_string() const override
     {
         std::ostringstream os;
         os << "netlink iface " << dev << " " << (add ? "add" : "del") << " "
@@ -185,7 +185,7 @@ struct NetlinkAddr6 : public Action
         return ret;
     }
 
-    virtual void execute(std::ostream &os) override
+    void execute(std::ostream &os) override
     {
         if (dev.empty())
         {
@@ -210,7 +210,7 @@ struct NetlinkAddr6 : public Action
         }
     }
 
-    virtual std::string to_string() const override
+    std::string to_string() const override
     {
         std::ostringstream os;
         os << "netlink iface " << dev << " " << (add ? "add" : "del") << " "
@@ -251,7 +251,7 @@ struct NetlinkAddr4PtP : public Action
         return ret;
     }
 
-    virtual void execute(std::ostream &os) override
+    void execute(std::ostream &os) override
     {
         if (dev.empty())
         {
@@ -276,7 +276,7 @@ struct NetlinkAddr4PtP : public Action
         }
     }
 
-    virtual std::string to_string() const override
+    std::string to_string() const override
     {
         return "netlink iface " + dev + " " + (add ? "add" : "del") + " ptp "
                + local.to_string() + " remote " + remote.to_string();
@@ -318,7 +318,7 @@ struct NetlinkRoute4 : public Action
         return ret;
     }
 
-    virtual void execute(std::ostream &os) override
+    void execute(std::ostream &os) override
     {
         if (dev.empty())
         {
@@ -343,7 +343,7 @@ struct NetlinkRoute4 : public Action
         }
     }
 
-    virtual std::string to_string() const override
+    std::string to_string() const override
     {
         std::ostringstream os;
         os << "netlink route " << (add ? "add" : "del") << " dev " << dev << " "
@@ -388,7 +388,7 @@ struct NetlinkRoute6 : public Action
         return ret;
     }
 
-    virtual void execute(std::ostream &os) override
+    void execute(std::ostream &os) override
     {
         if (dev.empty())
         {
@@ -413,7 +413,7 @@ struct NetlinkRoute6 : public Action
         }
     }
 
-    virtual std::string to_string() const override
+    std::string to_string() const override
     {
         std::ostringstream os;
         os << "netlink route " << (add ? "add" : "del") << " dev " << dev << " "

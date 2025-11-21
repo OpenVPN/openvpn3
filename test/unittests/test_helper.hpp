@@ -339,18 +339,18 @@ class FakeSecureRand : public openvpn::StrongRandomAPI
     {
     }
 
-    virtual std::string name() const override
+    std::string name() const override
     {
         return "FakeRNG";
     }
 
-    virtual void rand_bytes(unsigned char *buf, size_t size) override
+    void rand_bytes(unsigned char *buf, size_t size) override
     {
         rand_bytes_(buf, size);
         // OPENVPN_LOG("RAND: " << openvpn::render_hex(buf, size));
     }
 
-    virtual bool rand_bytes_noexcept(unsigned char *buf, size_t size) override
+    bool rand_bytes_noexcept(unsigned char *buf, size_t size) override
     {
         rand_bytes(buf, size);
         return true;

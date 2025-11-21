@@ -31,13 +31,13 @@ class WinSleep : public Action
     {
     }
 
-    virtual void execute(std::ostream &os) override
+    void execute(std::ostream &os) override
     {
         os << to_string() << "\n";
         ::Sleep(dwMilliseconds);
     }
 
-    virtual std::string to_string() const override
+    std::string to_string() const override
     {
         return "Sleeping for " + openvpn::to_string(dwMilliseconds) + " milliseconds...";
     }

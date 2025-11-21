@@ -457,7 +457,7 @@ class ClientSet : public RC<thread_unsafe_refcount>
             return (*this)[index++];
         }
 
-        virtual void retry(TransactionSet &ts, Transaction &t) override
+        void retry(TransactionSet &ts, Transaction &t) override
         {
             ts.host.host = next_host();
         }

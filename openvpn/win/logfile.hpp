@@ -29,7 +29,7 @@ class LogFile : public LogBase
     {
     }
 
-    virtual void log(const std::string &str) override
+    void log(const std::string &str) override
     {
         LogUtil::log(log_handle(), str);
     }

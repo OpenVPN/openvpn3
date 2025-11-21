@@ -32,14 +32,14 @@ class ProxySettings : public RC<thread_unsafe_refcount>
         {
         }
 
-        virtual void execute(std::ostream &os) override
+        void execute(std::ostream &os) override
         {
             os << to_string() << "\n";
             if (parent)
                 parent->set_proxy(del);
         }
 
-        virtual std::string to_string() const override
+        std::string to_string() const override
         {
             std::ostringstream os;
             if (parent && parent->config.defined())

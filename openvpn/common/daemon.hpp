@@ -40,7 +40,7 @@ class LogReopen : public LogSetup
     {
     }
 
-    virtual void reopen() override
+    void reopen() override
     {
         try
         {

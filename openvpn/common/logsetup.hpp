@@ -31,7 +31,7 @@ class MultiLogSetup : public std::vector<LogSetup::Ptr>,
   public:
     typedef RCPtr<MultiLogSetup> Ptr;
 
-    virtual void reopen() override
+    void reopen() override
     {
         for (const auto &e : *this)
             e->reopen();

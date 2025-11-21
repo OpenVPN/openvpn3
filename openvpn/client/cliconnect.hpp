@@ -309,7 +309,7 @@ class ClientConnect : ClientProto::NotifyCallback,
         }
     }
 
-    virtual void bulk_resolve_done() override
+    void bulk_resolve_done() override
     {
         if (!halt && generation == 0)
             new_client();
@@ -390,7 +390,7 @@ class ClientConnect : ClientProto::NotifyCallback,
         return true;
     }
 
-    virtual void client_proto_connected() override
+    void client_proto_connected() override
     {
         conn_timer.cancel();
         conn_timer_pending = false;
@@ -431,7 +431,7 @@ class ClientConnect : ClientProto::NotifyCallback,
                                       self->restart_wait_callback(gen, error); });
     }
 
-    virtual void client_proto_auth_pending_timeout(int timeout) override
+    void client_proto_auth_pending_timeout(int timeout) override
     {
         if (conn_timer_pending)
         {
@@ -490,7 +490,7 @@ class ClientConnect : ClientProto::NotifyCallback,
         queue_restart(delay);
     }
 
-    virtual void client_proto_terminate() override
+    void client_proto_terminate() override
     {
         if (!halt)
         {
@@ -698,22 +698,22 @@ class ClientConnect : ClientProto::NotifyCallback,
 
     // ClientLifeCycle::NotifyCallback callbacks
 
-    virtual void cln_stop() override
+    void cln_stop() override
     {
         thread_safe_stop();
     }
 
-    virtual void cln_pause(const std::string &reason) override
+    void cln_pause(const std::string &reason) override
     {
         thread_safe_pause(reason);
     }
 
-    virtual void cln_resume() override
+    void cln_resume() override
     {
         thread_safe_resume();
     }
 
-    virtual void cln_reconnect(int seconds) override
+    void cln_reconnect(int seconds) override
     {
         thread_safe_reconnect(seconds);
     }

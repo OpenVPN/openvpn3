@@ -125,7 +125,7 @@ class Socket : public SocketBase
         unsigned short port_;
     };
 
-    virtual void async_connect_post_open(const protocol_type &protocol, openvpn_io::error_code &ec) override
+    void async_connect_post_open(const protocol_type &protocol, openvpn_io::error_code &ec) override
     {
         if (protocol == openvpn_io::ip::tcp::v4())
             v4.post_open(this, ec);

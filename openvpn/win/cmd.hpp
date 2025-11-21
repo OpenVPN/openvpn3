@@ -35,14 +35,14 @@ class WinCmd : public Action
     {
     }
 
-    virtual void execute(std::ostream &os) override
+    void execute(std::ostream &os) override
     {
         os << cmd << "\n";
         std::string out = Win::call(cmd);
         os << out;
     }
 
-    virtual std::string to_string() const override
+    std::string to_string() const override
     {
         return cmd;
     }

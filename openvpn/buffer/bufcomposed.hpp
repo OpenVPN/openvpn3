@@ -49,7 +49,7 @@ class BufferComposed
             return iter != bc.bv.end();
         }
 
-        virtual void next_buffer() override
+        void next_buffer() override
         {
             next_buffer_impl();
         }

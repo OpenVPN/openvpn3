@@ -33,7 +33,7 @@ class ProcFS : public Action
     {
     }
 
-    virtual void execute(std::ostream &os) override
+    void execute(std::ostream &os) override
     {
         os << to_string() << "\n";
         try
@@ -46,7 +46,7 @@ class ProcFS : public Action
         }
     }
 
-    virtual std::string to_string() const override
+    std::string to_string() const override
     {
         return to_string(fn, text);
     }

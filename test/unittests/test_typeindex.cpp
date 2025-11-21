@@ -55,7 +55,7 @@ class Wrapper : public Base
             return nullptr;
     }
 
-    virtual std::string to_string() const override
+    std::string to_string() const override
     {
         return "value=" + StringTempl::to_string(obj) + " obj_size=" + std::to_string(sizeof(obj));
     }

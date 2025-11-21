@@ -155,7 +155,7 @@ struct Command : public Action
         return ret;
     }
 
-    virtual void execute(std::ostream &os) override
+    void execute(std::ostream &os) override
     {
         if (!argv.empty())
         {
@@ -180,7 +180,7 @@ struct Command : public Action
             os << "Error: command called with empty argv\n";
     }
 
-    virtual std::string to_string() const override
+    std::string to_string() const override
     {
         return argv.to_string();
     }

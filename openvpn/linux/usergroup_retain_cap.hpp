@@ -53,7 +53,7 @@ class SetUserGroupRetainCap : public SetUserGroup
     }
 
     // call first in all threads before user/group downgrade
-    virtual void pre_thread() const override
+    void pre_thread() const override
     {
         if (!pw)
             return;
@@ -76,7 +76,7 @@ class SetUserGroupRetainCap : public SetUserGroup
     }
 
     // call once after pre_thread() called in each thread
-    virtual void activate() const override
+    void activate() const override
     {
         if (!pw)
         {
@@ -106,7 +106,7 @@ class SetUserGroupRetainCap : public SetUserGroup
     }
 
     // call in all threads after activate()
-    virtual void post_thread() const override
+    void post_thread() const override
     {
         if (!pw)
             return;

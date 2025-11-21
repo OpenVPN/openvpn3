@@ -38,10 +38,10 @@ implementations for callbacks including event and logging notifications:
     class Client : public ClientAPI::OpenVPNClient
     {
     public:
-        virtual void event(const Event&) override {  // events delivered here
+        void event(const Event&) override {  // events delivered here
           ...
         }
-        virtual void log(const LogInfo&) override {  // logging delivered here
+        void log(const LogInfo&) override {  // logging delivered here
           ...
         }
 
