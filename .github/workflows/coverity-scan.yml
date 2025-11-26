@@ -18,7 +18,7 @@ jobs:
 
       - name: Install dependencies
         if: steps.check_submit.outputs.cache-hit != 'true'
-        run: doas syspatch && doas pkg_add -Uu -y libcap-dev libfmt-dev libjsoncpp-dev liblzo2-dev liblz4-dev libssl-dev swig
+        run: doas syspatch && doas pkg_add -Uu && doas pkg_add -y libcap-dev libfmt-dev libjsoncpp-dev liblzo2-dev liblz4-dev libssl-dev swig
       - name: Checkout OpenVPN 3
         if: steps.check_submit.outputs.cache-hit != 'true'
         uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
