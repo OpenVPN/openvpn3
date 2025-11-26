@@ -22,8 +22,8 @@ jobs:
 
       - name: Install dependencies
         run: |
-          sudo apt update
-          sudo apt install -y --no-install-recommends \
+          doas pkg_add -Uu
+          doas pkg_add -y --no-install-recommends \
             build-essential cmake doxygen graphviz ninja-build \
             libasio-dev libcap-dev liblz4-dev libjsoncpp-dev libssl-dev libxxhash-dev
 
@@ -49,7 +49,7 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-24.04
+    runs-on: OpenBSD
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
