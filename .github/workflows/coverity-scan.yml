@@ -18,7 +18,7 @@ jobs:
 
       - name: Install dependencies
         if: steps.check_submit.outputs.cache-hit != 'true'
-        run: doas syspatch && doas pkg_add -Uu && doas pkg_add -y libcap-dev libfmt-dev libjsoncpp-dev liblzo2-dev liblz4-dev libssl-dev swig
+        run: doas syspatch && doas pkg_add -Uu && doas pkg_add -aa libcap-dev libfmt-dev libjsoncpp-dev liblzo2-dev liblz4-dev libssl-dev swig wget2
       - name: Checkout OpenVPN 3
         if: steps.check_submit.outputs.cache-hit != 'true'
         uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
@@ -47,7 +47,7 @@ jobs:
         if: steps.check_submit.outputs.cache-hit != 'true'
         run: |
           wget -q https://scan.coverity.com/download/cxx/linux64 --post-data "token=$TOKEN&project=OpenVPN%2Fopenvpn3" -O cov-analysis-linux64.tar.gz
-          mkdir cov-analysis-linux64
+          mkdir cov-analysis-obsdx64
           tar xzf cov-analysis-linux64.tar.gz --strip 1 -C cov-analysis-linux64
         env:
           TOKEN: ${{ secrets.COVERITY_SCAN_TOKEN }}
