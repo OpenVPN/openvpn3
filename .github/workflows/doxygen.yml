@@ -25,7 +25,7 @@ jobs:
           sudo apt update
           sudo apt install -y --no-install-recommends \
             build-essential cmake doxygen graphviz ninja-build \
-            libasio-dev libcap-dev liblz4-dev libjsoncpp-dev libssl-dev libxxhash-dev
+            libasio-dev libcap-dev libfmt-dev libjsoncpp-dev liblz4-dev libssl-dev libxxhash-dev
 
       - name: Build Doxygen documentation
         id: build
