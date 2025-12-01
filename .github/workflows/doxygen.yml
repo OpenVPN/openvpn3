@@ -34,7 +34,6 @@ jobs:
           cd doxygen
           cmake -S ${{ github.workspace}}/openvpn3 -DENABLE_DOXYGEN=ON -DDOXYGEN_HTML_EXTRA_STYLESHEET=${{ github.workspace }}/doxygen-awesome-css/doxygen-awesome.css -GNinja
           ninja -v doxygen-core
-          touch doxygen/core/html/.nojekyll
       - name: Upload static files as artifact
         id: deployment
         uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4.0.0
