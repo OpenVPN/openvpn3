@@ -21,12 +21,12 @@ jobs:
         run: sudo apt update && sudo apt install -y libcap-dev libfmt-dev libjsoncpp-dev liblzo2-dev liblz4-dev libssl-dev swig
       - name: Checkout OpenVPN 3
         if: steps.check_submit.outputs.cache-hit != 'true'
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           path: openvpn3
       - name: Checkout asio
         if: steps.check_submit.outputs.cache-hit != 'true'
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           # versioning=regex:^asio-(?<major>\d+)-(?<minor>\d+)-(?<patch>\d+)$
           repository: chriskohlhoff/asio
@@ -34,7 +34,7 @@ jobs:
           path: asio
       - name: Checkout xxHash
         if: steps.check_submit.outputs.cache-hit != 'true'
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           # versioning=semver-coerced
           repository: Cyan4973/xxHash
