@@ -72,8 +72,7 @@ struct PacketIDData
     {
         if (wide)
             return long_id_size;
-        else
-            return short_id_size;
+        return short_id_size;
     }
 
 
@@ -262,7 +261,7 @@ class PacketIDDataSend
         {
             return true;
         }
-        else if (unlikely((pid_.id & PacketIDData::epoch_packet_id_mask) == epoch_packet_id_max))
+        if (unlikely((pid_.id & PacketIDData::epoch_packet_id_mask) == epoch_packet_id_max))
         {
             return true;
         }
@@ -366,8 +365,7 @@ class PacketIDDataReceiveType
             stats->error(err);
             return false;
         }
-        else
-            return true;
+        return true;
     }
 
     /**

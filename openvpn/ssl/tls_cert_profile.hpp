@@ -36,8 +36,7 @@ inline Type default_if_undef(const Type type)
 {
     if (type == UNDEF)
         return LEGACY; // this is the default if unspecified
-    else
-        return type;
+    return type;
 }
 
 inline const std::string to_string(const Type type)
@@ -70,12 +69,11 @@ inline Type parse_tls_cert_profile(const std::string &profile_name)
 #endif
         if (profile_name == "legacy")
         return LEGACY;
-    else if (profile_name == "preferred")
+    if (profile_name == "preferred")
         return PREFERRED;
-    else if (profile_name == "suiteb")
+    if (profile_name == "suiteb")
         return SUITEB;
-    else
-        throw option_error(ERR_INVALID_OPTION_CRYPTO, "tls-cert-profile: unrecognized profile name");
+    throw option_error(ERR_INVALID_OPTION_CRYPTO, "tls-cert-profile: unrecognized profile name");
 }
 
 inline Type parse_tls_cert_profile(const OptionList &opt,

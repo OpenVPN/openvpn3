@@ -60,16 +60,15 @@ inline Type parse_tls_version_min(const std::string &ver,
 {
     if (ver == "1.0" && Type::V1_0 <= max_version)
         return Type::V1_0;
-    else if (ver == "1.1" && Type::V1_1 <= max_version)
+    if (ver == "1.1" && Type::V1_1 <= max_version)
         return Type::V1_1;
-    else if (ver == "1.2" && Type::V1_2 <= max_version)
+    if (ver == "1.2" && Type::V1_2 <= max_version)
         return Type::V1_2;
-    else if (ver == "1.3" && Type::V1_3 <= max_version)
+    if (ver == "1.3" && Type::V1_3 <= max_version)
         return Type::V1_3;
-    else if (or_highest)
+    if (or_highest)
         return max_version;
-    else
-        throw option_error(ERR_INVALID_OPTION_CRYPTO, "tls-version-min: unrecognized TLS version");
+    throw option_error(ERR_INVALID_OPTION_CRYPTO, "tls-version-min: unrecognized TLS version");
 }
 
 inline Type parse_tls_version_min(const OptionList &opt,

@@ -130,8 +130,7 @@ class TunPersistTemplate : public TunWrapTemplate<SCOPED_OBJ>
             options_ = copt_->to_string();
             return true;
         }
-        else
-            return false;
+        return false;
     }
 
   private:

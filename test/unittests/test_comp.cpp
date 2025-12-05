@@ -82,8 +82,7 @@ class MySessionStats : public SessionStats
     {
         if (type < Error::N_ERRORS)
             return errors[type];
-        else
-            return 0;
+        return 0;
     }
 
   private:

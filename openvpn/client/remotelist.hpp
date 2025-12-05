@@ -198,8 +198,7 @@ class RemoteList : public RC<thread_unsafe_refcount>
                 OPENVPN_LOG_REMOTELIST("*** RemoteList::Item endpoint GET[" << index << "] " << endpoint << ' ' << to_string());
                 return true;
             }
-            else
-                return false;
+            return false;
         }
 
         bool need_resolve()
@@ -276,8 +275,7 @@ class RemoteList : public RC<thread_unsafe_refcount>
                     item_ = 0;
                 return true;
             }
-            else
-                return false;
+            return false;
         }
 
       private:
@@ -805,8 +803,7 @@ class RemoteList : public RC<thread_unsafe_refcount>
         const size_t pri = index.item();
         if (pri < list.size())
             return pri;
-        else
-            throw remote_list_error("current remote server item is undefined");
+        throw remote_list_error("current remote server item is undefined");
     }
 
     // return the number of cached IP addresses associated with a given item

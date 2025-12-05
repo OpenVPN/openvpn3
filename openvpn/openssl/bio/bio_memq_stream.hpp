@@ -211,15 +211,13 @@ inline MemQ *memq_from_bio(BIO *b)
 {
     if (BIO_method_type(b) == bio_memq_internal::memq_method_type)
         return (MemQ *)(BIO_get_data(b));
-    else
-        return nullptr;
+    return nullptr;
 }
 
 inline const MemQ *const_memq_from_bio(const BIO *b)
 {
     if (BIO_method_type(b) == bio_memq_internal::memq_method_type)
         return (const MemQ *)(BIO_get_data(const_cast<BIO *>(b)));
-    else
-        return nullptr;
+    return nullptr;
 }
 } // namespace openvpn::bmq_stream

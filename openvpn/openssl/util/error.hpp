@@ -70,8 +70,7 @@ class OpenSSLException : public ExceptionCode
     {
         if (i < n_err)
             return errstack[i];
-        else
-            throw ssl_exception_index();
+        throw ssl_exception_index();
     }
 
     int ssl_error() const

@@ -533,15 +533,14 @@ keymgmt_set_params(void *keydata, const OSSL_PARAM *params)
     {
         return keymgmt_import_helper(key, params);
     }
-    else if (key->handle == NULL) /* once handle is set our key is immutable */
+    if (key->handle == NULL) /* once handle is set our key is immutable */
     {
         /* pubkey is always native -- just delegate */
         return EVP_PKEY_set_params(key->pubkey, (OSSL_PARAM *)params);
     }
-    else
-    {
-        msg(M_WARN, "xkey keymgmt_set_params: key is immutable");
-    }
+    
+            msg(M_WARN, "xkey keymgmt_set_params: key is immutable");
+   
     return 1;
 }
 
@@ -565,7 +564,7 @@ ec_keymgmt_name(int id)
     /* though we do not implement keyexch we could be queried for
      * keyexch mechanism supported by EC keys
      */
-    else if (id == OSSL_OP_KEYEXCH)
+    if (id == OSSL_OP_KEYEXCH)
     {
         return "ECDH";
     }

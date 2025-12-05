@@ -78,10 +78,9 @@ static std::string get_csv_from_frag(Buffer buf, const size_t index, const size_
 {
     if (size < 2)
         return get_csv(std::move(buf), NO_PC, prefix);
-    else if (index == size - 1)
+    if (index == size - 1)
         return get_csv(std::move(buf), PC_1, prefix);
-    else
-        return get_csv(std::move(buf), PC_2, prefix);
+    return get_csv(std::move(buf), PC_2, prefix);
 }
 
 static std::string random_term(RandomAPI &prng)

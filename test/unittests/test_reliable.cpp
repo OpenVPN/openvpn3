@@ -302,8 +302,7 @@ void test(MTRand &rand,
             print_msg(t, "RECV", m.packet.buf, m.id(), case_detail);
             if (m.id() != rec_id)
                 throw receive_sequence();
-            else
-                rec_id = m.id() + 1;
+            rec_id = m.id() + 1;
 
             recv.advance();
         }

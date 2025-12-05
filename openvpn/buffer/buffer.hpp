@@ -145,8 +145,7 @@ class BufferException : public std::exception
     {
         if (!msg_.empty())
             return msg_.c_str();
-        else
-            return status_string(status_);
+        return status_string(status_);
     }
 
     Status status() const
@@ -1354,8 +1353,7 @@ auto *ConstBufferType<T>::read_alloc(const size_t size)
         size_ -= size;
         return ret;
     }
-    else
-        OPENVPN_BUFFER_THROW(buffer_underflow);
+    OPENVPN_BUFFER_THROW(buffer_underflow);
 }
 
 template <typename T>
@@ -1369,8 +1367,7 @@ auto ConstBufferType<T>::read_alloc_buf(const size_t size)
         size_ -= size;
         return ret;
     }
-    else
-        OPENVPN_BUFFER_THROW(buffer_underflow);
+    OPENVPN_BUFFER_THROW(buffer_underflow);
 }
 
 template <typename T>

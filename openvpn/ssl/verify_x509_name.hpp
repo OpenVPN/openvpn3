@@ -113,11 +113,11 @@ class VerifyX509Name
         {
             return VERIFY_X509_SUBJECT_DN;
         }
-        else if (type == "name")
+        if (type == "name")
         {
             return VERIFY_X509_SUBJECT_RDN;
         }
-        else if (type == "name-prefix")
+        if (type == "name-prefix")
         {
             return VERIFY_X509_SUBJECT_RDN_PREFIX;
         }

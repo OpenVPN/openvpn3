@@ -102,8 +102,7 @@ class OvpnHMAC
             ctx.final(local_hmac);
             return !crypto::memneq(data + l1, local_hmac, l2);
         }
-        else
-            return false;
+        return false;
     }
 
   private:

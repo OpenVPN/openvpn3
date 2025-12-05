@@ -55,12 +55,11 @@ class TriStateSetting
     {
         if (str == "no")
             return TriStateSetting(No);
-        else if (str == "yes")
+        if (str == "yes")
             return TriStateSetting(Yes);
-        else if (str == "default")
+        if (str == "default")
             return TriStateSetting(Default);
-        else
-            throw Exception("IPv6Setting: unrecognized setting: '" + str + '\'');
+        throw Exception("IPv6Setting: unrecognized setting: '" + str + '\'');
     }
 
     bool operator==(const TriStateSetting &other) const

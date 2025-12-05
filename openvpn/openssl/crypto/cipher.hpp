@@ -122,11 +122,9 @@ class CipherContext
             out_acc += outlen;
             return true;
         }
-        else
-        {
-            openssl_clear_error_stack();
-            return false;
-        }
+
+        openssl_clear_error_stack();
+        return false;
     }
 
     bool final(unsigned char *out, const size_t max_out_size, size_t &out_acc)
@@ -138,11 +136,9 @@ class CipherContext
             out_acc += outlen;
             return true;
         }
-        else
-        {
-            openssl_clear_error_stack();
-            return false;
-        }
+
+        openssl_clear_error_stack();
+        return false;
     }
 
     bool is_initialized() const

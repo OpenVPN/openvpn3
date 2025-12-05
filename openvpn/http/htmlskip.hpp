@@ -121,7 +121,7 @@ class HTMLSkip
             retain = true;
             if (c == ' ' || c == '\t' || c == '\r' || c == '\n')
                 break;
-            else if (c == 'h' || c == 'H')
+            if (c == 'h' || c == 'H')
                 state = O_HTML_H;
             else
                 state = FAIL;

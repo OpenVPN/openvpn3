@@ -76,8 +76,7 @@ struct HeaderList : public std::vector<Header>
         const Header *h = get(key);
         if (h)
             return h->value;
-        else
-            return std::string();
+        return std::string();
     }
 
     std::string get_value_trim(const std::string &key) const

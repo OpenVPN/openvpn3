@@ -50,11 +50,9 @@ class CoarseTime
         {
             if (t >= time_)
                 return (t - time_) <= post_;
-            else
-                return (time_ - t) <= pre_;
+            return (time_ - t) <= pre_;
         }
-        else
-            return false;
+        return false;
     }
 
   private:

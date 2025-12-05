@@ -25,8 +25,7 @@ static std::string get_next(PushLex &pl)
 {
     if (pl.defined())
         return pl.next();
-    else
-        return std::string();
+    return std::string();
 }
 
 // parse a PUSH_UPDATE message

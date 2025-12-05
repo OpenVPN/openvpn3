@@ -82,8 +82,7 @@ class RefType : public RCWeak<thread_unsafe_refcount>
         auto p = parent();
         if (p)
             return "I am " + name() + " whose parent is " + p->name();
-        else
-            return "I am " + name() + ", an orphan";
+        return "I am " + name() + ", an orphan";
     }
 
     std::string name() const
@@ -162,8 +161,7 @@ class Object : public RCWeak<thread_unsafe_refcount>
             auto p = parent();
             if (p)
                 return "I am " + name() + " whose parent is " + p->name();
-            else
-                return "I am " + name() + ", an orphan";
+            return "I am " + name() + ", an orphan";
         }
 
         std::string name() const

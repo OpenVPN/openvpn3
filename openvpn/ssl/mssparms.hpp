@@ -37,8 +37,7 @@ struct MSSParms
                     mssfix_default = false;
                     return;
                 }
-                else
-                    throw option_error(ERR_INVALID_OPTION_VAL, "mssfix must have a value");
+                throw option_error(ERR_INVALID_OPTION_VAL, "mssfix must have a value");
             }
 
             const bool status = parse_number_validate<decltype(mssfix)>(*val,

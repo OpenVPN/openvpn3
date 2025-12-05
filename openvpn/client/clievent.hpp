@@ -169,8 +169,7 @@ inline const char *event_name(const Type type)
     static_assert(N_TYPES == array_size(names), "event names array inconsistency");
     if (type < N_TYPES)
         return names[type];
-    else
-        return "UNKNOWN_EVENT_TYPE";
+    return "UNKNOWN_EVENT_TYPE";
 }
 
 struct Connected;
@@ -215,8 +214,7 @@ class Base : public RC<thread_safe_refcount>
     {
         if (id_ == CONNECTED)
             return (const Connected *)this;
-        else
-            return nullptr;
+        return nullptr;
     }
 
   private:

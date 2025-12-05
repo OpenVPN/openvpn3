@@ -60,8 +60,7 @@ inline const char *name(const Type type)
     static_assert(N_TYPES == array_size(names), "x509 names array inconsistency");
     if (type >= 0 && type < N_TYPES)
         return names[type];
-    else
-        return "UNDEF";
+    return "UNDEF";
 }
 
 inline Type parse_type(const std::string &name)

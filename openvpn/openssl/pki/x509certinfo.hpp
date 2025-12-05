@@ -63,8 +63,7 @@ static inline std::string x509_get_subject(::X509 *cert, bool new_format = false
             { OPENSSL_free(p); });
         if (subject)
             return std::string(subject.get());
-        else
-            return std::string("");
+        return std::string("");
     }
 
     unique_ptr_del<BIO> subject_bio(BIO_new(BIO_s_mem()),
@@ -119,8 +118,7 @@ static inline std::string x509_get_signature_algorithm(const ::X509 *cert)
     {
         return sig;
     }
-    else
-        return "(error getting signature algorithm)";
+    return "(error getting signature algorithm)";
 }
 
 /**

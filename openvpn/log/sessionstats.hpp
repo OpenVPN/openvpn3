@@ -79,8 +79,7 @@ class SessionStats : public RC<thread_safe_refcount>
     {
         if (type < N_STATS)
             return stats_[type];
-        else
-            return 0;
+        return 0;
     }
 
     count_t get_stat_fast(const size_t type) const
@@ -104,8 +103,7 @@ class SessionStats : public RC<thread_safe_refcount>
         static_assert(N_STATS == array_size(names), "stats names array inconsistency");
         if (type < N_STATS)
             return names[type];
-        else
-            return "UNKNOWN_STAT_TYPE";
+        return "UNKNOWN_STAT_TYPE";
     }
 
     void update_last_packet_received(const Time &now)

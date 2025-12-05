@@ -81,11 +81,9 @@ inline std::string basename(const std::string &path)
         const size_t p = pos + 1;
         if (p >= path.length())
             return "";
-        else
-            return path.substr(p);
+        return path.substr(p);
     }
-    else
-        return path;
+    return path;
 }
 
 inline std::string dirname(const std::string &path)
@@ -95,11 +93,9 @@ inline std::string dirname(const std::string &path)
     {
         if (pos == 0)
             return "/";
-        else
-            return path.substr(0, pos);
+        return path.substr(0, pos);
     }
-    else
-        return "";
+    return "";
 }
 
 // return true if path is a regular file that doesn't try to traverse via ".." or "/..."
@@ -161,11 +157,9 @@ inline std::string ext(const std::string &basename)
         const size_t p = pos + 1;
         if (p >= basename.length())
             return "";
-        else
-            return basename.substr(p);
+        return basename.substr(p);
     }
-    else
-        return "";
+    return "";
 }
 
 inline std::string root(const std::string &basename)
@@ -173,16 +167,14 @@ inline std::string root(const std::string &basename)
     const size_t pos = basename.find_last_of('.');
     if (pos != std::string::npos)
         return basename.substr(0, pos);
-    else
-        return basename;
+    return basename;
 }
 
 inline std::string join(const std::string &p1, const std::string &p2)
 {
     if (p1.empty() || is_fully_qualified(p2))
         return p2;
-    else
-        return string::add_trailing_copy(p1, dirsep[0]) + p2;
+    return string::add_trailing_copy(p1, dirsep[0]) + p2;
 }
 
 template <typename... Args>

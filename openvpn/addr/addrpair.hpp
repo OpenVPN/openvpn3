@@ -105,11 +105,9 @@ struct AddrMaskPair
                 const StringPair pair = Split::by_char<StringPair, NullLex, Split::NullLimit>(s1, '/');
                 return from_string_impl(pair, title);
             }
-            else
-            {
-                const StringPair pair(s1, s2);
-                return from_string_impl(pair, title);
-            }
+
+            const StringPair pair(s1, s2);
+            return from_string_impl(pair, title);
         }
         catch (const std::exception &e)
         {
@@ -167,8 +165,7 @@ struct AddrMaskPair
         const Addr::Version v2 = netmask.version();
         if (v1 == v2)
             return v1;
-        else
-            return Addr::UNSPEC;
+        return Addr::UNSPEC;
     }
 
     Addr addr;

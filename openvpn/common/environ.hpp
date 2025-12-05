@@ -87,8 +87,7 @@ class Environ : public std::vector<std::string>
         const int i = find_index(name);
         if (i >= 0)
             return value(i);
-        else
-            return "";
+        return "";
     }
 
     std::string value(const size_t idx) const
@@ -97,8 +96,7 @@ class Environ : public std::vector<std::string>
         const size_t pos = s.find_first_of('=');
         if (pos != std::string::npos)
             return s.substr(pos + 1);
-        else
-            return "";
+        return "";
     }
 
     void assign(const std::string &name, const std::string &value)

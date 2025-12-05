@@ -424,13 +424,11 @@ class TunProp
             const std::string &target = o.ref(target_index);
             if (target == "vpn_gateway")
                 return true;
-            else if (target == "net_gateway")
+            if (target == "net_gateway")
                 return false;
-            else
-                throw tun_prop_route_error("route destinations other than vpn_gateway or net_gateway are not supported");
+            throw tun_prop_route_error("route destinations other than vpn_gateway or net_gateway are not supported");
         }
-        else
-            return true;
+        return true;
     }
 
     static void add_routes(TunBuilderBase *tb,
@@ -595,7 +593,7 @@ class TunProp
                         // Ignore DNS related options here
                         continue;
                     }
-                    else if (type == "PROXY_BYPASS")
+                    if (type == "PROXY_BYPASS")
                     {
                         o.min_args(3);
                         for (size_t j = 2; j < o.size(); ++j)

@@ -50,12 +50,11 @@ class CryptoDCSelect : public CryptoDCFactory
         const CryptoAlgs::Alg &alg = CryptoAlgs::get(dc_settings.cipher());
         if (alg.mode() == CryptoAlgs::CBC_HMAC)
             return new CryptoContextCHM<CRYPTO_API>(libctx, std::move(dc_settings), frame, stats, rng);
-        else if (alg.mode() == CryptoAlgs::AEAD && dc_settings.useEpochKeys())
+        if (alg.mode() == CryptoAlgs::AEAD && dc_settings.useEpochKeys())
             return new AEADEpoch::CryptoContext<CRYPTO_API>(libctx, std::move(dc_settings), frame, stats);
-        else if (alg.mode() == CryptoAlgs::AEAD)
+        if (alg.mode() == CryptoAlgs::AEAD)
             return new AEAD::CryptoContext<CRYPTO_API>(libctx, std::move(dc_settings), frame, stats);
-        else
-            OPENVPN_THROW(crypto_dc_select, alg.name() << ": only CBC/HMAC and AEAD cipher modes supported");
+        OPENVPN_THROW(crypto_dc_select, alg.name() << ": only CBC/HMAC and AEAD cipher modes supported");
     }
 
   private:

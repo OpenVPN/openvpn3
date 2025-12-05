@@ -213,8 +213,7 @@ class ProtoStackBase
     {
         if (!invalidated())
             return next_retransmit_;
-        else
-            return Time::infinite();
+        return Time::infinite();
     }
 
     // Has SSL handshake been started yet?
@@ -430,8 +429,7 @@ class ProtoStackBase
             up_sequenced();
             return true;
         }
-        else
-            return false;
+        return false;
     }
 
     // if a sequenced packet is available from reliability layer,

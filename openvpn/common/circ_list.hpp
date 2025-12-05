@@ -93,20 +93,18 @@ class CircList
     {
         if (index >= data_.size())
             throw circ_list_index();
-        else if (index <= head_)
+        if (index <= head_)
             return data_[head_ - index];
-        else
-            return data_[head_ + capacity_ - index];
+        return data_[head_ + capacity_ - index];
     }
 
     const T &operator[](const size_t index) const
     {
         if (index >= data_.size())
             throw circ_list_const_index();
-        else if (index <= head_)
+        if (index <= head_)
             return data_[head_ - index];
-        else
-            return data_[head_ + capacity_ - index];
+        return data_[head_ + capacity_ - index];
     }
 
   private:

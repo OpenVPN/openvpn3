@@ -144,10 +144,9 @@ struct LinuxGW46Netlink
     {
         if (v4.defined())
             return v4.dev();
-        else if (v6.defined())
+        if (v6.defined())
             return v6.dev();
-        else
-            throw LinuxGWNetlink::linux_gw_netlink_error("cannot determine gateway interface");
+        throw LinuxGWNetlink::linux_gw_netlink_error("cannot determine gateway interface");
     }
 
     LinuxGWNetlink v4;

@@ -102,12 +102,10 @@ class TunIO : public RC<thread_unsafe_refcount>
                 }
                 if (wrote == buf.size())
                     return true;
-                else
-                {
-                    OPENVPN_LOG_TUN_ERROR("TUN partial write error");
-                    tun_error(Error::TUN_WRITE_ERROR, nullptr);
-                    return false;
-                }
+
+                OPENVPN_LOG_TUN_ERROR("TUN partial write error");
+                tun_error(Error::TUN_WRITE_ERROR, nullptr);
+                return false;
             }
             catch (openvpn_io::system_error &e)
             {
@@ -137,12 +135,10 @@ class TunIO : public RC<thread_unsafe_refcount>
                 }
                 if (wrote == bs.size())
                     return true;
-                else
-                {
-                    OPENVPN_LOG_TUN_ERROR("TUN partial write error");
-                    tun_error(Error::TUN_WRITE_ERROR, nullptr);
-                    return false;
-                }
+
+                OPENVPN_LOG_TUN_ERROR("TUN partial write error");
+                tun_error(Error::TUN_WRITE_ERROR, nullptr);
+                return false;
             }
             catch (openvpn_io::system_error &e)
             {

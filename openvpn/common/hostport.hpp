@@ -131,8 +131,7 @@ inline bool split_host_port(const std::string &str,
 
     if (allow_unix && port == "unix")
         return is_valid_unix_sock(host);
-    else
-        return is_valid_host(host) && is_valid_port(port, port_save);
+    return is_valid_host(host) && is_valid_port(port, port_save);
 }
 
 } // namespace openvpn::HostPort

@@ -468,22 +468,21 @@ class CompressContext
     {
         if (method == "stub-v2")
             return COMP_STUBv2;
-        else if (method == "lz4-v2")
+        if (method == "lz4-v2")
             return LZ4v2;
-        else if (method == "lz4")
+        if (method == "lz4")
             return LZ4;
-        else if (method == "lzo")
+        if (method == "lzo")
             return LZO;
-        else if (method == "lzo-swap")
+        if (method == "lzo-swap")
             return LZO_SWAP;
-        else if (method == "lzo-stub")
+        if (method == "lzo-stub")
             return LZO_STUB;
-        else if (method == "snappy")
+        if (method == "snappy")
             return SNAPPY;
-        else if (method == "stub")
+        if (method == "stub")
             return COMP_STUB;
-        else
-            return NONE;
+        return NONE;
     }
 
     static Type stub(const Type t)

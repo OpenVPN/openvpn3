@@ -131,8 +131,7 @@ class RandomAPI : public RC<thread_unsafe_refcount>
     {
         if (start >= end)
             return start;
-        else
-            return start + rand_get_positive<T>() % (end - start + 1);
+        return start + rand_get_positive<T>() % (end - start + 1);
     }
 
     /**
@@ -164,8 +163,7 @@ class RandomAPI : public RC<thread_unsafe_refcount>
     {
         if (start >= end)
             return start;
-        else
-            return start + randrange32(end - start + 1);
+        return start + randrange32(end - start + 1);
     }
 
     /**

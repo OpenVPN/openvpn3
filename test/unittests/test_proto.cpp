@@ -406,8 +406,7 @@ class TestProto : public ProtoContextCallbackInterface
             proto_context.housekeeping();
             return true;
         }
-        else
-            return false;
+        return false;
     }
 
     void control_send(BufferPtr &&app_bp)
@@ -555,8 +554,7 @@ class TestProto : public ProtoContextCallbackInterface
                 msg[i]++;
                 break;
             }
-            else
-                msg[i] = '0';
+            msg[i] = '0';
         }
     }
 
@@ -799,8 +797,7 @@ class NoisyWire
     {
         if (prob)
             return random.randrange(prob);
-        else
-            return 1;
+        return 1;
     }
 
     std::string title;
@@ -834,8 +831,7 @@ class MySessionStats : public SessionStats
     {
         if (type < Error::N_ERRORS)
             return errors[type];
-        else
-            return 0;
+        return 0;
     }
 
     void show_error_counts() const

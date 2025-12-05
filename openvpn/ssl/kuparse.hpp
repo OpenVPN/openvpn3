@@ -59,10 +59,9 @@ inline TLSWebType remote_cert_type(const std::string &ct)
 {
     if (ct == "server")
         return TLS_WEB_SERVER;
-    else if (ct == "client")
+    if (ct == "client")
         return TLS_WEB_CLIENT;
-    else
-        throw option_error(ERR_INVALID_OPTION_CRYPTO, "remote-cert-tls must be 'client' or 'server'");
+    throw option_error(ERR_INVALID_OPTION_CRYPTO, "remote-cert-tls must be 'client' or 'server'");
 }
 
 inline void remote_cert_tls(const std::string &ct,
@@ -98,19 +97,17 @@ inline void remote_cert_ku(const OptionList &opt,
     {
         if (o->empty())
             throw option_error(ERR_INVALID_OPTION_CRYPTO, "remote-cert-ku: no hex values specified");
-        else if (o->size() >= 64)
+        if (o->size() >= 64)
             throw option_error(ERR_INVALID_OPTION_CRYPTO, "remote-cert-ku: too many parameters");
-        else
+
+        try
         {
-            try
-            {
-                for (size_t i = 1; i < o->size(); ++i)
-                    ku.push_back(parse_hex_number<unsigned int>(o->get(i, 16)));
-            }
-            catch (parse_hex_error &)
-            {
-                throw option_error(ERR_INVALID_OPTION_CRYPTO, "remote-cert-ku: error parsing hex value list");
-            }
+            for (size_t i = 1; i < o->size(); ++i)
+                ku.push_back(parse_hex_number<unsigned int>(o->get(i, 16)));
+        }
+        catch (parse_hex_error &)
+        {
+            throw option_error(ERR_INVALID_OPTION_CRYPTO, "remote-cert-ku: error parsing hex value list");
         }
     }
 }

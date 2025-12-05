@@ -557,8 +557,7 @@ olong RCWeakPtr<T>::use_count() const noexcept
 {
     if (controller)
         return controller->use_count();
-    else
-        return 0;
+    return 0;
 }
 /**
   @brief Returns true if the underlying object is already freed.
@@ -584,8 +583,7 @@ typename RCWeakPtr<T>::Strong RCWeakPtr<T>::lock() const noexcept
 {
     if (controller)
         return controller->template lock<Strong>();
-    else
-        return Strong();
+    return Strong();
 }
 /**
   @brief Try to move the weak pointer into a strong pointer
@@ -602,8 +600,7 @@ typename RCWeakPtr<T>::Strong RCWeakPtr<T>::move_strong() noexcept
     c.swap(controller);
     if (c)
         return c->template lock<Strong>();
-    else
-        return Strong();
+    return Strong();
 }
 
 /* We're pretty sure these are false positives. They only occur with very
@@ -697,8 +694,7 @@ inline bool thread_unsafe_refcount::inc_if_nonzero() noexcept
         ++rc;
         return true;
     }
-    else
-        return false;
+    return false;
 }
 /**
   @brief Returns the internal use count
@@ -1229,8 +1225,7 @@ PTR RCWeak<RCImpl>::Controller::lock() noexcept
 {
     if (rc.inc_if_nonzero())
         return PTR(static_cast<typename PTR::element_type *>(parent), false);
-    else
-        return PTR();
+    return PTR();
 }
 
 /**

@@ -135,8 +135,7 @@ class CRL
     {
         if (crl)
             return ::X509_CRL_dup(const_cast<X509_CRL *>(crl));
-        else
-            return nullptr;
+        return nullptr;
     }
 
     ::X509_CRL *crl_;

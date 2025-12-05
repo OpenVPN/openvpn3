@@ -289,12 +289,12 @@ openvpn::DataChannelEpoch::lookup_decrypt_key(uint16_t epoch)
     {
         return &decrypt_ctx;
     }
-    else if (retiring_decrypt_ctx.epoch > 0 && retiring_decrypt_ctx.epoch == epoch)
+    if (retiring_decrypt_ctx.epoch > 0 && retiring_decrypt_ctx.epoch == epoch)
     {
         return &retiring_decrypt_ctx;
     }
-    else if (epoch > decrypt_ctx.epoch
-             && epoch <= decrypt_ctx.epoch + future_keys_count)
+    if (epoch > decrypt_ctx.epoch
+        && epoch <= decrypt_ctx.epoch + future_keys_count)
     {
         /* If we have reached the edge of the valid keys we do not return
          * the key anymore since regenerating the new keys would move us
@@ -304,17 +304,13 @@ openvpn::DataChannelEpoch::lookup_decrypt_key(uint16_t epoch)
         {
             return nullptr;
         }
-        else
-        {
-            /* Key in the range of future keys */
-            int index = epoch - (decrypt_ctx.epoch + 1);
-            return &future_keys.at(index);
-        }
+
+        /* Key in the range of future keys */
+        int index = epoch - (decrypt_ctx.epoch + 1);
+        return &future_keys.at(index);
     }
-    else
-    {
-        return nullptr;
-    }
+
+    return nullptr;
 }
 
 void openvpn::EpochDataChannelCryptoContext::calculate_iv(uint8_t *packet_id, std::array<uint8_t, IV_SIZE> &iv_dest)

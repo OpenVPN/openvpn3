@@ -251,16 +251,14 @@ class LinkCommon : public LinkBase
     {
         if (RAW_MODE_ONLY)
             return true;
-        else
-            return raw_mode_read;
+        return raw_mode_read;
     }
 
     bool is_raw_mode_write() const
     {
         if (RAW_MODE_ONLY)
             return true;
-        else
-            return raw_mode_write;
+        return raw_mode_write;
     }
 
     LinkCommon()

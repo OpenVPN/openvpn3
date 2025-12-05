@@ -51,8 +51,7 @@ class Wrapper : public Base
     {
         if (maybe_my_type->type() == static_type())
             return static_cast<const Wrapper *>(maybe_my_type);
-        else
-            return nullptr;
+        return nullptr;
     }
 
     std::string to_string() const override

@@ -222,11 +222,9 @@ class Client : public TransportClient, AsyncResolvableUDP
 #endif
                 return false;
             }
-            else
-                return true;
+            return true;
         }
-        else
-            return false;
+        return false;
     }
 
     void udp_read_handler(PacketFrom::SPtr &pfp) // called by LinkImpl

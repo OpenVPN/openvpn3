@@ -115,7 +115,7 @@ class MSSFix
         {
             if (*opt == TCPHeader::OPT_EOL)
                 break;
-            else if (*opt == TCPHeader::OPT_NOP)
+            if (*opt == TCPHeader::OPT_NOP)
                 optlen = 1;
             else
             {

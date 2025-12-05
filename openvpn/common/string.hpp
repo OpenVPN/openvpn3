@@ -85,8 +85,7 @@ inline bool starts_with_delim(const STRING &str, const std::string &prefix, cons
 {
     if (prefix.length() < str.length())
         return str[prefix.length()] == delim && str.starts_with(prefix);
-    else
-        return prefix == str;
+    return prefix == str;
 }
 
 // return true if string ends with a newline
@@ -105,8 +104,7 @@ inline bool ends_with_crlf(const STRING &str)
         const char c = str.back();
         return c == '\n' || c == '\r';
     }
-    else
-        return false;
+    return false;
 }
 
 // Prepend leading characters (c) to str to obtain a minimum string length (min_len).
@@ -129,8 +127,7 @@ inline std::string add_trailing_copy(const std::string &str, const char c)
 {
     if (str.ends_with(c))
         return str;
-    else
-        return str + c;
+    return str + c;
 }
 
 // make sure that string ends with char c, if not append it
@@ -168,8 +165,7 @@ inline std::string add_trailing_unless_empty_copy(const std::string &str, const 
 {
     if (str.empty() || str.ends_with(c))
         return str;
-    else
-        return str + c;
+    return str + c;
 }
 
 // remove trailing \r or \n chars
@@ -217,8 +213,7 @@ inline std::string to_delim(const std::string &str, const char delim)
     const size_t pos = str.find_first_of(delim);
     if (pos != std::string::npos)
         return str.substr(0, pos);
-    else
-        return str;
+    return str;
 }
 
 // return the first line (without newline) of a multi-line string

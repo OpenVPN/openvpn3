@@ -105,10 +105,9 @@ class Option
         const size_t len = max_len & ((size_t)MULTILINE - 1); // NOTE -- use smallest flag value here
         if (pos != std::string::npos && !(max_len & MULTILINE))
             return STATUS_MULTILINE;
-        else if (len > 0 && Unicode::utf8_length(str) > len)
+        if (len > 0 && Unicode::utf8_length(str) > len)
             return STATUS_LENGTH;
-        else
-            return STATUS_GOOD;
+        return STATUS_GOOD;
     }
 
     static const char *validate_status_description(const validate_status status)
@@ -158,8 +157,7 @@ class Option
             const size_t pos = str.find_first_of("\r\n");
             return pos != std::string::npos;
         }
-        else
-            return false;
+        return false;
     }
 
     static void validate_string(const std::string &name, const std::string &str, const size_t max_len)
@@ -175,8 +173,7 @@ class Option
         {
             if (!data.empty())
                 return Unicode::utf8_printable(data[0], 32);
-            else
-                return "";
+            return "";
         }
         catch (const std::exception &)
         {
@@ -196,8 +193,7 @@ class Option
         validate_arg(index, max_len);
         if (index < data.size())
             return data[index];
-        else
-            return "";
+        return "";
     }
 
     std::string get_default(const size_t index, const size_t max_len, const std::string &default_value) const
@@ -205,8 +201,7 @@ class Option
         validate_arg(index, max_len);
         if (index < data.size())
             return data[index];
-        else
-            return default_value;
+        return default_value;
     }
 
     const std::string *get_ptr(const size_t index, const size_t max_len) const
@@ -214,8 +209,7 @@ class Option
         validate_arg(index, max_len);
         if (index < data.size())
             return &data[index];
-        else
-            return nullptr;
+        return nullptr;
     }
 
     template <typename T>
@@ -239,8 +233,7 @@ class Option
     {
         if (size() > idx)
             return get_num<T>(idx);
-        else
-            return default_value;
+        return default_value;
     }
 
     template <typename T>
@@ -739,10 +732,9 @@ class OptionList : public std::vector<Option>, public RCCopyable<thread_unsafe_r
             const int cmp = a->key.compare(b->key);
             if (cmp < 0)
                 return true;
-            else if (cmp > 0)
+            if (cmp > 0)
                 return false;
-            else
-                return a->key_priority < b->key_priority;
+            return a->key_priority < b->key_priority;
         }
 
         std::string key;
@@ -1212,8 +1204,7 @@ class OptionList : public std::vector<Option>, public RCCopyable<thread_unsafe_r
                 ret->touch();
                 return ret;
             }
-            else
-                OPENVPN_THROW_ARG1(option_error, ERR_INVALID_CONFIG, "more than one instance of option '" << name << '\'');
+            OPENVPN_THROW_ARG1(option_error, ERR_INVALID_CONFIG, "more than one instance of option '" << name << '\'');
         }
         else
             return nullptr;
@@ -1240,8 +1231,7 @@ class OptionList : public std::vector<Option>, public RCCopyable<thread_unsafe_r
             }
             return first;
         }
-        else
-            return nullptr;
+        return nullptr;
     }
 
     // Get option, throw error if not found
@@ -1252,8 +1242,7 @@ class OptionList : public std::vector<Option>, public RCCopyable<thread_unsafe_r
         const Option *o = get_ptr(name);
         if (o)
             return *o;
-        else
-            OPENVPN_THROW_ARG1(option_error, ERR_INVALID_CONFIG, "option '" << name << "' not found");
+        OPENVPN_THROW_ARG1(option_error, ERR_INVALID_CONFIG, "option '" << name << "' not found");
     }
 
     // Get the list of options having the same name (by index),
@@ -1263,8 +1252,7 @@ class OptionList : public std::vector<Option>, public RCCopyable<thread_unsafe_r
         IndexMap::const_iterator e = map_.find(name);
         if (e != map_.end() && !e->second.empty())
             return e->second;
-        else
-            OPENVPN_THROW_ARG1(option_error, ERR_INVALID_CONFIG, "option '" << name << "' not found");
+        OPENVPN_THROW_ARG1(option_error, ERR_INVALID_CONFIG, "option '" << name << "' not found");
     }
 
     // Get the list of options having the same name (by index),
@@ -1274,8 +1262,7 @@ class OptionList : public std::vector<Option>, public RCCopyable<thread_unsafe_r
         IndexMap::const_iterator e = map_.find(name);
         if (e != map_.end() && !e->second.empty())
             return &e->second;
-        else
-            return nullptr;
+        return nullptr;
     }
 
     // Concatenate all one-arg directives of a given name, in index order.
@@ -1340,8 +1327,7 @@ class OptionList : public std::vector<Option>, public RCCopyable<thread_unsafe_r
         const Option *o = get_ptr(name);
         if (o)
             return o->get(index, max_len);
-        else
-            return "";
+        return "";
     }
 
     // Like get_optional(), but return "" if argument index is out-of-bounds.
@@ -1350,8 +1336,7 @@ class OptionList : public std::vector<Option>, public RCCopyable<thread_unsafe_r
         const Option *o = get_ptr(name);
         if (o)
             return o->get_optional(index, max_len);
-        else
-            return "";
+        return "";
     }
 
     // Like get_optional(), but return "" if exception is thrown.
@@ -1373,8 +1358,7 @@ class OptionList : public std::vector<Option>, public RCCopyable<thread_unsafe_r
         const Option *o = get_ptr(name);
         if (o)
             return o->get(index, max_len).c_str();
-        else
-            return nullptr;
+        return nullptr;
     }
 
     // Convenience method that gets a particular argument index within an option,
@@ -1388,8 +1372,7 @@ class OptionList : public std::vector<Option>, public RCCopyable<thread_unsafe_r
         const Option *o = get_ptr(name);
         if (o)
             return o->get(index, max_len);
-        else
-            return default_value;
+        return default_value;
     }
 
     // Like get_default(), but return default_value if argument index is out-of-bounds.

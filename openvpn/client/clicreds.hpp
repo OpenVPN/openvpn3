@@ -94,25 +94,22 @@ class ClientCreds : public RC<thread_unsafe_refcount>
     {
         if (dynamic_challenge)
             return dynamic_challenge->get_username();
-        else if (!session_id_username.empty())
+        if (!session_id_username.empty())
             return session_id_username;
-        else
-            return username;
+        return username;
     }
 
     std::string get_password() const
     {
         if (dynamic_challenge)
             return dynamic_challenge->construct_dynamic_password(response);
-        else if (response.empty())
+        if (response.empty())
         {
             if (!session_id.empty())
                 return session_id;
-            else
-                return password;
+            return password;
         }
-        else
-            return ChallengeResponse::construct_static_password(password, response);
+        return ChallengeResponse::construct_static_password(password, response);
     }
 
     std::string get_http_proxy_username() const

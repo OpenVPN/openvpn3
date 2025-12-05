@@ -1534,8 +1534,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
             buf.read((unsigned char *)&net_size, sizeof(net_size));
             return ntohs(net_size);
         }
-        else
-            return 0;
+        return 0;
     }
 
     template <typename S>
@@ -1895,8 +1894,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
             const Time t = Base::next_retransmit();
             if (t <= next_event_time)
                 return t;
-            else
-                return next_event_time;
+            return next_event_time;
         }
 
         void app_send_validate(BufferPtr &&bp)
@@ -2024,8 +2022,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
         {
             if (next_event == KEV_BECOME_PRIMARY)
                 return next_event_time;
-            else
-                return Time();
+            return Time();
         }
 
         // is an KEV_x event pending?
@@ -2862,16 +2859,13 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
             {
                 return CONTROL_SOFT_RESET_V1;
             }
-            else
-            {
-                if (proto.is_server() == sender)
-                    return CONTROL_HARD_RESET_SERVER_V2;
 
-                if (!tls_crypt_v2)
-                    return CONTROL_HARD_RESET_CLIENT_V2;
-                else
-                    return CONTROL_HARD_RESET_CLIENT_V3;
-            }
+            if (proto.is_server() == sender)
+                return CONTROL_HARD_RESET_SERVER_V2;
+
+            if (!tls_crypt_v2)
+                return CONTROL_HARD_RESET_CLIENT_V2;
+            return CONTROL_HARD_RESET_CLIENT_V3;
         }
 
         void send_reset()
@@ -3586,8 +3580,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
             Time::Duration d = next_time - *now;
             if (d.is_infinite())
                 return -1;
-            else
-                return numeric_cast<int>(d.to_seconds());
+            return numeric_cast<int>(d.to_seconds());
         }
 
         // BEGIN KeyContext data members
@@ -4252,8 +4245,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
             ret.min(keepalive_expire);
             return ret;
         }
-        else
-            return Time();
+        return Time();
     }
 
     // send app-level cleartext to remote peer
@@ -4556,8 +4548,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
     {
         if (primary)
             return primary->get_state();
-        else
-            return STATE_UNDEF;
+        return STATE_UNDEF;
     }
 
   private:
@@ -4616,8 +4607,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
             new_secondary_key(false);
             return true;
         }
-        else
-            return false;
+        return false;
     }
 
     // select a KeyContext (primary or secondary) for received network packets
@@ -4628,7 +4618,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
         {
             if (flags == (PacketType::DEFINED) && primary)
                 return *primary;
-            else if (flags == (PacketType::DEFINED | PacketType::SECONDARY) && secondary)
+            if (flags == (PacketType::DEFINED | PacketType::SECONDARY) && secondary)
                 return *secondary;
         }
         else
@@ -4637,8 +4627,8 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
             {
                 return *primary;
             }
-            else if (flags == (PacketType::DEFINED | PacketType::SECONDARY | PacketType::CONTROL)
-                     && secondary)
+            if (flags == (PacketType::DEFINED | PacketType::SECONDARY | PacketType::CONTROL)
+                && secondary)
             {
                 return *secondary;
             }

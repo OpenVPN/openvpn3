@@ -191,8 +191,7 @@ class Options : public RC<thread_safe_refcount>
             }
             return true;
         }
-        else
-            return false;
+        return false;
     }
 };
 
@@ -290,8 +289,7 @@ class Client : public TransportClient, AsyncResolvableTCP
     {
         if (impl)
             return impl->send_queue_empty();
-        else
-            return false;
+        return false;
     }
 
     bool transport_has_send_queue() override
@@ -307,8 +305,7 @@ class Client : public TransportClient, AsyncResolvableTCP
     {
         if (impl)
             return impl->send_queue_size();
-        else
-            return 0;
+        return 0;
     }
 
     void reset_align_adjust(const size_t align_adjust) override
@@ -337,10 +334,9 @@ class Client : public TransportClient, AsyncResolvableTCP
     {
         if (server_endpoint.address().is_v4())
             return Protocol(Protocol::TCPv4);
-        else if (server_endpoint.address().is_v6())
+        if (server_endpoint.address().is_v6())
             return Protocol(Protocol::TCPv6);
-        else
-            return Protocol();
+        return Protocol();
     }
 
     void stop() override
@@ -399,16 +395,14 @@ class Client : public TransportClient, AsyncResolvableTCP
             BufferAllocated buf(cbuf);
             return impl->send(buf);
         }
-        else
-            return false;
+        return false;
     }
 
     bool send(BufferAllocated &buf)
     {
         if (impl)
             return impl->send(buf);
-        else
-            return false;
+        return false;
     }
 
     void tcp_error_handler(const char *error) // called by LinkImpl and internally
@@ -667,16 +661,16 @@ class Client : public TransportClient, AsyncResolvableTCP
 
                 throw Exception("HTTP proxy-authenticate method not allowed / supported");
             }
-            else if (http_reply.status_code == HTTP::Status::ProxyError
-                     || http_reply.status_code == HTTP::Status::NotFound
-                     || http_reply.status_code == HTTP::Status::ServiceUnavailable)
+            if (http_reply.status_code == HTTP::Status::ProxyError
+                || http_reply.status_code == HTTP::Status::NotFound
+                || http_reply.status_code == HTTP::Status::ServiceUnavailable)
             {
                 // this is a nonfatal error, so we pass Error::UNDEF to tell the upper layer to
                 // retry the connection
                 proxy_error(Error::UNDEF, "HTTP proxy server could not connect to OpenVPN server");
                 return;
             }
-            else if (http_reply.status_code == HTTP::Status::Forbidden)
+            if (http_reply.status_code == HTTP::Status::Forbidden)
                 OPENVPN_THROW_EXCEPTION("HTTP proxy returned Forbidden status code");
             else
                 OPENVPN_THROW_EXCEPTION("HTTP proxy status code: " << http_reply.status_code);

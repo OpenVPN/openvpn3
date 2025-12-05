@@ -145,8 +145,7 @@ class ServerProto
         {
             if (TransportLink::send)
                 return TransportLink::send->stats_poll();
-            else
-                return PeerStats();
+            return PeerStats();
         }
 
         bool should_preserve_session_id() override
@@ -449,8 +448,7 @@ class ServerProto
         {
             if (get_tun())
                 return TunLink::send->tun_native_handle();
-            else
-                return TunClientInstance::NativeHandle();
+            return TunClientInstance::NativeHandle();
         }
 
         void push_halt_restart_msg(const HaltRestart::Type type,
@@ -707,8 +705,7 @@ class ServerProto
         {
             if (TransportLink::send)
                 return TransportLink::send->transport_info();
-            else
-                return "";
+            return "";
         }
 
         void error(const std::string &error)
@@ -745,8 +742,7 @@ class ServerProto
         {
             if (ManLink::send)
                 return ManLink::send->instance_name();
-            else
-                return "UNNAMED_CLIENT";
+            return "UNNAMED_CLIENT";
         }
 
         // higher values are higher priority

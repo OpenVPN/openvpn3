@@ -115,10 +115,9 @@ class DataLimit
                 flags |= mask;
                 if ((mask & (ER | DG)) && ((flags & (ER | DG)) == (ER | DG)))
                     return Red;
-                else if (mask & ER)
+                if (mask & ER)
                     return None;
-                else
-                    return state;
+                return state;
             }
         }
         return None;

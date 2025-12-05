@@ -619,8 +619,7 @@ inline bool get_bool_optional(const Json::Value &root,
     const Json::Value &jv = root[name];
     if (jv.isConvertibleTo(Json::booleanValue))
         return jv.asBool();
-    else
-        return default_value;
+    return default_value;
 }
 
 template <typename NAME>
@@ -630,8 +629,7 @@ inline int get_bool_tristate(const Json::Value &root,
     const Json::Value &jv = root[name];
     if (jv.isConvertibleTo(Json::booleanValue))
         return jv.asBool() ? 1 : 0;
-    else
-        return -1;
+    return -1;
 }
 
 DISABLE_DANGLING_WARNINGS()
@@ -929,8 +927,7 @@ inline std::string error(const Json::Value &root)
     const Json::Value &je = root["error"];
     if (je.isString())
         return je.asString();
-    else
-        return std::string();
+    return std::string();
 }
 
 // Guarantee that json object jr is a dictionary.
@@ -940,11 +937,9 @@ inline Json::Value dict_result(Json::Value jr)
 {
     if (jr.isObject())
         return jr;
-    else
-    {
-        Json::Value jret(Json::objectValue);
-        jret["result"] = std::move(jr);
-        return jret;
-    }
+
+    Json::Value jret(Json::objectValue);
+    jret["result"] = std::move(jr);
+    return jret;
 }
 } // namespace openvpn::json

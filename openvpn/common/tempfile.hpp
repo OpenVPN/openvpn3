@@ -122,8 +122,7 @@ class TempFile
     {
         if (fn)
             return fn.get();
-        else
-            return "";
+        return "";
     }
 
     void close_file()

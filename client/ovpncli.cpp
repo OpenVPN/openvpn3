@@ -124,11 +124,9 @@ class MySessionStats : public SessionStats
         {
             if (index < N_STATS)
                 return stat_name(index);
-            else
-                return Error::name(index - N_STATS);
+            return Error::name(index - N_STATS);
         }
-        else
-            return "";
+        return "";
     }
 
     count_t combined_value(const size_t index) const
@@ -137,11 +135,9 @@ class MySessionStats : public SessionStats
         {
             if (index < N_STATS)
                 return get_stat(index);
-            else
-                return errors[index - N_STATS];
+            return errors[index - N_STATS];
         }
-        else
-            return 0;
+        return 0;
     }
 
     count_t stat_count(const size_t index) const
@@ -322,8 +318,7 @@ class MyReconnectNotify : public ReconnectNotify
     {
         if (parent)
             return parent->pause_on_connection_timeout();
-        else
-            return false;
+        return false;
     }
 
   private:
@@ -374,8 +369,7 @@ class MyRemoteOverride : public RemoteList::RemoteOverride
                 throw Exception("remote override exception: " + ro.error);
             return ri;
         }
-        else
-            return RemoteList::Item::Ptr();
+        return RemoteList::Item::Ptr();
     }
 
   private:
@@ -1138,11 +1132,9 @@ OPENVPN_CLIENT_EXPORT bool OpenVPNClient::sign(const std::string &alias,
         sig = req.sig;
         return true;
     }
-    else
-    {
-        external_pki_error(req, Error::EPKI_SIGN_ERROR);
-        return false;
-    }
+
+    external_pki_error(req, Error::EPKI_SIGN_ERROR);
+    return false;
 }
 
 OPENVPN_CLIENT_EXPORT bool OpenVPNClient::remote_override_enabled()

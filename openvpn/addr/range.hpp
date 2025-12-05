@@ -380,8 +380,7 @@ inline bool RangePartitionType<ADDR>::next(RangeType<ADDR> &r)
         --remaining;
         return r.defined();
     }
-    else
-        return false;
+    return false;
 }
 
 } // namespace openvpn::IP

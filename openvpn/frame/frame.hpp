@@ -172,8 +172,7 @@ class Frame : public RC<thread_unsafe_refcount>
         {
             if (payload() > buf.size())
                 return payload() - buf.size();
-            else
-                return 0;
+            return 0;
         }
 
         // Used to set the capacity of a group of Context objects

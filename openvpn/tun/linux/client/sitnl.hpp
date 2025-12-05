@@ -501,10 +501,9 @@ class SITNL
         {
             return 0;
         }
-        else
-        {
-            OPENVPN_LOG_RTNL(__func__ << ": RTA_GATEWAY " << gw.to_string());
-        }
+
+        OPENVPN_LOG_RTNL(__func__ << ": RTA_GATEWAY " << gw.to_string());
+
 
         if (!route.contains(res->dst))
         {

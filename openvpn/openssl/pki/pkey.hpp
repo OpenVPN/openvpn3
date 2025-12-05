@@ -213,8 +213,7 @@ class PKey
     {
         if (pkey)
             return EVP_PKEY_dup(const_cast<EVP_PKEY *>(pkey));
-        else
-            return nullptr;
+        return nullptr;
     }
 #endif
 

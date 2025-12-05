@@ -131,8 +131,7 @@ class SignalBlocker
     {
         if (blocked_)
             return &old_mask_;
-        else
-            return nullptr;
+        return nullptr;
     }
 
     // Destructor restores the previous signal mask.

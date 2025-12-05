@@ -20,8 +20,7 @@ inline IPv4::Addr::base_type prefix_len_to_netmask(const unsigned int prefix_len
 {
     if (prefix_len >= 1 && prefix_len <= 32)
         return prefix_len_to_netmask_unchecked(prefix_len);
-    else
-        throw ipv4_bad_prefix_len();
+    throw ipv4_bad_prefix_len();
 }
 
 inline int prefix_len(const IPv4::Addr::base_type mask)
@@ -36,15 +35,14 @@ inline int prefix_len(const IPv4::Addr::base_type mask)
             const IPv4::Addr::base_type test = prefix_len_to_netmask_unchecked(mid);
             if (mask == test)
                 return mid;
-            else if (mask > test)
+            if (mask > test)
                 low = mid;
             else
                 high = mid;
         }
         return -1;
     }
-    else
-        return 32;
+    return 32;
 }
 
 TEST(IPAddr, Test32)

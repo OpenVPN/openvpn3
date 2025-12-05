@@ -137,17 +137,14 @@ class X509
             ::X509 *dup = ::X509_dup(const_cast<::X509 *>(x509.get()));
             return {dup, ::X509_free};
         }
-        else
-        {
-            return {nullptr, ::X509_free};
-        }
+
+        return {nullptr, ::X509_free};
     }
     static ::X509 *dup(const ::X509 *x509)
     {
         if (x509)
             return ::X509_dup(const_cast<::X509 *>(x509));
-        else
-            return nullptr;
+        return nullptr;
     }
 
     X509_unique_ptr x509_{nullptr, ::X509_free};

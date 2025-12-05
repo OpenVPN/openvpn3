@@ -268,8 +268,7 @@ class PrintFormatted
                         out.append((char)quote);
                     return true;
                 }
-                else
-                    out.append(c);
+                out.append(c);
             }
             else
             {

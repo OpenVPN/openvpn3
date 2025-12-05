@@ -189,10 +189,9 @@ struct LinuxGW46
     {
         if (v4.defined())
             return v4.dev();
-        else if (v6.defined())
+        if (v6.defined())
             return v6.dev();
-        else
-            throw LinuxGW::linux_gw_error("cannot determine gateway interface");
+        throw LinuxGW::linux_gw_error("cannot determine gateway interface");
     }
 
     LinuxGW v4;

@@ -52,8 +52,7 @@ inline std::string to_string(const char *str)
 {
     if (str)
         return std::string(str);
-    else
-        return to_string(nullptr);
+    return to_string(nullptr);
 }
 
 inline std::string to_string(std::string &&str)

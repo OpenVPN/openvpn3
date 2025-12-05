@@ -92,7 +92,7 @@ static inline void ipv6(Buffer &buf, const void *addr)
             ipv4(buf, *reinterpret_cast<const std::uint32_t *>(a + 6));
             return;
         }
-        else if (zero_extent == 6)
+        if (zero_extent == 6)
         {
             buf_append_string(buf, "::");
             ipv4(buf, *reinterpret_cast<const std::uint32_t *>(a + 6));

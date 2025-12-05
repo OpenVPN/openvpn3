@@ -94,7 +94,7 @@ class ParseClientConfig
                             message_ = "ERR_PROFILE_SERVER_LOCKED_UNSUPPORTED: server locked profiles are currently unsupported";
                             return;
                         }
-                        else if (arg1 == "ALLOW_PASSWORD_SAVE")
+                        if (arg1 == "ALLOW_PASSWORD_SAVE")
                             allowPasswordSave_ = parse_bool(o, "setenv ALLOW_PASSWORD_SAVE", 2);
                         else if (arg1 == "CLIENT_CERT")
                             clientCertEnabled_ = parse_bool(o, "setenv CLIENT_CERT", 2);
@@ -721,28 +721,24 @@ class ParseClientConfig
     {
         if (auth_user_pass && user_pass.size() >= 2) // embedded password?
             return true;
-        else
+
+        const Option *autologin = options.get_ptr("AUTOLOGIN");
+        if (autologin)
+            return string::is_true(autologin->get_optional(1, 16));
+
+        bool ret = !auth_user_pass;
+        if (ret)
         {
-            const Option *autologin = options.get_ptr("AUTOLOGIN");
-            if (autologin)
-                return string::is_true(autologin->get_optional(1, 16));
-            else
-            {
-                bool ret = !auth_user_pass;
-                if (ret)
-                {
-                    // External PKI profiles from AS don't declare auth-user-pass,
-                    // and we have no way of knowing if they are autologin unless
-                    // we examine their cert, which requires accessing the system-level
-                    // cert store on the client.  For now, we are going to assume
-                    // that External PKI profiles from the AS are always userlogin,
-                    // unless explicitly overriden by AUTOLOGIN above.
-                    if (options.exists("EXTERNAL_PKI"))
-                        return false;
-                }
-                return ret;
-            }
+            // External PKI profiles from AS don't declare auth-user-pass,
+            // and we have no way of knowing if they are autologin unless
+            // we examine their cert, which requires accessing the system-level
+            // cert store on the client.  For now, we are going to assume
+            // that External PKI profiles from the AS are always userlogin,
+            // unless explicitly overriden by AUTOLOGIN above.
+            if (options.exists("EXTERNAL_PKI"))
+                return false;
         }
+        return ret;
     }
 
     static bool is_external_pki(const OptionList &options)
@@ -750,12 +746,10 @@ class ParseClientConfig
         const Option *epki = options.get_ptr("EXTERNAL_PKI");
         if (epki)
             return string::is_true(epki->get_optional(1, 16));
-        else
-        {
-            const Option *cert = options.get_ptr("cert");
-            const Option *key = options.get_ptr("key");
-            return !cert || !key;
-        }
+
+        const Option *cert = options.get_ptr("cert");
+        const Option *key = options.get_ptr("key");
+        return !cert || !key;
     }
 
     void reset_pod()
@@ -771,10 +765,9 @@ class ParseClientConfig
         const std::string parm = o.get(index, 16);
         if (parm == "0")
             return false;
-        else if (parm == "1")
+        if (parm == "1")
             return true;
-        else
-            throw option_error(ERR_INVALID_OPTION_VAL, title + ": parameter must be 0 or 1");
+        throw option_error(ERR_INVALID_OPTION_VAL, title + ": parameter must be 0 or 1");
     }
 
     bool error_;

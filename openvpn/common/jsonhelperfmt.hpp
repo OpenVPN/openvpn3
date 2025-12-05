@@ -23,8 +23,7 @@ inline std::string fmt_name(const NAME &name, const TITLE &title)
 {
     if (!StringTempl::empty(title))
         return StringTempl::to_string(title) + '.' + StringTempl::to_string(name);
-    else
-        return StringTempl::to_string(name);
+    return StringTempl::to_string(name);
 }
 
 // if title is not a number, treat as an ordinary string

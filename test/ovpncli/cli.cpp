@@ -847,18 +847,16 @@ static std::string read_profile(const char *fn, const std::string *profile_conte
 {
     if (!string::strcasecmp(fn, "http") && profile_content && !profile_content->empty())
         return *profile_content;
-    else
-    {
-        ProfileMerge pm(fn,
-                        "ovpn",
-                        "",
-                        ProfileMerge::FOLLOW_FULL,
-                        ProfileParseLimits::MAX_LINE_SIZE,
-                        ProfileParseLimits::MAX_PROFILE_SIZE);
-        if (pm.status() != ProfileMerge::MERGE_SUCCESS)
-            OPENVPN_THROW_EXCEPTION("merge config error: " << pm.status_string() << " : " << pm.error());
-        return pm.profile_content();
-    }
+
+    ProfileMerge pm(fn,
+                    "ovpn",
+                    "",
+                    ProfileMerge::FOLLOW_FULL,
+                    ProfileParseLimits::MAX_LINE_SIZE,
+                    ProfileParseLimits::MAX_PROFILE_SIZE);
+    if (pm.status() != ProfileMerge::MERGE_SUCCESS)
+        OPENVPN_THROW_EXCEPTION("merge config error: " << pm.status_string() << " : " << pm.error());
+    return pm.profile_content();
 }
 
 #ifdef OPENVPN_PLATFORM_WIN

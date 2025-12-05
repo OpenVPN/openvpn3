@@ -87,8 +87,7 @@ inline Time::Duration skew_duration(const Time::Duration &dur,
     const Time::Duration ret = dur + delta;
     if (ret >= min)
         return ret;
-    else
-        return min;
+    return min;
 }
 } // namespace openvpn
 

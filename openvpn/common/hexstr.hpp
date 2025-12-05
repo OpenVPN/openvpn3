@@ -45,10 +45,9 @@ inline char render_hex_char(const int c, const bool caps = false)
         return '?';
     if (c < 10)
         return '0' + static_cast<char>(c);
-    else if (c < 16)
+    if (c < 16)
         return static_cast<char>((caps ? 'A' : 'a') - 10 + c);
-    else
-        return '?';
+    return '?';
 }
 
 /**
@@ -66,12 +65,11 @@ inline int parse_hex_char(const int c)
 {
     if (c >= '0' && c <= '9')
         return c - '0';
-    else if (c >= 'a' && c <= 'f')
+    if (c >= 'a' && c <= 'f')
         return c - 'a' + 10;
-    else if (c >= 'A' && c <= 'F')
+    if (c >= 'A' && c <= 'F')
         return c - 'A' + 10;
-    else
-        return -1;
+    return -1;
 }
 
 

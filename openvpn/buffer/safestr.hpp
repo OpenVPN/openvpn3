@@ -54,8 +54,7 @@ class SafeString
     {
         if (data.defined())
             return (const char *)data.c_data();
-        else
-            return "";
+        return "";
     }
 
     // Note: unsafe because of conversion to std::string

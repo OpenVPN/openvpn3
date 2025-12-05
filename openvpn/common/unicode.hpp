@@ -249,8 +249,7 @@ class UTF8Iterator
         {
             if (is_valid())
                 return std::string((char *)data, len);
-            else
-                return malformed;
+            return malformed;
         }
     };
 
@@ -281,8 +280,7 @@ class UTF8Iterator
             size -= c.len;
             return true;
         }
-        else
-            return false;
+        return false;
     }
 
   private:

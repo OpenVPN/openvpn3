@@ -105,7 +105,7 @@ class PsidCookieImpl : public PsidCookie
                        ? process_clients_initial_reset_tls_crypt(pkt_buf, pcaib, chelp)
                        : process_clients_initial_reset_tls_auth(pkt_buf, pcaib);
         }
-        else if (chelp.is_clients_server_reset_ack())
+        if (chelp.is_clients_server_reset_ack())
         {
             return is_tls_crypt_v2
                        ? process_clients_server_reset_ack_tls_crypt(pkt_buf, pcaib)

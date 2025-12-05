@@ -87,8 +87,7 @@ class CompressLZ4Base : public Compress
             buf.swap(work);
             return true;
         }
-        else
-            return false;
+        return false;
     }
 
     // Worst case size expansion on compress.
@@ -100,8 +99,7 @@ class CompressLZ4Base : public Compress
     {
         if (likely(len < 65535))
             return len + len / 256 + 17;
-        else
-            return len + len / 255 + 16;
+        return len + len / 255 + 16;
     }
 
     BufferAllocated work;

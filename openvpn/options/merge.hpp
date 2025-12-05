@@ -199,8 +199,7 @@ class ProfileMerge
                               max_size);
         if (pm.status() == ProfileMerge::MERGE_SUCCESS)
             return pm.profile_content();
-        else
-            OPENVPN_THROW(merge_error, pm.status_string() << ": " << pm.error());
+        OPENVPN_THROW(merge_error, pm.status_string() << ": " << pm.error());
     }
 
   protected:
@@ -514,8 +513,7 @@ class ProfileMergeFromString : public ProfileMerge
                                         max_size);
         if (pm.status() == ProfileMerge::MERGE_SUCCESS)
             return pm.profile_content();
-        else
-            OPENVPN_THROW(merge_error, pm.status_string() << ": " << pm.error());
+        OPENVPN_THROW(merge_error, pm.status_string() << ": " << pm.error());
     }
 };
 } // namespace openvpn

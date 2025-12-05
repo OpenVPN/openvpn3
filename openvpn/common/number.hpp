@@ -76,8 +76,7 @@ inline T parse_number_throw(const std::string &str, const std::string &error)
     T ret;
     if (parse_number<T>(str.c_str(), ret))
         return ret;
-    else
-        throw number_parse_exception(error);
+    throw number_parse_exception(error);
 }
 
 template <typename T>
@@ -86,8 +85,7 @@ inline T parse_number_throw(const std::string &str, const char *error)
     T ret;
     if (parse_number<T>(str.c_str(), ret))
         return ret;
-    else
-        throw number_parse_exception(std::string(error));
+    throw number_parse_exception(std::string(error));
 }
 
 template <typename T>
@@ -96,8 +94,7 @@ inline T parse_number_throw(const char *str, const char *error)
     T ret;
     if (parse_number<T>(str, ret))
         return ret;
-    else
-        throw number_parse_exception(std::string(error));
+    throw number_parse_exception(std::string(error));
 }
 
 template <typename T>

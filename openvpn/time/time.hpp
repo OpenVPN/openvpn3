@@ -129,8 +129,7 @@ class TimeType
         {
             if (is_infinite() || d.is_infinite())
                 return infinite();
-            else
-                return Duration(duration_ + d.duration_);
+            return Duration(duration_ + d.duration_);
         }
 
         Duration operator+(const int delta) const
@@ -181,10 +180,9 @@ class TimeType
         {
             if (d.duration_ >= duration_)
                 return Duration(0);
-            else if (is_infinite())
+            if (is_infinite())
                 return Duration::infinite();
-            else
-                return Duration(duration_ - d.duration_);
+            return Duration(duration_ - d.duration_);
         }
 
         Duration &operator-=(const Duration &d)
@@ -262,8 +260,7 @@ class TimeType
     {
         if (t <= base_)
             return TimeType(T(1));
-        else
-            return TimeType(T((t - base_) * prec));
+        return TimeType(T((t - base_) * prec));
     }
 
     bool is_infinite() const
@@ -316,8 +313,7 @@ class TimeType
     {
         if (is_infinite() || d.is_infinite())
             return infinite();
-        else
-            return TimeType(time_ + d.duration_);
+        return TimeType(time_ + d.duration_);
     }
 
     TimeType &operator+=(const Duration &d)
@@ -333,10 +329,9 @@ class TimeType
     {
         if (t.time_ >= time_)
             return Duration(0);
-        else if (is_infinite())
+        if (is_infinite())
             return Duration::infinite();
-        else
-            return Duration(time_ - t.time_);
+        return Duration(time_ - t.time_);
     }
 
     void min(const TimeType &t)

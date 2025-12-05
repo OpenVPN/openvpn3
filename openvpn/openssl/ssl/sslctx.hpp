@@ -802,11 +802,9 @@ class OpenSSLContext : public SSLFactoryAPI
             {
                 if (status == -1 && BIO_should_retry(ssl_bio))
                     return SSLConst::SHOULD_RETRY;
-                else
-                {
-                    mark_no_cache();
-                    OPENVPN_THROW(OpenSSLException, "OpenSSLContext::SSL::write_cleartext: BIO_write failed, size=" << size << " status=" << status);
-                }
+
+                mark_no_cache();
+                OPENVPN_THROW(OpenSSLException, "OpenSSLContext::SSL::write_cleartext: BIO_write failed, size=" << size << " status=" << status);
             }
             else
                 return status;
@@ -821,11 +819,9 @@ class OpenSSLContext : public SSLFactoryAPI
                 {
                     if ((status == 0 || status == -1) && BIO_should_retry(ssl_bio))
                         return SSLConst::SHOULD_RETRY;
-                    else
-                    {
-                        mark_no_cache();
-                        OPENVPN_THROW(OpenSSLException, "OpenSSLContext::SSL::read_cleartext: BIO_read failed, cap=" << capacity << " status=" << status);
-                    }
+
+                    mark_no_cache();
+                    OPENVPN_THROW(OpenSSLException, "OpenSSLContext::SSL::read_cleartext: BIO_read failed, cap=" << capacity << " status=" << status);
                 }
                 else
                     return status;
@@ -1611,10 +1607,9 @@ class OpenSSLContext : public SSLFactoryAPI
     {
         if (config->ns_cert_type == NSCert::SERVER)
             return X509_check_purpose(cert, X509_PURPOSE_SSL_SERVER, 0);
-        else if (config->ns_cert_type == NSCert::CLIENT)
+        if (config->ns_cert_type == NSCert::CLIENT)
             return X509_check_purpose(cert, X509_PURPOSE_SSL_CLIENT, 0);
-        else
-            return true;
+        return true;
     }
 
 

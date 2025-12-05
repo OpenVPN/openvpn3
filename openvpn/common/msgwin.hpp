@@ -71,8 +71,7 @@ class MessageWindow
             grow(id);
             return q_[id - head_id_];
         }
-        else
-            throw message_window_ref_by_id();
+        throw message_window_ref_by_id();
     }
 
     // Remove the M object at id, is a no-op if

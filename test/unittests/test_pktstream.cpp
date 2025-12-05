@@ -23,8 +23,7 @@ static size_t rand_size(RandomAPI &prng)
 {
     if (prng.randbool())
         return prng.randrange32(1, 16);
-    else
-        return prng.randrange32(1, 512);
+    return prng.randrange32(1, 512);
 }
 
 template <typename PKTSTREAM>

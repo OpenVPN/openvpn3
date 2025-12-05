@@ -193,8 +193,7 @@ inline void throw_ref(const std::exception &e)
     const Exception *ex = dynamic_cast<const Exception *>(&e);
     if (ex)
         throw *ex;
-    else
-        throw e;
+    throw e;
 }
 
 } // namespace openvpn

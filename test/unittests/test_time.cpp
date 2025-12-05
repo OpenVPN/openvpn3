@@ -13,8 +13,7 @@ int my_abs(const int value)
 {
     if (value >= 0)
         return value;
-    else
-        return -value;
+    return -value;
 }
 
 class Mean

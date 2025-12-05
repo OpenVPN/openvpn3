@@ -201,16 +201,14 @@ class RouteType
     {
         if (prefix_len < addr.size())
             return addr.size() - prefix_len;
-        else
-            return 0;
+        return 0;
     }
 
     bool contains(const ADDR &a) const // assumes canonical address/routes
     {
         if (addr.defined() && version_eq(addr, a))
             return (a & netmask()) == addr;
-        else
-            return false;
+        return false;
     }
 
     bool contains(const RouteType &r) const // assumes canonical routes
@@ -248,8 +246,7 @@ class RouteType
     {
         if (prefix_len == addr.size())
             return addr.to_string();
-        else
-            return addr.to_string() + '/' + openvpn::to_string(prefix_len);
+        return addr.to_string() + '/' + openvpn::to_string(prefix_len);
     }
 
     bool operator==(const RouteType &other) const

@@ -185,12 +185,10 @@ class UDPLink : public RC<thread_unsafe_refcount>
                 stats->inc_stat(SessionStats::PACKETS_OUT, 1);
                 if (wrote == buf.size())
                     return 0;
-                else
-                {
-                    OPENVPN_LOG_UDPLINK_ERROR("UDP partial send error");
-                    stats->error(Error::NETWORK_SEND_ERROR);
-                    return SEND_PARTIAL;
-                }
+
+                OPENVPN_LOG_UDPLINK_ERROR("UDP partial send error");
+                stats->error(Error::NETWORK_SEND_ERROR);
+                return SEND_PARTIAL;
             }
             catch (openvpn_io::system_error &e)
             {

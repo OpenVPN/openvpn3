@@ -435,16 +435,14 @@ class AuthCert : public RC<thread_unsafe_refcount>
     {
         if (openssl_fmt)
             return render_hex_sep(issuer_fp, sizeof(issuer_fp), ':', true);
-        else
-            return render_hex(issuer_fp, sizeof(issuer_fp), false);
+        return render_hex(issuer_fp, sizeof(issuer_fp), false);
     }
 
     std::string normalize_cn() const // remove trailing "_AUTOLOGIN" from AS certs
     {
         if (cn.ends_with("_AUTOLOGIN"))
             return cn.substr(0, cn.length() - 10);
-        else
-            return cn;
+        return cn;
     }
 
     // Allow sni_metadata object, if it exists, to generate the client name.
@@ -453,8 +451,7 @@ class AuthCert : public RC<thread_unsafe_refcount>
     {
         if (sni_metadata)
             return sni_metadata->sni_client_name(*this);
-        else
-            return normalize_cn();
+        return normalize_cn();
     }
 
     const std::string &get_sni() const
@@ -498,8 +495,7 @@ class AuthCert : public RC<thread_unsafe_refcount>
     {
         if (fail)
             return fail->to_string(true);
-        else
-            return "OK";
+        return "OK";
     }
 
 #ifndef UNIT_TEST

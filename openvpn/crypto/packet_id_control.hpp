@@ -213,8 +213,7 @@ class PacketIDControlReceiveType
             stats->error(err);
             return false;
         }
-        else
-            return true;
+        return true;
     }
 
     Error::Type do_test_add(const PacketIDControl &pin,

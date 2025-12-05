@@ -205,8 +205,7 @@ inline const char *name(const size_t type)
     static_assert(N_ERRORS == array_size(names), "error names array inconsistency");
     if (type < N_ERRORS)
         return names[type];
-    else
-        return "UNKNOWN_ERROR_TYPE";
+    return "UNKNOWN_ERROR_TYPE";
 }
 } // namespace openvpn::Error
 

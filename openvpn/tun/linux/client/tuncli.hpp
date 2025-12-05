@@ -107,8 +107,7 @@ class ClientConfig : public TunClientFactory
     {
         if (tun_setup_factory)
             return tun_setup_factory->new_setup_obj();
-        else
-            return new TunLinuxSetup::Setup<TUN_LINUX>();
+        return new TunLinuxSetup::Setup<TUN_LINUX>();
     }
 
     bool supports_epoch_data() override
@@ -248,40 +247,35 @@ class Client : public TunClient
     {
         if (impl)
             return impl->name();
-        else
-            return "UNDEF_TUN";
+        return "UNDEF_TUN";
     }
 
     std::string vpn_ip4() const override
     {
         if (state->vpn_ip4_addr.specified())
             return state->vpn_ip4_addr.to_string();
-        else
-            return "";
+        return "";
     }
 
     std::string vpn_ip6() const override
     {
         if (state->vpn_ip6_addr.specified())
             return state->vpn_ip6_addr.to_string();
-        else
-            return "";
+        return "";
     }
 
     std::string vpn_gw4() const override
     {
         if (state->vpn_ip4_gw.specified())
             return state->vpn_ip4_gw.to_string();
-        else
-            return "";
+        return "";
     }
 
     std::string vpn_gw6() const override
     {
         if (state->vpn_ip6_gw.specified())
             return state->vpn_ip6_gw.to_string();
-        else
-            return "";
+        return "";
     }
 
     int vpn_mtu() const override
@@ -335,8 +329,7 @@ class Client : public TunClient
     {
         if (impl)
             return impl->write(buf);
-        else
-            return false;
+        return false;
     }
 
     void tun_read_handler(PacketFrom::SPtr &pfp) // called by TunImpl

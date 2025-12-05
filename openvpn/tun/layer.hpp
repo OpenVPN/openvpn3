@@ -92,24 +92,22 @@ class Layer
     {
         if (str == "OSI_LAYER_3")
             return Layer(OSI_LAYER_3);
-        else if (str == "OSI_LAYER_2")
+        if (str == "OSI_LAYER_2")
             return Layer(OSI_LAYER_2);
-        else if (str == "UNDEF_LAYER")
+        if (str == "UNDEF_LAYER")
             return Layer(NONE);
-        else
-            throw Exception("Layer: unrecognized layer string");
+        throw Exception("Layer: unrecognized layer string");
     }
 
     static Layer from_value(const int value)
     {
         if (value == 3)
             return Layer(OSI_LAYER_3);
-        else if (value == 2)
+        if (value == 2)
             return Layer(OSI_LAYER_2);
-        else if (value == 0)
+        if (value == 0)
             return Layer(NONE);
-        else
-            throw Exception("Layer: unrecognized layer value");
+        throw Exception("Layer: unrecognized layer value");
     }
 
     bool operator==(const Layer &other) const
