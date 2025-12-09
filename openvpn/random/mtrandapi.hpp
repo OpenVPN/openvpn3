@@ -54,15 +54,19 @@ class MTRand : public WeakRandomAPI
     // Fill buffer with random bytes
     void rand_bytes(unsigned char *buf, size_t size) override
     {
-        if (!rndbytes(buf, size))
-            throw mtrand_error("rand_bytes failed");
+        while (size--)
+            *buf++ = rbs.get_byte(rng);
     }
 
-    // Like rand_bytes, but don't throw exception.
-    // Return true on successs, false on fail.
+    /**
+     * Like rand_bytes, but don't throw exception. At least that's the
+     * intent in the base class API. Here, neither function throws and
+     * we always return true (success).
+     **/
     bool rand_bytes_noexcept(unsigned char *buf, size_t size) override
     {
-        return rndbytes(buf, size);
+        rand_bytes(buf, size);
+        return true;
     }
 
     rand_type::result_type rand()
@@ -71,13 +75,6 @@ class MTRand : public WeakRandomAPI
     }
 
   private:
-    bool rndbytes(unsigned char *buf, size_t size)
-    {
-        while (size--)
-            *buf++ = rbs.get_byte(rng);
-        return true;
-    }
-
     static rand_type::result_type gen_seed(RandomAPI &seed)
     {
         return seed.rand_get<rand_type::result_type>();
