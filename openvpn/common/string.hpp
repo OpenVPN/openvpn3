@@ -222,8 +222,20 @@ inline std::string first_line(const std::string &str)
     return to_delim(str, '\n');
 }
 
-// Define a common interpretation of what constitutes a space character.
-// Return true if c is a space char.
+/**
+ * Define a common interpretation of what constitutes a space character.
+ *
+ * According to the Notes section at
+ * https://en.cppreference.com/w/cpp/string/byte/isspace.html:
+ *
+ * "Like all other functions from <cctype>, the behavior of `std::isspace`
+ * is undefined if the argument's value is neither representable as
+ * `unsigned char` nor equal to `EOF`. To use these functions safely with
+ * plain chars (or signed chars), the argument should first be converted
+ * to `unsigned char`"
+ *
+ * @return true if c is a space char.
+ **/
 inline bool is_space(const char c)
 {
     return std::isspace(static_cast<unsigned char>(c)) != 0;
