@@ -1615,6 +1615,7 @@ class OpenSSLContext : public SSLFactoryAPI
 
     void set_openssl_tls_groups(const std::string &tls_groups)
     {
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
         auto num_groups = std::count(tls_groups.begin(), tls_groups.end(), ':') + 1;
 
         std::unique_ptr<int[]> glist(new int[num_groups]);
@@ -1648,6 +1649,10 @@ class OpenSSLContext : public SSLFactoryAPI
 
         if (!SSL_CTX_set1_groups(ctx.get(), glist.get(), glistlen))
             OPENVPN_THROW(ssl_context_error, "OpenSSLContext: SSL_CTX_set1_groups failed");
+#else
+        if (!SSL_CTX_set1_groups_list(ctx.get(), tls_groups.c_str()))
+            OPENVPN_THROW(ssl_context_error, "OpenSSLContext: SSL_CTX_set1_groups_list failed");
+#endif
     }
 
     // remote-cert-ku verification

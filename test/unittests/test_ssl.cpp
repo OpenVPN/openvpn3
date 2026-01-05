@@ -86,13 +86,21 @@ TEST(Ssl, TlsGroups)
     sslcfg->set_tls_groups("secp521r1:secp384r1:greenhell");
 
     testLog->startCollecting();
+#if defined(USE_OPENSSL) && OPENSSL_VERSION_NUMBER >= 0x30000000L
+    OVPN_EXPECT_THROW(
+        f = sslcfg->new_factory(),
+        openvpn::SSLFactoryAPI::ssl_context_error,
+        "OpenSSLContext: SSL_CTX_set1_groups_list failed");
+#else
     f = sslcfg->new_factory();
     f->set_log_level(logging::LOG_LEVEL_INFO);
     f->ssl();
+
 #ifdef USE_OPENSSL
     EXPECT_EQ("OpenSSL -- warning ignoring unknown group 'greenhell' in tls-groups\n", testLog->stopCollecting());
 #else
     EXPECT_EQ("mbed TLS -- warning ignoring unknown group 'greenhell' in tls-groups\n", testLog->stopCollecting());
+#endif
 #endif
 }
 
