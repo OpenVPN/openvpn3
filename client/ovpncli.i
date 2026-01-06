@@ -8,6 +8,10 @@
 %include "std_vector.i"
 %include "std_map.i"
 
+#ifdef SWIGJAVA
+%include "swiginterface.i"
+#endif
+
 // top-level C++ implementation file
 %{
 #include "ovpncli.hpp"
@@ -21,8 +25,11 @@
 
 %apply size_t { openvpn::Error::Type };
 
+#ifdef SWIGJAVA
+%interface(openvpn::ClientAPI::LogReceiver);
+#endif
+
 // ignore these ClientAPI::OpenVPNClient bases
-%ignore openvpn::ClientAPI::LogReceiver;
 %ignore openvpn::ExternalTun::Factory;
 %ignore openvpn::ExternalTransport::Factory;
 
