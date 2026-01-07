@@ -752,7 +752,11 @@ class OpenVPNClient : public TunBuilderBase,             // expose tun builder v
     virtual void connect_run();
     virtual void connect_session_stop();
 
+#ifndef SWIG
+    /* hide this function from swig as it otherwise complains about a director
+     * method returning a pointer and the swig interfaces does not need this method. */
     virtual Stop *get_async_stop();
+#endif
 
     Private::ClientState *state;
 
