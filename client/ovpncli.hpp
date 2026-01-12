@@ -724,7 +724,9 @@ class OpenVPNClient : public TunBuilderBase,             // expose tun builder v
 
     // Callback for logging.
     // Will be called from the thread executing connect().
-    void log(const LogInfo &) override = 0;
+    // SWIG-director: keep 'virtual' explicit - SWIG doesn't infer virtual from
+    // 'override' alone, which breaks director code generation for Java/JNI bindings
+    virtual void log(const LogInfo &) override = 0;
 
     // External PKI callbacks
     // Will be called from the thread executing connect().
