@@ -536,12 +536,47 @@ class OvpnDcoClient : public Client,
             return;
         }
 
-        std::ostringstream os;
-        int res = TunNetlink::iface_new(os, config->dev_name, "ovpn-dco");
-        if (res != 0)
+        int res = -ENOENT;
+        const int max_units = 256;
+        // attempt creating the device using the provided name, in case
+        // of error append a counter starting at 1 and try again until 256.
+        for (int unit = 0; unit < max_units; ++unit)
+        {
+            std::string n = config->dev_name;
+            if (unit)
+                n += openvpn::to_string(unit);
+            if (n.length() >= IFNAMSIZ)
+            {
+                stop_();
+                transport_parent->transport_error(Error::TUN_IFACE_CREATE,
+                                                  "DCO: ifname name too long: " + n);
+                return;
+            }
+
+
+            OPENVPN_LOG("DCO: attempting to open iface " + n);
+
+            std::ostringstream os;
+            res = TunNetlink::iface_new(os, n, "ovpn-dco");
+            if (res)
+            {
+                OPENVPN_LOG("DCO: couldn't open iface " + n + ": " << os.str());
+                continue;
+            }
+
+            // iface creation was successful
+            config->dev_name = n;
+            break;
+        }
+
+        // no successful creation. bail out
+        if (res)
         {
             stop_();
-            transport_parent->transport_error(Error::TUN_IFACE_CREATE, os.str());
+            transport_parent->transport_error(Error::TUN_IFACE_CREATE,
+                                              "DCO: failed to open iface " + config->dev_name
+                                                  + " after trying " + openvpn::to_string(max_units)
+                                                  + " units");
             return;
         }
 
