@@ -88,7 +88,10 @@ class OMI : public OMICore, public ClientAPI::LogReceiver
           opt(std::move(opt_arg)),
           reconnect_timer(io_context),
           bytecount_timer(io_context),
+
+#ifdef OPENVPN_PLATFORM_WIN
           exit_event(io_context),
+#endif
           log_context(this)
     {
         signals.reset(new ASIOSignals(io_context));
@@ -112,6 +115,7 @@ class OMI : public OMICore, public ClientAPI::LogReceiver
         management_query_remote = opt.exists("management-query-remote");
         exit_event_name = opt.get_optional("exit-event-name", 1, 256);
 
+#ifdef OPENVPN_PLATFORM_WIN
         // passed by OpenVPN GUI to trigger exit
         if (!exit_event_name.empty())
         {
@@ -122,6 +126,7 @@ class OMI : public OMICore, public ClientAPI::LogReceiver
 				  return;
 				self->stop(); });
         }
+#endif
 
         // http-proxy-override
         {
@@ -653,8 +658,10 @@ class OMI : public OMICore, public ClientAPI::LogReceiver
         async_stop.stop();
 
         // cancel wait on exit_event
+#ifdef OPENVPN_PLATFORM_WIN
         if (exit_event.is_open())
             exit_event.cancel();
+#endif
 
         // stop timers
         reconnect_timer.cancel();
@@ -1001,8 +1008,10 @@ class OMI : public OMICore, public ClientAPI::LogReceiver
     // signals
     ASIOSignals::Ptr signals;
 
+#ifdef OPENVPN_PLATFORM_WIN
     typedef openvpn_io::windows::object_handle AsioEvent;
     AsioEvent exit_event;
+#endif
     std::string exit_event_name;
 
     Log::Context log_context; // should be initialized last
@@ -1049,7 +1058,9 @@ int run(OptionList opt)
 
     try
     {
+#ifdef OPENVPN_PLATFORM_WIN
         TunWin::NRPT::delete_rules(0); // delete stale NRPT rules
+#endif
         omi.reset(new OMI(io_context, std::move(opt)));
         omi->start();
         io_context_run_called = true;
