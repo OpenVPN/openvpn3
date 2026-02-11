@@ -56,7 +56,7 @@ struct Unix : Base
     {
         if (unix_mode)
         {
-            if (::chmod(socket_path.c_str(), unix_mode) < 0)
+            if (chmod(socket_path.c_str(), unix_mode) < 0)
                 throw unix_acceptor_error("chmod failed on unix socket");
         }
     }
