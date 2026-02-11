@@ -33,14 +33,14 @@ namespace openvpn::Acceptor {
 
 struct ListenerBase : OPENVPN_ACCEPTOR_LISTENER_BASE_RC
 {
-    typedef RCPtr<ListenerBase> Ptr;
+    using Ptr = RCPtr<ListenerBase>;
 
     virtual void handle_accept(AsioPolySock::Base::Ptr sock, const openvpn_io::error_code &error) = 0;
 };
 
 struct Base : RC<thread_unsafe_refcount>
 {
-    typedef RCPtr<Base> Ptr;
+    using Ptr = RCPtr<Base>;
 
     virtual void async_accept(ListenerBase *listener,
                               const size_t acceptor_index,
