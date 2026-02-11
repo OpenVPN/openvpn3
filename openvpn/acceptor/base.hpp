@@ -31,14 +31,14 @@
 
 namespace openvpn::Acceptor {
 
-struct ListenerBase : public OPENVPN_ACCEPTOR_LISTENER_BASE_RC
+struct ListenerBase : OPENVPN_ACCEPTOR_LISTENER_BASE_RC
 {
     typedef RCPtr<ListenerBase> Ptr;
 
     virtual void handle_accept(AsioPolySock::Base::Ptr sock, const openvpn_io::error_code &error) = 0;
 };
 
-struct Base : public RC<thread_unsafe_refcount>
+struct Base : RC<thread_unsafe_refcount>
 {
     typedef RCPtr<Base> Ptr;
 
@@ -70,7 +70,7 @@ struct Item
     SSLMode ssl_mode;
 };
 
-struct Set : public std::vector<Item>
+struct Set : std::vector<Item>
 {
     void close()
     {
