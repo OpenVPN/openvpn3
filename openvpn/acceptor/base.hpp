@@ -16,6 +16,7 @@
 
 #include <vector>
 #include <utility>
+#include <algorithm>
 
 #include <openvpn/io/io.hpp>
 
@@ -74,8 +75,8 @@ struct Set : std::vector<Item>
 {
     void close()
     {
-        for (auto &i : *this)
-            i.acceptor->close();
+        std::ranges::for_each(*this, [](const auto &i)
+                              { i.acceptor->close(); });
     }
 };
 
