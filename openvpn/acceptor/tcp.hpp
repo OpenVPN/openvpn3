@@ -18,7 +18,7 @@ namespace openvpn::Acceptor {
 
 struct TCP : Base
 {
-    typedef RCPtr<TCP> Ptr;
+    using Ptr = RCPtr<TCP>;
 
     TCP(openvpn_io::io_context &io_context)
         : acceptor(io_context)
