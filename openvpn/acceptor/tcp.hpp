@@ -16,7 +16,7 @@
 
 namespace openvpn::Acceptor {
 
-struct TCP : public Base
+struct TCP : Base
 {
     typedef RCPtr<TCP> Ptr;
 
