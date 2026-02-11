@@ -22,7 +22,7 @@ class NamedPipe : public Base
   public:
     OPENVPN_EXCEPTION(named_pipe_acceptor_error);
 
-    typedef RCPtr<NamedPipe> Ptr;
+    using Ptr = RCPtr<NamedPipe>;
 
     NamedPipe(openvpn_io::io_context &io_context,
               const std::string &name_arg,
