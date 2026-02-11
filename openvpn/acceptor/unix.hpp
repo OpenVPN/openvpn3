@@ -18,7 +18,7 @@
 
 namespace openvpn::Acceptor {
 
-struct Unix : public Base
+struct Unix : Base
 {
     OPENVPN_EXCEPTION(unix_acceptor_error);
 
