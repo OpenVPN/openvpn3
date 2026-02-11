@@ -917,5 +917,13 @@ inline auto genDNSOptions() -> Gen<openvpn::DnsOptions>
         gen::set(&openvpn::DnsOptions::servers, generateDnsServerMap()));
 }
 
+inline auto genIPAddr() -> Gen<openvpn::IP::Addr>
+{
+    return gen::map(gen::oneOf(IPv4Address(), IPv6Address()),
+                    [](const std::string &ip)
+                    {
+                        return openvpn::IP::Addr::from_string(ip);
+                    });
+}
 } // namespace rc
 #endif // TEST_GENERATORS_HPP

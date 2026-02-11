@@ -33,6 +33,7 @@ add_executable(coreUnitTests
         test_acc.cpp
         test_alignment.cpp
         test_acc_certcheck.cpp
+        test_addrlist.cpp
         test_route_emulation.cpp
         test_log.cpp
         test_comp.cpp
