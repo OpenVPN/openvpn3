@@ -53,7 +53,7 @@ struct TCP : Base
     };
     void set_socket_options(unsigned int flags)
     {
-        static_assert(int(FIRST) > int(SSLConst::LAST), "TCP flags in conflict with SSL flags");
+        static_assert(static_cast<int>(FIRST) > static_cast<int>(SSLConst::LAST), "TCP flags in conflict with SSL flags");
 
 #if defined(OPENVPN_PLATFORM_WIN)
         // set Windows socket flags
