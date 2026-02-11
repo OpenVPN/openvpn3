@@ -22,7 +22,7 @@ struct Unix : Base
 {
     OPENVPN_EXCEPTION(unix_acceptor_error);
 
-    typedef RCPtr<Unix> Ptr;
+    using Ptr = RCPtr<Unix>;
 
     Unix(openvpn_io::io_context &io_context)
         : acceptor(io_context)
