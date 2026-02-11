@@ -55,7 +55,7 @@ struct TCP : Base
     {
         static_assert(static_cast<int>(FIRST) > static_cast<int>(SSLConst::LAST), "TCP flags in conflict with SSL flags");
 
-#if defined(OPENVPN_PLATFORM_WIN)
+#ifdef OPENVPN_PLATFORM_WIN
         // set Windows socket flags
         if (!(flags & DISABLE_REUSE_ADDR))
             acceptor.set_option(openvpn_io::ip::tcp::acceptor::reuse_address(true));
