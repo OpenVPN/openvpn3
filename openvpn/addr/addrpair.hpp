@@ -114,7 +114,7 @@ struct AddrMaskPair
             const StringPair pair(s1, s2);
             error(e, pair.render(), title);
         }
-        return AddrMaskPair(); // NOTREACHED
+        return {}; // NOTREACHED
     }
 
     static AddrMaskPair from_string(const std::string &s, const char *title = nullptr)
@@ -128,7 +128,7 @@ struct AddrMaskPair
         {
             error(e, s, title);
         }
-        return AddrMaskPair(); // NOTREACHED
+        return {}; // NOTREACHED
     }
 
     static AddrMaskPair from_string(const StringPair &pair, const char *title = nullptr)
@@ -141,7 +141,7 @@ struct AddrMaskPair
         {
             error(e, pair.render(), title);
         }
-        return AddrMaskPair(); // NOTREACHED
+        return {}; // NOTREACHED
     }
 
     std::string to_string(const bool netmask_form = false) const
