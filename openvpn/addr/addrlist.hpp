@@ -12,6 +12,8 @@
 #ifndef OPENVPN_ADDR_ADDRLIST_H
 #define OPENVPN_ADDR_ADDRLIST_H
 
+#include <algorithm>
+
 #include <openvpn/common/rc.hpp>
 #include <openvpn/addr/ip.hpp>
 
@@ -31,7 +33,7 @@ class AddrList : public std::vector<Addr>, public RC<thread_unsafe_refcount>
 
     bool exists(const Addr &a) const
     {
-        return std::find(begin(), end(), a) != end();
+        return std::ranges::find(*this, a) != end();
     }
 
 #if 0
