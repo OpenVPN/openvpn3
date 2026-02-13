@@ -161,11 +161,7 @@ struct AddrMaskPair
 
     Addr::Version version() const
     {
-        const Addr::Version v1 = addr.version();
-        const Addr::Version v2 = netmask.version();
-        if (v1 == v2)
-            return v1;
-        return Addr::UNSPEC;
+        return addr.version() == netmask.version() ? addr.version() : Addr::UNSPEC;
     }
 
     Addr addr;
