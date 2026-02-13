@@ -146,12 +146,8 @@ struct AddrMaskPair
 
     std::string to_string(const bool netmask_form = false) const
     {
-        std::ostringstream os;
-        if (netmask_form)
-            os << addr.to_string() << '/' << netmask.to_string();
-        else
-            os << addr.to_string() << '/' << netmask.prefix_len();
-        return os.str();
+        return netmask_form ? addr.to_string() + '/' + netmask.to_string()
+                            : addr.to_string() + '/' + std::to_string(netmask.prefix_len());
     }
 
     bool is_canonical() const
