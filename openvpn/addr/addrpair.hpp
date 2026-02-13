@@ -102,7 +102,7 @@ struct AddrMaskPair
         {
             if (s2.empty())
             {
-                const StringPair pair = Split::by_char<StringPair, NullLex, Split::NullLimit>(s1, '/');
+                const auto pair = Split::by_char<StringPair, NullLex, Split::NullLimit>(s1, '/');
                 return from_string_impl(pair, title);
             }
 
@@ -121,7 +121,7 @@ struct AddrMaskPair
     {
         try
         {
-            const StringPair pair = Split::by_char<StringPair, NullLex, Split::NullLimit>(s, '/');
+            const auto pair = Split::by_char<StringPair, NullLex, Split::NullLimit>(s, '/');
             return from_string_impl(pair, title);
         }
         catch (const std::exception &e)
