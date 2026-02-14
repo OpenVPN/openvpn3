@@ -14,6 +14,7 @@
 #ifndef OPENVPN_COMMON_NUMBER_H
 #define OPENVPN_COMMON_NUMBER_H
 
+#include <algorithm>
 #include <string>
 #include <limits>
 
@@ -120,18 +121,10 @@ inline bool parse_number_validate(const std::string &numstr,
     return false;
 }
 
-inline bool is_number(const char *str)
+inline bool is_number(std::string_view str)
 {
-    char c;
-    bool found_digit = false;
-    while ((c = *str++))
-    {
-        if (c >= '0' && c <= '9')
-            found_digit = true;
-        else
-            return false;
-    }
-    return found_digit;
+    return !str.empty() && std::ranges::all_of(str, [](const unsigned char c)
+                                               { return std::isdigit(c); });
 }
 
 } // namespace openvpn
