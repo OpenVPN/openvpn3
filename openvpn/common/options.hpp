@@ -184,6 +184,11 @@ class Option
         }
     }
 
+    bool parameter_exists(const std::string &parameter) const
+    {
+        return std::count(data.begin(), data.end(), parameter);
+    }
+
     const std::string &get(const size_t index, const size_t max_len) const
     {
         min_args(index + 1);
