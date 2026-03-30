@@ -337,6 +337,8 @@ class Client : public ClientBase
         {
             std::cout << "Received event " << ev.name << " " << ev.info << "\n";
         }
+        // We want to log events in near real-time
+        std::cout << std::flush;
     }
 
     void handle_dpc1_protocol(const ClientAPI::AppCustomControlMessageEvent &acev)
@@ -366,6 +368,8 @@ class Client : public ClientBase
         {
             std::cout << "Cannot parse device posture message:" << acev.payload << "\n";
         }
+        // We want to log events in near real-time
+        std::cout << std::flush;
     }
 
     /**
@@ -387,6 +391,8 @@ class Client : public ClientBase
             std::cout << "received unhandled app custom control message for protocol " << acev.protocol
                       << " msg payload: " << acev.payload << "\n";
         }
+        // We want to log events in near real-time
+        std::cout << std::flush;
     }
 
     /**
@@ -422,6 +428,8 @@ class Client : public ClientBase
         {
             start_cert_check_epki("certcheck", clientca_pem);
         }
+        // We want to log events in near real-time
+        std::cout << std::flush;
     }
 
     void open_url(const std::string &url_str)
