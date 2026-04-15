@@ -1108,24 +1108,24 @@ ConstBufferType<T>::ConstBufferType()
 
 template <typename T>
 ConstBufferType<T>::ConstBufferType(void *data, const size_t size, const bool filled)
-    : ConstBufferType((T *)data, size, filled){};
+    : ConstBufferType((T *)data, size, filled) {};
 
 template <typename T>
 template <typename U, typename std::enable_if_t<!std::is_const_v<U>, int>>
 ConstBufferType<T>::ConstBufferType(const void *data, const size_t size, const bool filled)
-    : ConstBufferType(const_cast<void *>(data), size, filled){};
+    : ConstBufferType(const_cast<void *>(data), size, filled) {};
 
 template <typename T>
 ConstBufferType<T>::ConstBufferType(T *data, const size_t size, const bool filled)
     : data_(data),
       offset_(0),
       size_(filled ? size : 0),
-      capacity_(size){};
+      capacity_(size) {};
 
 template <typename T>
 template <typename U, typename std::enable_if_t<!std::is_const_v<U>, int>>
 ConstBufferType<T>::ConstBufferType(const U *data, const size_t size, const bool filled)
-    : ConstBufferType(const_cast<U *>(data), size, filled){};
+    : ConstBufferType(const_cast<U *>(data), size, filled) {};
 
 template <typename T>
 const auto &ConstBufferType<T>::operator[](const size_t index) const
@@ -1650,12 +1650,12 @@ void ConstBufferType<T>::buffer_full_error(const size_t newcap, const bool alloc
 
 template <typename T>
 ConstBufferType<T>::ConstBufferType(T *data, const size_t offset, const size_t size, const size_t capacity)
-    : data_(data), offset_(offset), size_(size), capacity_(capacity){};
+    : data_(data), offset_(offset), size_(size), capacity_(capacity) {};
 
 template <typename T>
 template <typename U, typename std::enable_if_t<!std::is_const_v<U>, int>>
 ConstBufferType<T>::ConstBufferType(const U *data, const size_t offset, const size_t size, const size_t capacity)
-    : ConstBufferType(const_cast<U *>(data), offset, size, capacity){};
+    : ConstBufferType(const_cast<U *>(data), offset, size, capacity) {};
 
 //  ===============================================================================================
 //  BufferAllocatedType<T> member function definitions
@@ -1686,7 +1686,7 @@ BufferAllocatedType<T>::BufferAllocatedType(const size_t capacity,
     : BufferAllocatedType(0,
                           (flags & BufAllocFlags::ARRAY ? capacity : 0),
                           capacity,
-                          flags){};
+                          flags) {};
 
 template <typename T>
 BufferAllocatedType<T>::BufferAllocatedType(const T *data,

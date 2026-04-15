@@ -60,7 +60,7 @@ class RcEnable : public TypeT, public RcT
     template <typename... ArgsT>
     RcEnable(ArgsT &&...args)
         : TypeT(std::forward<ArgsT>(args)...),
-          RcT(){};
+          RcT() {};
 };
 
 /**

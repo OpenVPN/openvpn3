@@ -165,7 +165,7 @@ class RCPtr
 */
 template <typename T>
 RCPtr<T>::RCPtr() noexcept
-    : px(nullptr){};
+    : px(nullptr) {};
 /**
   @brief Construct a new RCPtr<T>::RCPtr object
   @tparam T an RC enabled type
@@ -1199,7 +1199,7 @@ struct RCWeak<RCImpl>::Controller : public RC<RCImpl>
 */
 template <typename RCImpl>
 RCWeak<RCImpl>::Controller::Controller(RCWeak *parent_arg) noexcept
-    : parent(parent_arg){};
+    : parent(parent_arg) {};
 /**
   @brief Get the use count of the underlying ref count implementation
   @tparam RCImpl the ref count implementation
@@ -1262,7 +1262,7 @@ struct RCWeak<RCImpl>::ControllerRef
 */
 template <typename RCImpl>
 RCWeak<RCImpl>::ControllerRef::ControllerRef(RCWeak *parent) noexcept
-    : controller(new Controller(parent)){};
+    : controller(new Controller(parent)) {};
 /**
   @brief Increments the ref count
   @tparam RCImpl the injected ref count implementation
