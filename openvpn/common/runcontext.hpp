@@ -212,12 +212,12 @@ class RunContext : public RunContextBase
     void set_exit_socket(ScopedFD &fd)
     {
         exit_sock.reset(new openvpn_io::posix::stream_descriptor(io_context, fd.release()));
-        exit_sock->async_read_some(openvpn_io::null_buffers(),
-                                   [self = Ptr(this)](const openvpn_io::error_code &error, const size_t bytes_recvd)
-                                   {
-                                       if (!error)
-                                           self->cancel();
-                                   });
+        exit_sock->async_wait(openvpn_io::posix::stream_descriptor::wait_read,
+                              [self = Ptr(this)](const openvpn_io::error_code &error)
+                              {
+                                  if (!error)
+                                      self->cancel();
+                              });
     }
 #endif
 
