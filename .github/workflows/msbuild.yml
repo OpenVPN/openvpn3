@@ -11,17 +11,29 @@ jobs:
     env:
       VCPKG_ROOT: ${{ github.workspace }}/vcpkg
       VCPKG_DEFAULT_TRIPLET: ${{ matrix.arch }}-windows
+      VCPKG_GIT_COMMIT_ID: d7b75fa8a30478ae5b5eb86ac730f851ef036875
       BUILD_CONFIGURATION: Release
 
     runs-on: windows-2025
     steps:
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
     - uses: lukka/get-cmake@ea83089aa35e08e459464341fe24ad024ee2466f # v4.3.1
-    - name: Restore from cache and install vcpkg
+    - name: Install vcpkg
       uses: lukka/run-vcpkg@5e0cab206a5ea620130caf672fce3e4a6b5666a1 # v11.5
+      env:
+          VCPKG_BINARY_SOURCES: default,rw
       with:
-        vcpkgGitCommitId: d7b75fa8a30478ae5b5eb86ac730f851ef036875
+        vcpkgGitCommitId: ${{ env.VCPKG_GIT_COMMIT_ID }}
         vcpkgJsonGlob: '**/windows/vcpkg.json'
+
+    - name: Set up vcpkg binary cache
+      uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+      with:
+        path: ${{ env.VCPKG_DEFAULT_BINARY_CACHE }}
+        key: ${{ runner.os }}-${{ matrix.arch }}-vcpkg-binary-cache-${{ hashFiles('**/windows/vcpkg.json') }}-${{ env.VCPKG_GIT_COMMIT_ID }}
+        restore-keys: |
+          ${{ runner.os }}-${{ matrix.arch }}-vcpkg-binary-cache-${{ hashFiles('**/windows/vcpkg.json') }}-
+          ${{ runner.os }}-${{ matrix.arch }}-vcpkg-binary-cache-
 
     - name: Run CMake with vcpkg.json manifest
       uses: lukka/run-cmake@5d55ea7949e25f69f0ecb516d8d572297e03a956 # v10.9
@@ -56,6 +68,7 @@ jobs:
 
     env:
       VCPKG_ROOT: ${{ github.workspace }}/vcpkg
+      VCPKG_GIT_COMMIT_ID: d7b75fa8a30478ae5b5eb86ac730f851ef036875
 
     runs-on: ubuntu-24.04
     steps:
@@ -65,11 +78,22 @@ jobs:
     - name: Install dependencies
       run: sudo apt update && sudo apt install -y mingw-w64 unzip cmake build-essential
 
-    - name: Restore from cache and install vcpkg
+    - name: Install vcpkg
       uses: lukka/run-vcpkg@5e0cab206a5ea620130caf672fce3e4a6b5666a1 # v11.5
+      env:
+          VCPKG_BINARY_SOURCES: default,rw
       with:
-        vcpkgGitCommitId: d7b75fa8a30478ae5b5eb86ac730f851ef036875
+        vcpkgGitCommitId: ${{ env.VCPKG_GIT_COMMIT_ID }}
         vcpkgJsonGlob: '**/mingw/vcpkg.json'
+
+    - name: Set up vcpkg binary cache
+      uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+      with:
+        path: ${{ env.VCPKG_DEFAULT_BINARY_CACHE }}
+        key: ${{ runner.os }}-${{ matrix.arch }}-vcpkg-binary-cache-${{ hashFiles('**/mingw/vcpkg.json') }}-${{ env.VCPKG_GIT_COMMIT_ID }}
+        restore-keys: |
+          ${{ runner.os }}-${{ matrix.arch }}-vcpkg-binary-cache-${{ hashFiles('**/mingw/vcpkg.json') }}-
+          ${{ runner.os }}-${{ matrix.arch }}-vcpkg-binary-cache-
 
     - name: Run CMake with vcpkg.json manifest
       uses: lukka/run-cmake@5d55ea7949e25f69f0ecb516d8d572297e03a956 # v10.9
