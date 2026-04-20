@@ -30,6 +30,7 @@ jobs:
         configurePreset: win-${{ matrix.arch }}-release
         buildPreset: win-${{ matrix.arch }}-release
         testPreset: win-${{ matrix.arch }}-release
+        testPresetAdditionalArgs: "['--output-on-failure']"
 
     - name: Run CMake with vcpkg.json manifest (NO TESTS)
       uses: lukka/run-cmake@5d55ea7949e25f69f0ecb516d8d572297e03a956 # v10.9
