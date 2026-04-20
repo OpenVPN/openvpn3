@@ -7,6 +7,13 @@ jobs:
     strategy:
       matrix:
         arch: [x86, x64, arm64]
+        include:
+          - arch: x64
+            cmake_dir: amd64
+          - arch: x86
+            cmake_dir: x86
+          - arch: arm64
+            cmake_dir: arm64
 
     env:
       VCPKG_ROOT: ${{ github.workspace }}/vcpkg
@@ -38,6 +45,9 @@ jobs:
     - name: Run CMake with vcpkg.json manifest
       uses: lukka/run-cmake@5d55ea7949e25f69f0ecb516d8d572297e03a956 # v10.9
       if: ${{ matrix.arch != 'arm64' }}
+      env:
+        # make sure legacy provider is available for UTs
+        OPENSSL_MODULES: ${{ github.workspace }}\build\msvc\${{ matrix.cmake_dir }}\vcpkg_installed\${{ env.VCPKG_DEFAULT_TRIPLET }}\bin
       with:
         configurePreset: win-${{ matrix.arch }}-release
         buildPreset: win-${{ matrix.arch }}-release
