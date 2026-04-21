@@ -14,6 +14,7 @@
 // tun/transport client for ovpn-dco
 
 #include <openvpn/dco/dcocli.hpp>
+#include <openvpn/tun/linux/client/tunnetlink.hpp>
 #include <openvpn/tun/client/tunconfigflags.hpp>
 
 class OvpnDcoClient : public Client,
@@ -641,12 +642,12 @@ class OvpnDcoClient : public Client,
 
             std::vector<IP::Route> rtvec;
 
-            TUN_LINUX::tun_config(config->dev_name,
-                                  *po,
-                                  &rtvec,
-                                  *add_cmds,
-                                  *remove_cmds,
-                                  TunConfigFlags::ADD_BYPASS_ROUTES);
+            TunNetlink::TunMethods::tun_config(config->dev_name,
+                                               *po,
+                                               &rtvec,
+                                               *add_cmds,
+                                               *remove_cmds,
+                                               TunConfigFlags::ADD_BYPASS_ROUTES);
 
             // execute commands to bring up interface
             add_cmds->execute_log();

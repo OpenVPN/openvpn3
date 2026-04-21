@@ -26,10 +26,6 @@
 #include <openvpn/tun/builder/capture.hpp>
 #include <openvpn/tun/client/tunbase.hpp>
 
-#if !defined(ENABLE_OVPNDCOWIN)
-#include <openvpn/tun/linux/client/tunmethods.hpp>
-#endif
-
 #if defined(ENABLE_KOVPN)
 #include <openvpn/kovpn/kodevtun.hpp>
 #include <openvpn/kovpn/kostats.hpp>

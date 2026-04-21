@@ -20,7 +20,7 @@
 #include <openvpn/tun/builder/setup.hpp>
 #include <openvpn/tun/tunio.hpp>
 #include <openvpn/tun/persist/tunpersist.hpp>
-#include <openvpn/tun/linux/client/tunmethods.hpp>
+#include <openvpn/tun/linux/client/tunnetlink.hpp>
 
 namespace openvpn::TunLinux {
 
@@ -107,7 +107,7 @@ class ClientConfig : public TunClientFactory
     {
         if (tun_setup_factory)
             return tun_setup_factory->new_setup_obj();
-        return new TunLinuxSetup::Setup<TUN_LINUX>();
+        return new TunLinuxSetup::Setup<TunNetlink::TunMethods>();
     }
 
     bool supports_epoch_data() override
@@ -185,7 +185,7 @@ class Client : public TunClient
                     tun_setup = config->new_setup_obj();
 
                     // create config object for tun setup layer
-                    TunLinuxSetup::Setup<TUN_LINUX>::Config tsconf;
+                    TunLinuxSetup::Setup<TunNetlink::TunMethods>::Config tsconf;
                     tsconf.layer = config->tun_prop.layer;
                     tsconf.dev_name = config->dev_name;
                     tsconf.txqueuelen = config->txqueuelen;
