@@ -392,6 +392,12 @@ class OvpnDcoClient : public Client,
                 std::ostringstream os;
                 Error::Type err;
 
+                if (peer_id != this->peer_id)
+                {
+                    OPENVPN_LOG("received DEL_PEER for " << peer_id << " while expecting " << this->peer_id);
+                    break;
+                }
+
                 switch (reason)
                 {
                 case OVPN_DEL_PEER_REASON_EXPIRED:
