@@ -416,10 +416,8 @@ class OvpnDcoClient : public Client,
                     break;
 
                 case OVPN_DEL_PEER_REASON_USERSPACE:
-                    // volountary delete - do not stop client
                     OPENVPN_LOG("peer deleted, id=" << peer_id
                                                     << ", requested by userspace");
-                    peer_id = OVPN_PEER_ID_UNDEF;
                     return true;
 
                 default:
@@ -427,6 +425,9 @@ class OvpnDcoClient : public Client,
                     os << "peer deleted, id=" << peer_id << ", reason=" << reason;
                     break;
                 }
+
+                // peer is gone - avoid any other netlink call for it
+                this->peer_id = OVPN_PEER_ID_UNDEF;
 
                 stop_();
                 transport_parent->transport_error(err, os.str());
