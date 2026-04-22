@@ -222,7 +222,6 @@ class OvpnDcoClient : public Client,
         if (tb)
         {
             tb->tun_builder_dco_get_peer(peer_id, sync);
-            queue_read_pipe(nullptr);
         }
         else
         {
@@ -540,6 +539,7 @@ class OvpnDcoClient : public Client,
             }
 
             pipe.reset(new openvpn_io::posix::stream_descriptor(io_context, fd));
+            queue_read_pipe(nullptr);
             return;
         }
 
