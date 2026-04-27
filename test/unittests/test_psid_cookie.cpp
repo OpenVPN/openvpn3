@@ -160,3 +160,217 @@ TEST_F(PsidCookieTest, ValidTime)
     hmac_ok = pci_dut.check_session_id_hmac(srv_psid, cli_psid, cli_addr);
     EXPECT_FALSE(hmac_ok);
 }
+
+
+// Tests that exercise PsidCookieImpl::intercept() against crafted third
+// packets of the OpenVPN 3-way handshake (the client reply to the server's
+// HARD_RESET).  The cookie code only ever sees this packet when no peer
+// state exists yet, so it must positively identify the packet as the
+// handshake-completing one before letting the caller create state.
+class PsidCookieInterceptTest : public PsidCookieTest
+{
+  protected:
+    // Build a complete third-packet (tls-auth path) suitable for intercept().
+    // Each on-the-wire field is parameterized so that individual tests can
+    // perturb exactly one field while leaving everything else valid.
+    BufferAllocated build_third_packet_tls_auth(const ProtoSessionID &cli_psid,
+                                                const ProtoSessionID &cookie_psid,
+                                                std::uint32_t acked_pktid_be,
+                                                std::uint32_t own_pktid_be,
+                                                unsigned char ack_count,
+                                                unsigned char op_field)
+    {
+        PsidCookieImpl &pci = *pcookie_impl;
+        // The server validates the incoming HMAC with ta_hmac_recv_; with
+        // pcfg_.key_direction == 0 that key differs from ta_hmac_send_'s, so
+        // we must sign the synthetic client packet with the recv key here.
+        const size_t hmac_size = pci.ta_hmac_recv_->output_size();
+
+        BufferAllocated buf;
+        buf.reset(/*headroom=*/256, /*capacity=*/512, BufAllocFlags::GROW);
+
+        // Fields are prepended in reverse on-the-wire order, mirroring how
+        // process_clients_initial_reset_tls_auth() builds the server reply.
+        buf.prepend(&own_pktid_be, sizeof(own_pktid_be));
+        cookie_psid.prepend(buf);
+        buf.prepend(&acked_pktid_be, sizeof(acked_pktid_be));
+        buf.push_front(ack_count);
+
+        PacketIDControlSend pid;
+        pid.write_next(buf, /*prepend=*/true, pci.now_->seconds_since_epoch());
+
+        buf.prepend_alloc(hmac_size);
+        cli_psid.prepend(buf);
+        buf.push_front(op_field);
+
+        pci.ta_hmac_recv_->ovpn_hmac_gen(buf.data(),
+                                         buf.size(),
+                                         PsidCookieImpl::OPCODE_SIZE + PsidCookieImpl::SID_SIZE,
+                                         hmac_size,
+                                         PacketIDControl::idsize);
+        return buf;
+    }
+
+    struct Fixture
+    {
+        ClientAddressMock cli_addr;
+        ProtoSessionID cli_psid;
+        ProtoSessionID cookie_psid;
+    };
+
+    Fixture make_fixture()
+    {
+        PsidCookieImpl &pci = *pcookie_impl;
+        set_clock(Time::now());
+
+        Fixture f{ClientAddressMock(*pci.pcfg_.prng), {}, {}};
+        f.cli_psid.randomize(*pci.pcfg_.rng);
+        f.cookie_psid = pci.calculate_session_id_hmac(f.cli_psid, f.cli_addr, 0);
+        return f;
+    }
+};
+
+TEST_F(PsidCookieInterceptTest, ThirdPacketValid)
+{
+    auto f = make_fixture();
+    BufferAllocated pkt = build_third_packet_tls_auth(f.cli_psid,
+                                                      f.cookie_psid,
+                                                      /*acked_pktid_be=*/0,
+                                                      /*own_pktid_be=*/0,
+                                                      /*ack_count=*/1,
+                                                      ProtoContext::op_compose(ProtoContext::CONTROL_V1, 0));
+
+    EXPECT_EQ(pcookie_impl->intercept(pkt, f.cli_addr), PsidCookie::Intercept::HANDLE_2ND);
+    EXPECT_TRUE(pcookie_impl->get_cookie_psid().match(f.cookie_psid));
+}
+
+TEST_F(PsidCookieInterceptTest, ThirdPacketAcceptsAckedPktidOne)
+{
+    // Both acked-pktid 0 (default) and 1 are tolerated as part of the early
+    // handshake; only > 1 is treated as mid-session.  This mirrors OpenVPN 2.
+    auto f = make_fixture();
+    BufferAllocated pkt = build_third_packet_tls_auth(f.cli_psid,
+                                                      f.cookie_psid,
+                                                      /*acked_pktid_be=*/htonl(1),
+                                                      /*own_pktid_be=*/0,
+                                                      /*ack_count=*/1,
+                                                      ProtoContext::op_compose(ProtoContext::CONTROL_V1, 0));
+
+    EXPECT_EQ(pcookie_impl->intercept(pkt, f.cli_addr), PsidCookie::Intercept::HANDLE_2ND);
+}
+
+TEST_F(PsidCookieInterceptTest, ThirdPacketRejectsAckedPktidAboveOne)
+{
+    auto f = make_fixture();
+    BufferAllocated pkt = build_third_packet_tls_auth(f.cli_psid,
+                                                      f.cookie_psid,
+                                                      /*acked_pktid_be=*/htonl(2),
+                                                      /*own_pktid_be=*/0,
+                                                      /*ack_count=*/1,
+                                                      ProtoContext::op_compose(ProtoContext::CONTROL_V1, 0));
+
+    EXPECT_EQ(pcookie_impl->intercept(pkt, f.cli_addr), PsidCookie::Intercept::DROP_2ND);
+}
+
+TEST_F(PsidCookieInterceptTest, ThirdPacketAcceptsOwnPktidOne)
+{
+    auto f = make_fixture();
+    BufferAllocated pkt = build_third_packet_tls_auth(f.cli_psid,
+                                                      f.cookie_psid,
+                                                      /*acked_pktid_be=*/0,
+                                                      /*own_pktid_be=*/htonl(1),
+                                                      /*ack_count=*/1,
+                                                      ProtoContext::op_compose(ProtoContext::CONTROL_V1, 0));
+
+    EXPECT_EQ(pcookie_impl->intercept(pkt, f.cli_addr), PsidCookie::Intercept::HANDLE_2ND);
+}
+
+TEST_F(PsidCookieInterceptTest, ThirdPacketRejectsOwnPktidAboveOne)
+{
+    auto f = make_fixture();
+    BufferAllocated pkt = build_third_packet_tls_auth(f.cli_psid,
+                                                      f.cookie_psid,
+                                                      /*acked_pktid_be=*/0,
+                                                      /*own_pktid_be=*/htonl(2),
+                                                      /*ack_count=*/1,
+                                                      ProtoContext::op_compose(ProtoContext::CONTROL_V1, 0));
+
+    EXPECT_EQ(pcookie_impl->intercept(pkt, f.cli_addr), PsidCookie::Intercept::DROP_2ND);
+}
+
+TEST_F(PsidCookieInterceptTest, ThirdPacketRejectsAckCountNotOne)
+{
+    auto f = make_fixture();
+    BufferAllocated pkt = build_third_packet_tls_auth(f.cli_psid,
+                                                      f.cookie_psid,
+                                                      /*acked_pktid_be=*/0,
+                                                      /*own_pktid_be=*/0,
+                                                      /*ack_count=*/2,
+                                                      ProtoContext::op_compose(ProtoContext::CONTROL_V1, 0));
+
+    EXPECT_EQ(pcookie_impl->intercept(pkt, f.cli_addr), PsidCookie::Intercept::DROP_2ND);
+}
+
+TEST_F(PsidCookieInterceptTest, ThirdPacketAcceptsAckV1)
+{
+    // P_ACK_V1 has no own message-id on the wire; intercept() must accept
+    // it and skip the message-id check.  The packet builder still writes 4
+    // bytes for own_pktid into the buffer, but the validator's reqd_size is
+    // 4 bytes shorter for ACK_V1 so those bytes are simply ignored.
+    auto f = make_fixture();
+    BufferAllocated pkt = build_third_packet_tls_auth(f.cli_psid,
+                                                      f.cookie_psid,
+                                                      /*acked_pktid_be=*/0,
+                                                      /*own_pktid_be=*/0,
+                                                      /*ack_count=*/1,
+                                                      ProtoContext::op_compose(ProtoContext::ACK_V1, 0));
+
+    EXPECT_EQ(pcookie_impl->intercept(pkt, f.cli_addr), PsidCookie::Intercept::HANDLE_2ND);
+}
+
+TEST_F(PsidCookieInterceptTest, ThirdPacketRejectsNonZeroKeyId)
+{
+    auto f = make_fixture();
+    BufferAllocated pkt = build_third_packet_tls_auth(f.cli_psid,
+                                                      f.cookie_psid,
+                                                      /*acked_pktid_be=*/0,
+                                                      /*own_pktid_be=*/0,
+                                                      /*ack_count=*/1,
+                                                      ProtoContext::op_compose(ProtoContext::CONTROL_V1, 1));
+
+    EXPECT_EQ(pcookie_impl->intercept(pkt, f.cli_addr), PsidCookie::Intercept::EARLY_DROP);
+}
+
+TEST_F(PsidCookieInterceptTest, ThirdPacketRejectsBadCookie)
+{
+    auto f = make_fixture();
+    // Tamper with the cookie psid: still valid HMAC over the packet, but
+    // the embedded server psid does not match what calculate_session_id_hmac
+    // would produce for this client.
+    ProtoSessionID bogus;
+    bogus.randomize(*pcookie_impl->pcfg_.rng);
+
+    BufferAllocated pkt = build_third_packet_tls_auth(f.cli_psid,
+                                                      bogus,
+                                                      /*acked_pktid_be=*/0,
+                                                      /*own_pktid_be=*/0,
+                                                      /*ack_count=*/1,
+                                                      ProtoContext::op_compose(ProtoContext::CONTROL_V1, 0));
+
+    EXPECT_EQ(pcookie_impl->intercept(pkt, f.cli_addr), PsidCookie::Intercept::DROP_2ND);
+}
+
+TEST_F(PsidCookieInterceptTest, ThirdPacketRejectsBadHmac)
+{
+    auto f = make_fixture();
+    BufferAllocated pkt = build_third_packet_tls_auth(f.cli_psid,
+                                                      f.cookie_psid,
+                                                      /*acked_pktid_be=*/0,
+                                                      /*own_pktid_be=*/0,
+                                                      /*ack_count=*/1,
+                                                      ProtoContext::op_compose(ProtoContext::CONTROL_V1, 0));
+    // Flip a byte in the HMAC field (right after the opcode + own session id).
+    pkt.data()[PsidCookieImpl::OPCODE_SIZE + PsidCookieImpl::SID_SIZE] ^= 0x01;
+
+    EXPECT_EQ(pcookie_impl->intercept(pkt, f.cli_addr), PsidCookie::Intercept::DROP_2ND);
+}

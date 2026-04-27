@@ -3641,9 +3641,22 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
             return (pidc.id & EARLY_NEG_MASK) == EARLY_NEG_START;
         }
 
-        bool is_clients_server_reset_ack() const
+        //! Returns `true` if this could be the third packet of the 3-way handshake (tls-auth/none).
+        bool is_clients_handshake_ack_tls_auth() const
         {
-            return key_id_ == 0 && (op_code_ == CONTROL_V1 || op_code_ == ACK_V1 || op_code_ == CONTROL_WKC_V1);
+            return key_id_ == 0 && (op_code_ == CONTROL_V1 || op_code_ == ACK_V1);
+        }
+
+        //! Returns `true` if this could be the third packet of the 3-way handshake (tls-crypt-v2).
+        bool is_clients_handshake_ack_tls_crypt_v2() const
+        {
+            return key_id_ == 0 && op_code_ == CONTROL_WKC_V1;
+        }
+
+        //! Returns `true` if the packet is a P_ACK_V1 (no own message-id field on the wire).
+        bool is_ack_v1() const
+        {
+            return op_code_ == ACK_V1;
         }
 
         //! Adds an {EARLY_NEG_FLAGS, 2, EARLY_NEG_FLAG_RESEND_WKC} TLV to a payload buffer (use with TLS crypt V2).

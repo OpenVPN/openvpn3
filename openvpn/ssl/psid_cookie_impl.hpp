@@ -105,11 +105,13 @@ class PsidCookieImpl : public PsidCookie
                        ? process_clients_initial_reset_tls_crypt(pkt_buf, pcaib, chelp)
                        : process_clients_initial_reset_tls_auth(pkt_buf, pcaib);
         }
-        if (chelp.is_clients_server_reset_ack())
+        if (is_tls_crypt_v2 && chelp.is_clients_handshake_ack_tls_crypt_v2())
         {
-            return is_tls_crypt_v2
-                       ? process_clients_server_reset_ack_tls_crypt(pkt_buf, pcaib)
-                       : process_clients_server_reset_ack_tls_auth(pkt_buf, pcaib);
+            return process_clients_server_reset_ack_tls_crypt(pkt_buf, pcaib);
+        }
+        if (pcfg_.tls_auth_enabled() && chelp.is_clients_handshake_ack_tls_auth())
+        {
+            return process_clients_server_reset_ack_tls_auth(pkt_buf, pcaib, chelp.is_ack_v1());
         }
 
         // JMD_TODO: log failure?  Logging DDoS?
@@ -132,6 +134,45 @@ class PsidCookieImpl : public PsidCookie
   private:
 #endif
     using CookieHelper = ProtoContext::PsidCookieHelper;
+
+    // Returns true iff the reliable::id_t read from `buf` is within the early-handshake
+    // range (0 or 1); false for mid-session values (> 1).
+    template <typename Buf>
+    static bool read_id_is_early_handshake(Buf &buf)
+    {
+        reliable::id_t net_id;
+        buf.read(&net_id, sizeof(net_id));
+        return ntohl(net_id) <= 1;
+    }
+
+    // Validates the payload of the third 3WHS packet (client ACK of server HARD_RESET).
+    // The "0 or 1" tolerance on pktids matches OpenVPN 2's check_session_hmac_and_pkt_id():
+    // anything higher is clearly mid-session traffic, not a 3WHS completion.
+    // When has_own_pktid is false (P_ACK_V1 wire format), the own message-id field is
+    // absent on the wire and the check is skipped.
+    // Sets cookie_psid_ and returns true on success.
+    template <typename Buf>
+    bool validate_3whs_ack_payload(Buf &buf,
+                                   const ProtoSessionID &cli_psid,
+                                   const PsidCookieAddrInfoBase &pcaib,
+                                   bool has_own_pktid = true)
+    {
+        // We _should_ have one ACK (for the HARD_RESET previous message).
+        if (buf[0] != 1)
+            return false;
+
+        buf.advance(1);
+
+        if (!read_id_is_early_handshake(buf))
+            return false;
+
+        cookie_psid_.read(buf);
+
+        if (has_own_pktid && !read_id_is_early_handshake(buf))
+            return false;
+
+        return check_session_id_hmac(cookie_psid_, cli_psid, pcaib);
+    }
 
     Intercept process_clients_initial_reset_tls_auth(ConstBuffer &pkt_buf, const PsidCookieAddrInfoBase &pcaib)
     {
@@ -218,7 +259,9 @@ class PsidCookieImpl : public PsidCookie
         return Intercept::DROP_1ST;
     }
 
-    Intercept process_clients_server_reset_ack_tls_auth(ConstBuffer &pkt_buf, const PsidCookieAddrInfoBase &pcaib)
+    Intercept process_clients_server_reset_ack_tls_auth(ConstBuffer &pkt_buf,
+                                                        const PsidCookieAddrInfoBase &pcaib,
+                                                        bool is_ack_v1)
     {
         static const size_t hmac_size = ta_hmac_recv_->output_size();
         // ovpn_hmac_cmp checks for adequate pkt_buf.size()
@@ -233,13 +276,11 @@ class PsidCookieImpl : public PsidCookie
             return Intercept::DROP_2ND;
         }
 
-        static const size_t reqd_packet_size
-            // clang-format off
-            // [op_field]    [cli_psid] [HMAC]      [cli_auth_pktid]         [acked] [srv_psid]
-            =  OPCODE_SIZE + SID_SIZE + hmac_size + PacketIDControl::size() + 5 +    SID_SIZE;
-        // the fixed size, 5, of the [acked] field recognizes that the client's first
-        // response will ack exactly one packet, the server's HARD_RESET
-        // clang-format on
+        // [op_field][cli_psid][HMAC][cli_auth_pktid][acked][srv_psid] and,
+        // for CONTROL_V1 only, a trailing [own_pktid].  P_ACK_V1 has no own
+        // message-id on the wire, so its required size is shorter.
+        const size_t reqd_packet_size = OPCODE_SIZE + SID_SIZE + hmac_size + PacketIDControl::size() + 5 + SID_SIZE
+                                        + (is_ack_v1 ? 0 : reliable::id_size);
         if (pkt_buf.size() < reqd_packet_size)
         {
             // JMD_TODO: log failure?  Logging DDoS?
@@ -256,22 +297,9 @@ class PsidCookieImpl : public PsidCookie
         PacketIDControl cli_auth_pktid; // a.k.a, replay_packet_id in draft RFC
         cli_auth_pktid.read(recv_buf_copy);
 
-        unsigned int ack_count = recv_buf_copy[0];
-        if (ack_count != 1)
-        {
-            return Intercept::DROP_2ND;
-        }
-        recv_buf_copy.advance(5);
-        cookie_psid_.read(recv_buf_copy);
-
-        // verify client's Psid Cookie
-        bool is_cookie_valid = check_session_id_hmac(cookie_psid_, cli_psid, pcaib);
-        if (is_cookie_valid)
-        {
-            return Intercept::HANDLE_2ND;
-        }
-
-        return Intercept::DROP_2ND;
+        return validate_3whs_ack_payload(recv_buf_copy, cli_psid, pcaib, !is_ack_v1)
+                   ? Intercept::HANDLE_2ND
+                   : Intercept::DROP_2ND;
     }
 
     Intercept process_clients_initial_reset_tls_crypt(Buffer &pkt_buf,
@@ -386,21 +414,14 @@ class PsidCookieImpl : public PsidCookie
         if (!recv->hmac_cmp(orig_data, TLSCryptContext::hmac_offset, work.c_data(), work.size()))
             return Intercept::DROP_2ND;
 
-        // We _should_ have one ACK (for the CONTROL_HARD_RESET_V2 previous message).
-        if (work[0] != 1)
+        // Decrypted plaintext layout: ack_count(1) | acked_pktid(4) | peer_session_id(8) | packet_id(4) | payload
+        static const size_t reqd_decrypted_size = 1 + reliable::id_size + ProtoSessionID::SIZE + reliable::id_size;
+        if (work.size() < reqd_decrypted_size)
             return Intercept::DROP_2ND;
 
-        // Discard the opcode and the acked packet ID.
-        work.advance(OPCODE_SIZE + sizeof(uint32_t));
-
-        // Retrieve the peer session ID (this must match).
-        cookie_psid_.read(work);
-
-        // verify client's Psid Cookie
-        if (check_session_id_hmac(cookie_psid_, client_session_id, pcaib))
-            return Intercept::HANDLE_2ND;
-
-        return Intercept::DROP_2ND;
+        return validate_3whs_ack_payload(work, client_session_id, pcaib)
+                   ? Intercept::HANDLE_2ND
+                   : Intercept::DROP_2ND;
     }
 
     // key must be common to all threads
