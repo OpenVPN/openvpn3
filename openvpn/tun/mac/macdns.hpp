@@ -74,17 +74,20 @@ class MacDNS : public RC<thread_unsafe_refcount>
 
             search_domains = get_search_domains(settings);
 
-            if (!settings.dns_options.from_dhcp_options)
+            if (CF::array_len(server_addresses))
             {
-                // With --dns options we redirect when there are no split domains
-                redirect_dns = !CF::array_len(resolve_domains);
-            }
-            else
-            {
-                // We redirect DNS if either of the following is true:
-                // 1. redirect-gateway (IPv4) is pushed, or
-                // 2. DNS servers are pushed but no search domains are pushed
-                redirect_dns = settings.reroute_gw.ipv4 || (CF::array_len(server_addresses) && !CF::array_len(resolve_domains));
+                if (!settings.dns_options.from_dhcp_options)
+                {
+                    // With --dns options we redirect when there are no split domains
+                    redirect_dns = !CF::array_len(resolve_domains);
+                }
+                else
+                {
+                    // We redirect DNS if either of the following is true:
+                    // 1. redirect-gateway (IPv4) is pushed, or
+                    // 2. DNS servers are pushed but no search domains are pushed
+                    redirect_dns = settings.reroute_gw.ipv4 || !CF::array_len(resolve_domains);
+                }
             }
         }
 
