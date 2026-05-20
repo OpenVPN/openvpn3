@@ -471,7 +471,10 @@ namespace openvpn::Unicode {
         case 1: ch += *source++; ch <<= 6;
         case 0: ch += *source++;
 	}
-	ch -= offsetsFromUTF8[extraBytesToRead];
+
+	if (extraBytesToRead < std::size(offsetsFromUTF8)) {
+	  ch -= offsetsFromUTF8[extraBytesToRead];
+	}
 
 	if (target >= targetEnd) {
 	  source -= (extraBytesToRead+1); /* Back up source pointer! */
