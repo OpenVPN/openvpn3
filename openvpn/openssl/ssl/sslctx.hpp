@@ -917,6 +917,11 @@ class OpenSSLContext : public SSLFactoryAPI
             context_data_index = SSL_get_ex_new_index(0, (char *)"OpenSSLContext", nullptr, nullptr, nullptr);
         }
 
+        static void uninit_static()
+        {
+            bmq_stream::free_bio_method();
+        }
+
       private:
         SSL(const OpenSSLContext &ctx, const std::string *hostname, const std::string *cache_key)
         {

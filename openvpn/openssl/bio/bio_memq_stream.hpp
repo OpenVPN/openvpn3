@@ -202,6 +202,11 @@ inline void init_static()
     bio_memq_internal::init_static();
 }
 
+inline void free_bio_method()
+{
+    bio_memq_internal::free_bio_method();
+}
+
 inline BIO_METHOD *BIO_s_memq(void)
 {
     return (bio_memq_internal::memq_method);

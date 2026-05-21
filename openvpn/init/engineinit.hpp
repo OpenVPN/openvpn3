@@ -42,5 +42,12 @@ inline void init_openssl(const std::string &engine)
 #endif
 }
 
+inline void uninit_openssl()
+{
+#ifdef USE_OPENSSL
+    OpenSSLContext::SSL::uninit_static();
+#endif
+}
+
 } // namespace openvpn
 #endif

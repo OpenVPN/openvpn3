@@ -46,6 +46,7 @@ class Init
         ~InitImpl()
         {
             base64_uninit_static();
+            uninit_openssl();
         }
     };
 
