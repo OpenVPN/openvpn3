@@ -179,6 +179,15 @@ class LinkCommon : public LinkBase
         return true;
     }
 
+#ifdef OPENVPN_GREMLIN
+    void gremlin_config(openvpn_io::io_context &io_context,
+                        const Gremlin::Config::Ptr &config) override
+    {
+        if (config)
+            gremlin.reset(new Gremlin::SendRecvQueue(io_context, config, true));
+    }
+#endif
+
     void queue_recv(PacketFrom *tcpfrom)
     {
         OPENVPN_LOG_TCPLINK_VERBOSE("TLSLink::queue_recv");
@@ -233,14 +242,6 @@ class LinkCommon : public LinkBase
     {
         set_raw_mode(false);
     }
-
-#ifdef OPENVPN_GREMLIN
-    void gremlin_config(const Gremlin::Config::Ptr &config)
-    {
-        if (config)
-            gremlin.reset(new Gremlin::SendRecvQueue(socket.get_executor().context(), config, true));
-    }
-#endif
 
     bool is_raw_mode() const
     {

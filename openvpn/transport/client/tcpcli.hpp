@@ -357,7 +357,7 @@ class Client : public TransportClient, AsyncResolvableTCP
                                             config->stats));
 
 #ifdef OPENVPN_GREMLIN
-                impl->gremlin_config(config->gremlin_config);
+                impl->gremlin_config(io_context, config->gremlin_config);
 #endif
                 impl->start();
                 if (!parent->transport_is_openvpn_protocol())

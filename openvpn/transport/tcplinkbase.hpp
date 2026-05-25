@@ -6,6 +6,11 @@
 
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/common/rc.hpp>
+#include <openvpn/io/io.hpp>
+
+#ifdef OPENVPN_GREMLIN
+#include <openvpn/transport/gremlin.hpp>
+#endif
 
 #pragma once
 
@@ -33,5 +38,9 @@ class LinkBase : public RC<thread_unsafe_refcount>
     virtual void set_raw_mode(const bool mode) = 0;
     virtual void start() = 0;
     virtual void stop() = 0;
+#ifdef OPENVPN_GREMLIN
+    virtual void gremlin_config(openvpn_io::io_context &io_context,
+                                const Gremlin::Config::Ptr &config) = 0;
+#endif
 };
 } // namespace openvpn::TCPTransport

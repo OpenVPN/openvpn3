@@ -184,6 +184,7 @@ class Client : public TransportClient, AsyncResolvableUDP
            ClientConfig *config_arg,
            TransportClientParent *parent_arg)
         : AsyncResolvableUDP(io_context_arg),
+          io_context(io_context_arg),
           socket(io_context_arg),
           config(config_arg),
           parent(parent_arg),
@@ -308,7 +309,7 @@ class Client : public TransportClient, AsyncResolvableUDP
                                         (*config->frame)[Frame::READ_LINK_UDP],
                                         config->stats));
 #ifdef OPENVPN_GREMLIN
-                impl->gremlin_config(config->gremlin_config);
+                impl->gremlin_config(io_context, config->gremlin_config);
 #endif
                 impl->start(config->n_parallel);
                 parent->transport_connecting();
@@ -329,6 +330,7 @@ class Client : public TransportClient, AsyncResolvableUDP
 
     Protocol server_protocol;
 
+    openvpn_io::io_context &io_context;
     openvpn_io::ip::udp::socket socket;
     ClientConfig::Ptr config;
     TransportClientParent *parent;
