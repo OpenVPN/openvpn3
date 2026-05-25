@@ -429,6 +429,8 @@ class LinkCommon : public LinkBase
                             {
 	    if (!self->halt)
 	      {
+		// TCP frames are prefixed with a 2-byte length; opcode lives at offset 2
+		self->gremlin->maybe_corrupt_data(*buf, 2);
 		self->queue_send_buffer(buf);
 	      } });
     }

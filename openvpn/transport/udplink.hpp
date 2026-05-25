@@ -211,7 +211,10 @@ class UDPLink : public RC<thread_unsafe_refcount>
         gremlin->send_queue([self = Ptr(this), buf = BufferAllocated(buf), ep = std::move(ep)]() mutable
                             {
 	    if (!self->halt)
-	      self->do_send(buf, ep.get()); });
+	      {
+	        self->gremlin->maybe_corrupt_data(buf, 0);
+	        self->do_send(buf, ep.get());
+	      } });
     }
 
     void gremlin_recv(PacketFrom::SPtr &pfp)

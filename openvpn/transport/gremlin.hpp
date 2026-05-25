@@ -22,6 +22,7 @@
 #include <openvpn/common/string.hpp>
 #include <openvpn/common/number.hpp>
 #include <openvpn/common/exception.hpp>
+#include <openvpn/buffer/buffer.hpp>
 #include <openvpn/time/asiotimer.hpp>
 #include <openvpn/random/mtrandapi.hpp>
 
@@ -124,7 +125,7 @@ class Config : public RC<thread_unsafe_refcount>
     {
         const std::vector<std::string> parms = string::split(config_str, ',');
         if (parms.size() < 4)
-            throw gremlin_error("need 4 comma-separated values for send_delay_ms, recv_delay_ms, send_drop_prob, recv_drop_prob");
+            throw gremlin_error("need at least 4 comma-separated values for send_delay_ms, recv_delay_ms, send_drop_prob, recv_drop_prob[, send_corrupt_prob]");
         if (!parse_number(string::trim_copy(parms[0]), send_delay_ms))
             throw gremlin_error("send_delay_ms");
         if (!parse_number(string::trim_copy(parms[1]), recv_delay_ms))
@@ -133,12 +134,14 @@ class Config : public RC<thread_unsafe_refcount>
             throw gremlin_error("send_drop_probability");
         if (!parse_number(string::trim_copy(parms[3]), recv_drop_probability))
             throw gremlin_error("recv_drop_probability");
+        if (parms.size() >= 5 && !parse_number(string::trim_copy(parms[4]), send_corrupt_probability))
+            throw gremlin_error("send_corrupt_probability");
     }
 
     std::string to_string() const
     {
         std::ostringstream os;
-        os << '[' << send_delay_ms << ',' << recv_delay_ms << ',' << send_drop_probability << ',' << recv_drop_probability << ']';
+        os << '[' << send_delay_ms << ',' << recv_delay_ms << ',' << send_drop_probability << ',' << recv_drop_probability << ',' << send_corrupt_probability << ']';
         return os.str();
     }
 
@@ -146,6 +149,10 @@ class Config : public RC<thread_unsafe_refcount>
     unsigned int recv_delay_ms = 0;
     unsigned int send_drop_probability = 0;
     unsigned int recv_drop_probability = 0;
+    // 1-in-N probability of flipping one bit in an outgoing data-channel
+    // packet (post-encryption). 0 disables corruption. Used to exercise
+    // server-side decrypt-fail-limit enforcement.
+    unsigned int send_corrupt_probability = 0;
 };
 
 class SendRecvQueue
@@ -173,6 +180,36 @@ class SendRecvQueue
     {
         if (tcp || flip(conf->recv_drop_probability))
             recv->queue(std::move(func_arg));
+    }
+
+    /**
+      @brief Maybe flip one bit in an outgoing data-channel packet so the
+             peer's AEAD/HMAC authentication fails.
+
+      Non-data packets are left alone so the TLS handshake can complete.
+      Corruption fires with 1-in-N probability where N is the
+      send_corrupt_probability configured on the gremlin Config; if that
+      value is 0, the function is a no-op.
+
+      @param buf            Buffer to mutate in place.
+      @param opcode_offset  Byte index of the OpenVPN opcode in buf
+                            (0 for UDP, 2 for TCP because of the 2-byte
+                            length prefix prepended by PacketStream).
+    */
+    void maybe_corrupt_data(Buffer &buf, const size_t opcode_offset)
+    {
+        if (!conf->send_corrupt_probability || buf.size() <= opcode_offset + 1)
+            return;
+        const unsigned int opcode = static_cast<unsigned int>(buf.c_data()[opcode_offset]) >> 3;
+        constexpr unsigned int DATA_V1 = 6;
+        constexpr unsigned int DATA_V2 = 9;
+        if (opcode != DATA_V1 && opcode != DATA_V2)
+            return;
+        if (ri.randrange(conf->send_corrupt_probability) != 0)
+            return;
+        const size_t payload_start = opcode_offset + 1;
+        const size_t idx = payload_start + ri.randrange(buf.size() - payload_start);
+        buf.data()[idx] ^= 1u << ri.randrange(8);
     }
 
     size_t send_size() const

@@ -1043,6 +1043,7 @@ int openvpn_client(int argc, char *argv[], const std::string *profile_content)
         {.name = "peer-info",                 .has_arg = required_argument, .flag = nullptr, .val = 'I'},
         {.name = "acc-protos",                .has_arg = required_argument, .flag = nullptr, .val = 'K'},
         {.name = "gremlin",                   .has_arg = required_argument, .flag = nullptr, .val = 'G'},
+        {.name = "corrupt-data",              .has_arg = required_argument, .flag = nullptr, .val = 'F'},
         {.name = "proxy-basic",               .has_arg = no_argument,       .flag = nullptr, .val = 'B'},
         {.name = "alt-proxy",                 .has_arg = no_argument,       .flag = nullptr, .val = 'A'},
 #if defined(ENABLE_KOVPN) || defined(ENABLE_OVPNDCO) || defined(ENABLE_OVPNDCOWIN)
@@ -1110,6 +1111,7 @@ int openvpn_client(int argc, char *argv[], const std::string *profile_content)
             std::string proxyPassword;
             std::string peer_info;
             std::string gremlin;
+            unsigned int corruptData = 0;
             std::string ssoMethods;
             std::string appCustomProtocols;
             std::string certcheck_cert_fn;
@@ -1150,7 +1152,7 @@ int openvpn_client(int argc, char *argv[], const std::string *profile_content)
             int ch;
             optind = 1;
 
-            while ((ch = getopt_long(argc, argv, "6:ABCD:G:I:K:LM:P:QR:S:TU:W:X:YZ:ac:degh:o:O:b:jk:lmp:q:r:s:t:u:vwxz:", longopts, nullptr)) != -1)
+            while ((ch = getopt_long(argc, argv, "6:ABCD:F:G:I:K:LM:P:QR:S:TU:W:X:YZ:ac:degh:o:O:b:jk:lmp:q:r:s:t:u:vwxz:", longopts, nullptr)) != -1)
             {
                 switch (ch)
                 {
@@ -1292,6 +1294,9 @@ int openvpn_client(int argc, char *argv[], const std::string *profile_content)
                 case 'G':
                     gremlin = optarg;
                     break;
+                case 'F':
+                    corruptData = static_cast<unsigned int>(::atoi(optarg));
+                    break;
                 case 'K':
                     appCustomProtocols = optarg;
                     break;
@@ -1383,7 +1388,17 @@ int openvpn_client(int argc, char *argv[], const std::string *profile_content)
                     config.autologinSessions = autologinSessions;
                     config.retryOnAuthFailed = retryOnAuthFailed;
                     config.tunPersist = tunPersist;
-                    config.gremlinConfig = gremlin;
+                    {
+                        std::string gremlinConfig = gremlin;
+                        if (corruptData)
+                        {
+                            if (gremlinConfig.empty())
+                                gremlinConfig = "0,0,0,0";
+                            gremlinConfig += ',';
+                            gremlinConfig += std::to_string(corruptData);
+                        }
+                        config.gremlinConfig = std::move(gremlinConfig);
+                    }
                     config.info = true;
                     config.wintun = wintun;
                     config.allowLocalDnsResolvers = allowLocalDnsResolvers;
@@ -1619,7 +1634,8 @@ int openvpn_client(int argc, char *argv[], const std::string *profile_content)
         std::cout << "--persist-tun, -j          : keep TUN interface open across reconnects\n";
         std::cout << "--wintun, -w               : use WinTun instead of TAP-Windows6 on Windows\n";
         std::cout << "--peer-info, -I            : peer info key/value list in the form K1=V1,K2=V2,... or @kv.json\n";
-        std::cout << "--gremlin, -G              : gremlin info (send_delay_ms, recv_delay_ms, send_drop_prob, recv_drop_prob)\n";
+        std::cout << "--gremlin, -G              : gremlin info (send_delay_ms, recv_delay_ms, send_drop_prob, recv_drop_prob[, send_corrupt_prob])\n";
+        std::cout << "--corrupt-data, -F         : 1-in-N probability of bit-flipping outgoing data-channel packets (post-encryption); for testing server decrypt-fail-limit\n";
         std::cout << "--epki-ca                  : simulate external PKI cert supporting intermediate/root certs\n";
         std::cout << "--epki-cert                : simulate external PKI cert\n";
         std::cout << "--epki-key                 : simulate external PKI private key\n";
