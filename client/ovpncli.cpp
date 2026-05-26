@@ -947,6 +947,9 @@ OPENVPN_CLIENT_EXPORT void OpenVPNClient::connect_setup(Status &status, bool &se
     cc.extra_peer_info = state->extra_peer_info;
     cc.stop = state->async_stop_local();
     cc.socket_protect = &state->socket_protect;
+#ifdef OPENVPN_GREMLIN
+    cc.gremlin_config = state->gremlin_config;
+#endif
 #ifdef USE_TUN_BUILDER
     cc.builder = this;
 #endif
