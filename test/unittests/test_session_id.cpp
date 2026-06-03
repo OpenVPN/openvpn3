@@ -184,10 +184,10 @@ static void tryit(RandomAPI &rng, TokenEncryptDecrypt &encdec)
 
 TEST(sessid, tokenEncrypt)
 {
-    StrongRandomAPI::Ptr rng(new SSLLib::RandomAPI());
-    const TokenEncrypt::Key key(*rng);
+    SSLLib::RandomAPI rng;
+    const TokenEncrypt::Key key(rng);
     TokenEncryptDecrypt encdec(key);
 
     for (size_t i = 0; i < ITER; ++i)
-        tryit(*rng, encdec);
+        tryit(rng, encdec);
 }
