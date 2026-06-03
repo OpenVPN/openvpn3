@@ -20,6 +20,20 @@
 #include <openvpn/random/randapi.hpp>
 #include <openvpn/random/randbytestore.hpp>
 
+
+//
+// Prevent compiler from inlining MTRand byte-fill loops into
+// larger call chains, which confuses the optimiser and triggers
+// false-positive -Warray-bounds / -Wstringop-overflow warnings.
+// This issue appeared first with GCC 16.1 with -O2
+//
+#if defined(__GNUC__) && !defined(__clang__) && __GNUC__ >= 16
+#define MTRAND_GCC_NO_INLINE __attribute__((noinline))
+#else
+#define MTRAND_GCC_NO_INLINE
+#endif
+
+
 namespace openvpn {
 
 class MTRand : public WeakRandomAPI
@@ -52,7 +66,7 @@ class MTRand : public WeakRandomAPI
     }
 
     // Fill buffer with random bytes
-    void rand_bytes(unsigned char *buf, size_t size) override
+    MTRAND_GCC_NO_INLINE void rand_bytes(unsigned char *buf, size_t size) override
     {
         if (!rndbytes(buf, size))
             throw mtrand_error("rand_bytes failed");
@@ -60,7 +74,7 @@ class MTRand : public WeakRandomAPI
 
     // Like rand_bytes, but don't throw exception.
     // Return true on successs, false on fail.
-    bool rand_bytes_noexcept(unsigned char *buf, size_t size) override
+    MTRAND_GCC_NO_INLINE bool rand_bytes_noexcept(unsigned char *buf, size_t size) override
     {
         return rndbytes(buf, size);
     }
@@ -71,7 +85,7 @@ class MTRand : public WeakRandomAPI
     }
 
   private:
-    bool rndbytes(unsigned char *buf, size_t size)
+    MTRAND_GCC_NO_INLINE bool rndbytes(unsigned char *buf, size_t size)
     {
         while (size--)
             *buf++ = rbs.get_byte(rng);

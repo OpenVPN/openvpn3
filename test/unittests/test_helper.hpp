@@ -344,13 +344,13 @@ class FakeSecureRand : public openvpn::StrongRandomAPI
         return "FakeRNG";
     }
 
-    virtual void rand_bytes(unsigned char *buf, size_t size) override
+    MTRAND_GCC_NO_INLINE void rand_bytes(unsigned char *buf, size_t size) override
     {
         rand_bytes_(buf, size);
         // OPENVPN_LOG("RAND: " << openvpn::render_hex(buf, size));
     }
 
-    virtual bool rand_bytes_noexcept(unsigned char *buf, size_t size) override
+    MTRAND_GCC_NO_INLINE bool rand_bytes_noexcept(unsigned char *buf, size_t size) override
     {
         rand_bytes(buf, size);
         return true;
@@ -358,7 +358,7 @@ class FakeSecureRand : public openvpn::StrongRandomAPI
 
   private:
     // fake RNG -- just use an incrementing sequence
-    void rand_bytes_(unsigned char *buf, size_t size)
+    MTRAND_GCC_NO_INLINE void rand_bytes_(unsigned char *buf, size_t size)
     {
         while (size--)
             *buf++ = next++;
