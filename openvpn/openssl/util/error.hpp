@@ -22,6 +22,7 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/error/error.hpp>
 #include <openvpn/error/excode.hpp>
+#include <openvpn/openssl/compat.hpp>
 
 namespace openvpn {
 
@@ -147,21 +148,27 @@ class OpenSSLException : public ExceptionCode
             case SSL_R_UNSUPPORTED_PROTOCOL:
                 set_code(Error::TLS_VERSION_MIN, true);
                 break;
+#ifdef SSL_R_CA_MD_TOO_WEAK
             case SSL_R_CA_MD_TOO_WEAK:
                 set_code(Error::SSL_CA_MD_TOO_WEAK, true);
                 break;
+#endif
+#ifdef SSL_R_CA_KEY_TOO_SMALL
             case SSL_R_CA_KEY_TOO_SMALL:
                 set_code(Error::SSL_CA_KEY_TOO_SMALL, true);
                 break;
+#endif
 #ifdef SSL_R_LEGACY_SIGALG_DISALLOWED_OR_UNSUPPORTED
                 /* This error code has been added in OpenSSL 3.0.8 */
             case SSL_R_LEGACY_SIGALG_DISALLOWED_OR_UNSUPPORTED:
                 set_code(Error::TLS_SIGALG_DISALLOWED_OR_UNSUPPORTED, true);
                 break;
 #endif
+#ifdef SSL_R_DH_KEY_TOO_SMALL
             case SSL_R_DH_KEY_TOO_SMALL:
                 set_code(Error::SSL_DH_KEY_TOO_SMALL, true);
                 break;
+#endif
             case SSL_R_TLSV1_ALERT_PROTOCOL_VERSION:
                 set_code(Error::TLS_ALERT_PROTOCOL_VERSION, true);
                 break;
@@ -171,9 +178,11 @@ class OpenSSLException : public ExceptionCode
             case SSL_R_SSLV3_ALERT_HANDSHAKE_FAILURE:
                 set_code(Error::TLS_ALERT_HANDSHAKE_FAILURE, true);
                 break;
+#ifdef SSL_R_TLSV13_ALERT_CERTIFICATE_REQUIRED
             case SSL_R_TLSV13_ALERT_CERTIFICATE_REQUIRED:
                 set_code(Error::TLS_ALERT_CERTIFICATE_REQUIRED, true);
                 break;
+#endif
             case SSL_R_SSLV3_ALERT_CERTIFICATE_EXPIRED:
                 set_code(Error::TLS_ALERT_CERTIFICATE_EXPIRED, true);
                 break;

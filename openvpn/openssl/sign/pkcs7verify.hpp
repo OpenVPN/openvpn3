@@ -23,6 +23,7 @@
 #include <openvpn/common/cleanup.hpp>
 #include <openvpn/common/numeric_cast.hpp>
 #include <openvpn/openssl/pki/x509.hpp>
+#include <openvpn/openssl/compat.hpp>
 #include <openvpn/openssl/util/error.hpp>
 
 namespace openvpn::OpenSSLSign {
