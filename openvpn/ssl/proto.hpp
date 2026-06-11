@@ -3089,6 +3089,35 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
             }
         }
 
+        // True if the control packet with the given reliable-layer id will
+        // carry the tls-crypt-v2 wrapped client key (WKc), appended after the
+        // payload during encapsulation.  Used both to select the CONTROL_WKC_V1
+        // opcode and to reserve room for the WKc when filling the packet with
+        // ciphertext.
+        bool packet_carries_wkc(id_t id) const
+        {
+            return id == 1 && resend_wkc && proto.tls_wrap_mode == TLS_CRYPT_V2;
+        }
+
+        // Maximum amount of SSL ciphertext that may be placed into the control
+        // packet with the given id.  For the packet that also carries the WKc,
+        // the WKc length is subtracted so the fully assembled datagram still
+        // fits within the control-channel frame.  Called by ProtoStackBase.
+        size_t control_ciphertext_capacity(id_t id) const
+        {
+            size_t capacity = (*proto.config->frame)[Frame::READ_BIO_MEMQ_STREAM].payload();
+            if (packet_carries_wkc(id) && proto.config->wkc.defined())
+            {
+                // clamp: with a small control-channel payload (mssfix-ctrl
+                // can go as low as 256) a large WKc could exceed it; never
+                // let the subtraction wrap.  A zero capacity yields a
+                // CONTROL_WKC_V1 packet carrying the WKc alone, with all
+                // ciphertext deferred to the following messages.
+                capacity -= std::min(capacity, proto.config->wkc.size());
+            }
+            return capacity;
+        }
+
         void encapsulate(id_t id, Packet &pkt) // called by ProtoStackBase
         {
             BufferAllocated &buf = *pkt.buf;
@@ -3101,7 +3130,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
 
             // generate message head
             int opcode = pkt.opcode;
-            if (id == 1 && resend_wkc)
+            if (packet_carries_wkc(id))
             {
                 opcode = CONTROL_WKC_V1;
             }

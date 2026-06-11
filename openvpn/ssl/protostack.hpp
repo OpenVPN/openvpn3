@@ -318,10 +318,31 @@ class ProtoStackBase
     void send_pending_ssl_ciphertext_packets()
     {
         // encapsulate SSL ciphertext packets
-        while (ssl_->read_ciphertext_ready() && rel_send.ready())
+        while ((ct_overflow_ || ssl_->read_ciphertext_ready()) && rel_send.ready())
         {
             typename ReliableSend::Message &m = rel_send.send(*now, tls_timeout);
-            m.packet = PACKET(ssl_->read_ciphertext());
+
+            // Use any ciphertext carried over from a previous packet (where room
+            // had to be reserved for an appended WKc); otherwise pull the next
+            // ciphertext chunk from the SSL engine.
+            BufferPtr ct = ct_overflow_ ? std::move(ct_overflow_) : ssl_->read_ciphertext();
+
+            // The packet that carries the tls-crypt-v2 WKc has less room for
+            // ciphertext, since the WKc is appended during encapsulation.  Trim
+            // the ciphertext to the available capacity and carry the remainder
+            // over to the next control message (which won't carry a WKc).
+            const size_t capacity = parent().control_ciphertext_capacity(m.id());
+            if (ct->size() > capacity)
+            {
+                // Carry the remainder over to the next control message, in a
+                // buffer with the same headroom/tailroom the SSL ciphertext
+                // chunks get, so the encapsulation layer can prepend the
+                // control-channel header.
+                const Frame::Context &fc = (*frame_)[Frame::READ_BIO_MEMQ_STREAM];
+                ct_overflow_ = fc.copy(ct->c_data() + capacity, ct->size() - capacity);
+                ct->set_size(capacity);
+            }
+            m.packet = PACKET(std::move(ct));
 
             // encapsulate and send cloned packet, preserve original one for retransmit
             PACKET pkt = m.packet.clone();
@@ -528,8 +549,9 @@ class ProtoStackBase
     Error::Type invalidation_reason_ = Error::SUCCESS;
     bool ssl_started_ = false;
     Time next_retransmit_ = Time::infinite();
-    BufferPtr to_app_buf; // cleartext data decrypted by SSL that is to be passed to app via app_recv method
-    PACKET ack_send_buf;  // only used for standalone ACKs to be sent to peer
+    BufferPtr to_app_buf;   // cleartext data decrypted by SSL that is to be passed to app via app_recv method
+    BufferPtr ct_overflow_; // ciphertext trimmed off a control packet (to reserve room for an appended WKc), sent in the next message
+    PACKET ack_send_buf;    // only used for standalone ACKs to be sent to peer
     std::deque<BufferPtr> app_write_queue;
     std::deque<PACKET> raw_write_queue;
     SessionStats::Ptr stats;
