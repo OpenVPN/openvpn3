@@ -1677,6 +1677,10 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
     {
         typedef ProtoStackBase<Packet, KeyContext> Base;
         friend Base;
+#ifdef UNIT_TEST
+        // test seam: lets ProtoContext::force_resend_wkc() set resend_wkc
+        friend class ProtoContext;
+#endif
         typedef Base::ReliableSend ReliableSend;
         typedef Base::ReliableRecv ReliableRecv;
 
@@ -4124,6 +4128,17 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
         primary->start(cookie_psid);
         update_last_received(); // set an upper bound on when we expect a response
     }
+
+#ifdef UNIT_TEST
+    // Test seam: pretend the server requested resending the tls-crypt-v2 WKc
+    // (EARLY_NEG_FLAG_RESEND_WKC), so the first control packet carrying SSL
+    // ciphertext is emitted as CONTROL_WKC_V1 with the WKc appended.
+    void force_resend_wkc()
+    {
+        if (primary)
+            primary->resend_wkc = true;
+    }
+#endif
 
     // trigger a protocol renegotiation
     void renegotiate()
