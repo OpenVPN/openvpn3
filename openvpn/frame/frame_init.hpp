@@ -53,7 +53,7 @@ inline Frame::Ptr frame_init(const bool align_adjust_3_1,
 
     if (verbose)
         OPENVPN_LOG("Frame=" << headroom << '/' << payload << '/' << tailroom
-                             << " mssfix-ctrl=" << (*frame)[Frame::READ_BIO_MEMQ_STREAM].payload());
+                             << " control-channel-payload=" << (*frame)[Frame::READ_BIO_MEMQ_STREAM].payload());
 
     return frame;
 }

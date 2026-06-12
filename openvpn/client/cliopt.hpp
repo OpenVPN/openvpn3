@@ -236,7 +236,12 @@ class ClientOptions : public RC<thread_unsafe_refcount>
         const unsigned int tun_mtu_max = std::max(parse_tun_mtu_max(opt, TUN_MTU_DEFAULT + 100), tun_mtu);
 
         const MSSCtrlParms mc(opt);
-        frame = frame_init(true, tun_mtu_max, mc.mssfix_ctrl, true);
+        // Reserve the worst-case wrapping overhead when sizing the control
+        // channel ciphertext chunks, so the final packet stays within the
+        // mssfix_ctrl limit (the option minimum of 256 keeps this from
+        // underflowing).  The precise per-mode budget is enforced at
+        // runtime by ProtoContext.
+        frame = frame_init(true, tun_mtu_max, mc.mssfix_ctrl - ProtoContext::MAX_CONTROL_WRAP_OVERHEAD, true);
 
         // TCP queue limit
         tcp_queue_limit = opt.get_num<decltype(tcp_queue_limit)>("tcp-queue-limit", 1, tcp_queue_limit, 1, 65536);

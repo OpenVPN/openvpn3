@@ -367,6 +367,7 @@ class TestProto : public ProtoContextCallbackInterface
     {
         net_out.clear();
         wkc_pkt_sizes_.clear();
+        max_ctrl_pkt_size_ = 0;
         proto_context.reset();
         proto_context.conf().mss_parms.mssfix = MSSParms::MSSFIX_DEFAULT;
     }
@@ -502,6 +503,14 @@ class TestProto : public ProtoContextCallbackInterface
     // vector stays tiny even across the long feedback tests.
     std::vector<size_t> wkc_pkt_sizes_;
 
+    // largest control channel packet emitted via control_net_send()
+    size_t max_ctrl_pkt_size_ = 0;
+
+    size_t max_ctrl_pkt_size() const
+    {
+        return max_ctrl_pkt_size_;
+    }
+
     // Verify every emitted CONTROL_WKC_V1 packet fits within max_size,
     // and that at least one such packet was emitted.
     bool verify_wkc_packets_fit(size_t max_size) const
@@ -532,6 +541,7 @@ class TestProto : public ProtoContextCallbackInterface
         if (disable_xmit_)
             return;
         net_bytes_ += net_buf.size();
+        max_ctrl_pkt_size_ = std::max(max_ctrl_pkt_size_, net_buf.size());
         if (net_buf.size()
             && (net_buf.c_data()[0] >> ProtoContext::OPCODE_SHIFT) == ProtoContext::CONTROL_WKC_V1)
             wkc_pkt_sizes_.push_back(net_buf.size());
@@ -1006,7 +1016,8 @@ int test(const int thread_num,
          bool tls_version_mismatch,
          const std::string &tls_crypt_v2_key_fn = "",
          bool force_resend_wkc = false,
-         size_t control_payload = 378)
+         size_t control_payload = 378,
+         size_t mssfix_ctrl = 0)
 {
     try
     {
@@ -1044,6 +1055,8 @@ int test(const int thread_num,
         auto cp = create_client_proto_context(std::move(cc), frame, prng_cli, cli_stats, time, tls_crypt_v2_key_fn);
         if (use_tls_ekm)
             cp->dc.set_key_derivation(CryptoAlgs::KeyDerivation::TLS_EKM);
+        if (mssfix_ctrl)
+            cp->mssfix_ctrl = mssfix_ctrl;
 
         // server config
         MySessionStats::Ptr serv_stats(new MySessionStats);
@@ -1192,7 +1205,18 @@ int test(const int thread_num,
                     // Even the WKc-bearing packet must stay within headroom +
                     // payload; without the reservation fix it overflows by
                     // ~wkc.size() bytes.
-                    return cli_proto.verify_wkc_packets_fit(128 + control_payload) ? 0 : 1;
+                    if (!cli_proto.verify_wkc_packets_fit(128 + control_payload))
+                        return 1;
+                    // when a wire cap is configured, every emitted control
+                    // packet must stay within it after all wrappings
+                    if (mssfix_ctrl && cli_proto.max_ctrl_pkt_size() > mssfix_ctrl)
+                    {
+                        std::cerr << "control packet exceeded mssfix_ctrl: "
+                                  << cli_proto.max_ctrl_pkt_size()
+                                  << " > " << mssfix_ctrl << '\n';
+                        return 1;
+                    }
+                    return 0;
                 }
 
                 // message loop
@@ -1358,6 +1382,16 @@ TEST_F(ProtoUnitTest, TlsCryptV2WkcRidesFirstControlPacket)
 TEST_F(ProtoUnitTest, TlsCryptV2WkcLargerThanControlPayload)
 {
     int ret = test(1, false, false, "tls-crypt-v2-client-with-serverkey.key", true, 278);
+    EXPECT_EQ(ret, 0);
+}
+
+// Every control packet, including the WKc-bearing one, must stay within the
+// configured mssfix_ctrl limit after all tls wrappings have been applied.
+// 420 leaves just enough room for the unsplittable WKc packet (~406 bytes
+// worst case: tls-crypt header + full ACK block + the 328 byte WKc).
+TEST_F(ProtoUnitTest, TlsCryptV2ControlPacketCapHonored)
+{
+    int ret = test(1, false, false, "tls-crypt-v2-client-with-serverkey.key", true, 378, 420);
     EXPECT_EQ(ret, 0);
 }
 #endif
