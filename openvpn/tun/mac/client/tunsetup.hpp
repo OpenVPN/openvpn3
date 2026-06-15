@@ -414,6 +414,19 @@ class Setup : public TunBuilderSetup::Base
                     {
                         Action::Ptr c, d;
                         add_del_route(pull.remote_address.address, 32, gw4.gateway_addr_str(), gw4.iface(), 0, c, d);
+                        // Make the server bypass route idempotent. This host route must
+                        // point at the *current* physical default gateway. If a previous
+                        // session ended uncleanly (sleep, network change or crash) a stale
+                        // copy of this route can survive with an outdated gateway. A plain
+                        // "route add" then fails with "File exists"; execute() flags the add
+                        // as failed and remove_marked() drops the paired delete from the
+                        // teardown list, so the stale route is never cleaned up. Once the old
+                        // gateway is no longer on-link it produces a permanent
+                        // "UDP send: Can't assign requested address" and the client can only
+                        // time out. Issue a best-effort delete first (a no-op "not in table"
+                        // when absent, non-fatal) so the add always installs a fresh route
+                        // bound to the current gateway and stays managed for teardown.
+                        create.add(d); // pre-delete any stale/orphaned copy, then add
                         create.add(c);
                         destroy.add(d);
                     }
