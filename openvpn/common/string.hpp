@@ -22,7 +22,7 @@
 #include <algorithm>
 #include <optional>
 
-#include <fmt/core.h>
+#include <fmt/format.h>
 
 #include <openvpn/common/platform.hpp>
 #include <openvpn/common/size.hpp>
