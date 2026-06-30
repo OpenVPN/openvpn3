@@ -603,6 +603,15 @@ class OvpnDcoClient : public Client,
         if (config->builder)
         {
             builder = config->builder;
+
+            // Reset any addresses/routes captured during a previous tun
+            // setup so that a reconfiguration -- e.g. triggered by a
+            // PUSH_UPDATE -- starts from a clean snapshot instead of
+            // accumulating duplicate entries (which break the re-establish
+            // and leave the interface unconfigured). For an active DCO
+            // session the builder keeps the ovpn-dco device, peer and keys
+            // intact across this reset.
+            builder->tun_builder_new();
         }
         else
         {
