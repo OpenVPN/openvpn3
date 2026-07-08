@@ -78,7 +78,10 @@ struct MSSCtrlParms
 {
     MSSCtrlParms(const OptionList &opt)
     {
-        mssfix_ctrl = opt.get_num<decltype(mssfix_ctrl)>("mssfix-ctrl", 1, 1250, 256, 65535);
+        // maximum size of a control channel packet on the wire, after all
+        // wrapping (tls-auth/tls-crypt/tls-crypt-v2) has been applied;
+        // the default of 1280 matches the IPv6 minimum MTU
+        mssfix_ctrl = opt.get_num<decltype(mssfix_ctrl)>("mssfix-ctrl", 1, 1280, 256, 65535);
     }
 
     unsigned int mssfix_ctrl;

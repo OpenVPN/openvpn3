@@ -212,7 +212,8 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
   protected:
 #endif
     static constexpr size_t APP_MSG_MAX = 65536;
-    static constexpr int OPCODE_SIZE = 1;
+    // size of the leading opcode/key-id byte of a packet
+    static constexpr size_t OPCODE_SIZE = 1;
 
     enum
     {
@@ -331,6 +332,22 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
     OPENVPN_UNTAGGED_EXCEPTION_INHERIT(option_error, proto_error);
     OPENVPN_UNTAGGED_EXCEPTION_INHERIT(option_error, process_server_push_error);
     OPENVPN_UNTAGGED_EXCEPTION_INHERIT(option_error, proto_option_error);
+
+    // Worst-case number of bytes added around the SSL ciphertext of a
+    // control channel packet: opcode, session id, tls-auth/tls-crypt
+    // packet id, the largest supported HMAC digest (SHA512, tls-auth),
+    // the reliable-layer message id and the largest possible piggybacked
+    // ACK block (count byte + ACK ids + dest session id).  Used to size
+    // the control channel ciphertext chunks such that the final wrapped
+    // packet cannot exceed the mssfix_ctrl limit.
+    static constexpr size_t MAX_CONTROL_WRAP_OVERHEAD =
+        OPCODE_SIZE
+        + ProtoSessionID::SIZE
+        + PacketIDControl::size()
+        + 64 // largest supported HMAC digest (SHA512, tls-auth)
+        + sizeof(reliable::id_t)
+        + 1 + sizeof(reliable::id_t) * ReliableAck::maximum_acks_control_v1
+        + ProtoSessionID::SIZE;
 
     // configuration data passed to ProtoContext constructor
     class ProtoConfig : public RCCopyable<thread_unsafe_refcount>
@@ -461,6 +478,11 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
         unsigned int tun_mtu_max = TUN_MTU_DEFAULT + 100;
         MSSParms mss_parms;
         unsigned int mss_fix = 0;
+
+        // maximum size of a control channel packet on the wire, after all
+        // wrapping (tls-auth/tls-crypt/tls-crypt-v2) has been applied;
+        // 1280 == IPv6 minimum MTU
+        size_t mssfix_ctrl = 1280;
 
         // For compatibility with openvpn2 we send initial options on rekeying,
         // instead of possible modifications caused by NCP
@@ -682,6 +704,9 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
                     mss_parms.fixed = true;
                 }
             }
+
+            // mssfix-ctrl: cap on the wrapped size of control channel packets
+            mssfix_ctrl = MSSCtrlParms(opt).mssfix_ctrl;
 
             // load parameters that can be present in both config file or pushed options
             load_common(opt, pco, server ? LOAD_COMMON_SERVER : LOAD_COMMON_CLIENT);
@@ -1683,6 +1708,10 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
     {
         using Base = ProtoStackBase<Packet, KeyContext>;
         friend Base;
+#ifdef UNIT_TEST
+        // test seam: lets ProtoContext::force_resend_wkc() set resend_wkc
+        friend class ProtoContext;
+#endif
         using ReliableSend = Base::ReliableSend;
         using ReliableRecv = Base::ReliableRecv;
 
@@ -3235,6 +3264,61 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
             }
         }
 
+        // True if the control packet with the given reliable-layer id will
+        // carry the tls-crypt-v2 wrapped client key (WKc), appended after the
+        // payload during encapsulation.  Used both to select the CONTROL_WKC_V1
+        // opcode and to reserve room for the WKc when filling the packet with
+        // ciphertext.
+        bool packet_carries_wkc(id_t id) const
+        {
+            return id == 1 && resend_wkc && proto.tls_wrap_mode == TLS_CRYPT_V2;
+        }
+
+        // Worst-case number of bytes this control packet will carry around
+        // the SSL ciphertext once encapsulated and wrapped: the tls wrap
+        // header (opcode, session id, packet id, hmac) plus the reliable
+        // layer message id and the largest possible piggybacked ACK block.
+        // ACKs must be accounted for at their maximum, since retransmits
+        // re-run encapsulate() with whatever ACKs are pending at that time.
+        size_t control_channel_wrap_overhead() const
+        {
+            size_t overhead = OPCODE_SIZE + ProtoSessionID::SIZE + proto.hmac_size;
+            if (proto.tls_wrap_mode != TLS_PLAIN)
+                overhead += PacketIDControl::size();
+            // reliable layer message id
+            overhead += sizeof(id_t);
+            // worst-case ACK block: count byte + ACK ids + dest session id
+            overhead += 1 + sizeof(id_t) * ReliableAck::maximum_acks_control_v1
+                        + ProtoSessionID::SIZE;
+            return overhead;
+        }
+
+        // Maximum amount of SSL ciphertext that may be placed into the control
+        // packet with the given id, such that the fully wrapped packet does
+        // not exceed the mssfix_ctrl limit.  For the packet that also carries
+        // the WKc, the WKc length is subtracted as well.  Called by
+        // ProtoStackBase.
+        size_t control_ciphertext_capacity(id_t id) const
+        {
+            size_t capacity = (*proto.config->frame)[Frame::READ_BIO_MEMQ_STREAM].payload();
+
+            // never let the fully wrapped packet exceed mssfix_ctrl
+            size_t wire_budget = proto.config->mssfix_ctrl;
+            wire_budget -= std::min(wire_budget, control_channel_wrap_overhead());
+            capacity = std::min(capacity, wire_budget);
+
+            if (packet_carries_wkc(id) && proto.config->wkc.defined())
+            {
+                // clamp: a large WKc could exceed a small budget (mssfix-ctrl
+                // can go as low as 256); never let the subtraction wrap.  A
+                // zero capacity yields a CONTROL_WKC_V1 packet carrying the
+                // WKc alone, with all ciphertext deferred to the following
+                // messages.
+                capacity -= std::min(capacity, proto.config->wkc.size());
+            }
+            return capacity;
+        }
+
         void encapsulate(id_t id, Packet &pkt) // called by ProtoStackBase
         {
             BufferAllocated &buf = *pkt.buf;
@@ -3247,7 +3331,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
 
             // generate message head
             int opcode = pkt.opcode;
-            if (id == 1 && resend_wkc)
+            if (packet_carries_wkc(id))
             {
                 opcode = CONTROL_WKC_V1;
             }
@@ -4188,6 +4272,17 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
         primary->start(cookie_psid);
         update_last_received(); // set an upper bound on when we expect a response
     }
+
+#ifdef UNIT_TEST
+    // Test seam: pretend the server requested resending the tls-crypt-v2 WKc
+    // (EARLY_NEG_FLAG_RESEND_WKC), so the first control packet carrying SSL
+    // ciphertext is emitted as CONTROL_WKC_V1 with the WKc appended.
+    void force_resend_wkc()
+    {
+        if (primary)
+            primary->resend_wkc = true;
+    }
+#endif
 
     // trigger a protocol renegotiation
     void renegotiate()

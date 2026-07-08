@@ -20,17 +20,15 @@ template <typename RAND_TYPE>
 class RandomByteStore
 {
   public:
-    static constexpr size_t SIZE = sizeof(typename RAND_TYPE::result_type);
-
     unsigned char get_byte(RAND_TYPE &rng)
     {
         if (n_bytes == 0)
         {
-            res.rt = rng();
-            n_bytes = SIZE;
+            res = rng();
+            n_bytes = sizeof(res);
         }
-        const unsigned char ret = res.bytes[0];
-        res.rt >>= 8;
+        const unsigned char ret = static_cast<unsigned char>(res);
+        res >>= 8;
         --n_bytes;
         return ret;
     }
@@ -44,12 +42,7 @@ class RandomByteStore
     }
 
   private:
-    union Result {
-        unsigned char bytes[SIZE];
-        typename RAND_TYPE::result_type rt;
-    };
-
-    Result res;
+    typename RAND_TYPE::result_type res = 0;
     unsigned int n_bytes = 0;
 };
 

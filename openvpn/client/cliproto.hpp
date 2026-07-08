@@ -1137,6 +1137,7 @@ class Session : ProtoContextCallbackInterface,
 
                 // send the Connected event
                 cli_events->add_event(connected_);
+                connected_event_emitted_ = true;
 
                 // send an event for custom app control if present
                 notify_client_acc_protocols();
@@ -1207,6 +1208,18 @@ class Session : ProtoContextCallbackInterface,
         }
         ev->tun_name = tun->tun_name();
         connected_ = std::move(ev);
+
+        // On the initial connection the Connected event is emitted by
+        // recv_push_reply(), once the data channel and the remaining
+        // post-connect setup have been initialized, so we must not emit it
+        // here. When the tun is re-established after a PUSH_UPDATE, however,
+        // apply_push_update() runs tun_start() (and therefore this callback)
+        // asynchronously, after recv_push_update() has already returned -- so
+        // nobody else would emit the refreshed Connected event. Do it here to
+        // signal that the tun is operational again, otherwise the controller
+        // is left waiting in the IP-assignment state forever.
+        if (connected_event_emitted_)
+            cli_events->add_event(connected_);
     }
 
     void tun_error(const Error::Type fatal_err, const std::string &err_text) override
@@ -1678,6 +1691,13 @@ class Session : ProtoContextCallbackInterface,
     ClientEvent::Queue::Ptr cli_events;
 
     ClientEvent::Connected::Ptr connected_;
+
+    // True once the Connected event has been emitted for this session (by
+    // recv_push_reply()). It tells tun_connected() that any later tun
+    // re-establishment -- e.g. triggered by a PUSH_UPDATE -- must re-emit the
+    // Connected event itself, because recv_push_update() drives the tun setup
+    // asynchronously and does not emit it.
+    bool connected_event_emitted_ = false;
 
     bool echo;
     bool info;

@@ -723,9 +723,12 @@ class Setup : public SetupBase
                     create.add(new NRPT::ActionCreate(pid, split_domains, addresses, wide_search_domains, dnssec));
                     destroy.add(new NRPT::ActionDelete(pid));
                 }
-
-                // Set pushed DNS servers with the adapter
-                set_adapter_dns(create, destroy, tap_index_name, addresses, pull);
+                else if (allow_local_dns_resolvers && pull.block_outside_dns)
+                {
+                    // Set pushed DNS servers with the adapter. In case the local resolver
+                    // doesn't work the VPN DNS resolvers will serve as a fallback
+                    set_adapter_dns(create, destroy, tap_index_name, addresses, pull);
+                }
 
                 create.add(new DNS::ActionCreate(tap.name, search_domains));
                 destroy.add(new DNS::ActionDelete(tap.name, search_domains));

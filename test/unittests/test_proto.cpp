@@ -363,6 +363,8 @@ class TestProto : public ProtoContextCallbackInterface
     void reset()
     {
         net_out.clear();
+        wkc_pkt_sizes_.clear();
+        max_ctrl_pkt_size_ = 0;
         proto_context.reset();
         proto_context.conf().mss_parms.mssfix = MSSParms::MSSFIX_DEFAULT;
     }
@@ -492,6 +494,40 @@ class TestProto : public ProtoContextCallbackInterface
 
     std::deque<BufferPtr> net_out;
 
+    // sizes of the CONTROL_WKC_V1 packets (the tls-crypt-v2 WKc riders)
+    // emitted via control_net_send().  Only these are recorded, so the
+    // vector stays tiny even across the long feedback tests.
+    std::vector<size_t> wkc_pkt_sizes_;
+
+    // largest control channel packet emitted via control_net_send()
+    size_t max_ctrl_pkt_size_ = 0;
+
+    size_t max_ctrl_pkt_size() const
+    {
+        return max_ctrl_pkt_size_;
+    }
+
+    // Verify every emitted CONTROL_WKC_V1 packet fits within max_size,
+    // and that at least one such packet was emitted.
+    bool verify_wkc_packets_fit(size_t max_size) const
+    {
+        if (wkc_pkt_sizes_.empty())
+        {
+            std::cerr << "no CONTROL_WKC_V1 packet was emitted by the client\n";
+            return false;
+        }
+        for (const size_t size : wkc_pkt_sizes_)
+        {
+            if (size > max_size)
+            {
+                std::cerr << "CONTROL_WKC_V1 packet too large: " << size
+                          << " > " << max_size << '\n';
+                return false;
+            }
+        }
+        return true;
+    }
+
     DroughtMeasure control_drought;
     DroughtMeasure data_drought;
 
@@ -501,6 +537,10 @@ class TestProto : public ProtoContextCallbackInterface
         if (disable_xmit_)
             return;
         net_bytes_ += net_buf.size();
+        max_ctrl_pkt_size_ = std::max(max_ctrl_pkt_size_, net_buf.size());
+        if (net_buf.size()
+            && (net_buf.c_data()[0] >> ProtoContext::OPCODE_SHIFT) == ProtoContext::CONTROL_WKC_V1)
+            wkc_pkt_sizes_.push_back(net_buf.size());
         net_out.push_back(BufferAllocatedRc::Create(net_buf, BufAllocFlags::NO_FLAGS));
     }
 
@@ -968,12 +1008,20 @@ int test(const int thread_num,
          bool use_tls_ekm,
          bool tls_version_mismatch,
          const std::string &tls_crypt_v2_key_fn = "",
-         bool use_tls_auth_with_tls_crypt_v2 = false)
+         bool use_tls_auth_with_tls_crypt_v2 = false,
+         bool force_resend_wkc = false,
+         size_t control_payload = 378,
+         size_t mssfix_ctrl = 0)
 {
     try
     {
         // frame
         Frame::Ptr frame(new Frame(Frame::Context(128, 378, 128, 0, 16, BufAllocFlags::NO_FLAGS)));
+        // Shrink only the control-channel ciphertext context, mirroring what
+        // mssfix-ctrl does in production (see frame_init()): the cleartext
+        // staging buffers (e.g. WRITE_SSL_CLEARTEXT, used for the auth
+        // message) keep their normal size.
+        (*frame)[Frame::READ_BIO_MEMQ_STREAM] = Frame::Context(128, control_payload, 128, 0, 16, BufAllocFlags::NO_FLAGS);
 
         // RNG
         ClientRandomAPI::Ptr prng_cli(new ClientRandomAPI());
@@ -1001,6 +1049,8 @@ int test(const int thread_num,
         auto cp = create_client_proto_context(std::move(cc), frame, prng_cli, cli_stats, time, tls_crypt_v2_key_fn);
         if (use_tls_ekm)
             cp->dc.set_key_derivation(CryptoAlgs::KeyDerivation::TLS_EKM);
+        if (mssfix_ctrl)
+            cp->mssfix_ctrl = mssfix_ctrl;
 
         // server config
         MySessionStats::Ptr serv_stats(new MySessionStats);
@@ -1135,6 +1185,41 @@ int test(const int thread_num,
                 cli_proto.app_send_templ_init(message);
                 serv_proto.app_send_templ_init(message);
 #endif
+
+                if (force_resend_wkc)
+                {
+                    // Pretend the server asked the client to resend the
+                    // tls-crypt-v2 WKc on the first control packet, so the
+                    // client's ClientHello is emitted as CONTROL_WKC_V1 with
+                    // the WKc appended.  Drive only enough rounds for the
+                    // client to emit it, then verify it fits the control-channel
+                    // frame.  The handshake won't complete (a plain ProtoContext
+                    // server doesn't expect a WKc on a mid-handshake
+                    // CONTROL_WKC_V1), which is irrelevant to this check.
+                    cli_proto.proto_context.force_resend_wkc();
+                    for (int k = 0; k < 60; ++k)
+                    {
+                        client_to_server.xfer(cli_proto, serv_proto);
+                        server_to_client.xfer(serv_proto, cli_proto);
+                        time += time_step;
+                    }
+                    // Frame control context above is Context(128, control_payload, ...).
+                    // Even the WKc-bearing packet must stay within headroom +
+                    // payload; without the reservation fix it overflows by
+                    // ~wkc.size() bytes.
+                    if (!cli_proto.verify_wkc_packets_fit(128 + control_payload))
+                        return 1;
+                    // when a wire cap is configured, every emitted control
+                    // packet must stay within it after all wrappings
+                    if (mssfix_ctrl && cli_proto.max_ctrl_pkt_size() > mssfix_ctrl)
+                    {
+                        std::cerr << "control packet exceeded mssfix_ctrl: "
+                                  << cli_proto.max_ctrl_pkt_size()
+                                  << " > " << mssfix_ctrl << '\n';
+                        return 1;
+                    }
+                    return 0;
+                }
 
                 // message loop
                 for (j = 0; j < ITER; ++j)
@@ -1286,6 +1371,40 @@ TEST_F(ProtoUnitTest, BaseSingleThreadTlsCryptV2WithMissingEmbeddedServerkey)
 TEST_F(ProtoUnitTest, BaseSingleThreadTlsCryptV2WithTlsAuthAlsoActive)
 {
     int ret = test_retry(1, N_RETRIES, false, false, "tls-crypt-v2-client-with-serverkey.key", true);
+    EXPECT_EQ(ret, 0);
+}
+
+// Regression test: when the tls-crypt-v2 WKc is appended to the first
+// ciphertext-bearing control packet (EARLY_NEG_FLAG_RESEND_WKC -> the client
+// emits CONTROL_WKC_V1), the SSL ciphertext placed into that packet must be
+// trimmed to leave room for the WKc, so the assembled datagram still fits the
+// control-channel frame.  Without the reservation fix the packet overflows the
+// frame by ~wkc.size() bytes and gets dropped, stalling the handshake.
+TEST_F(ProtoUnitTest, TlsCryptV2WkcRidesFirstControlPacket)
+{
+    int ret = test(1, false, false, "tls-crypt-v2-client-with-serverkey.key", false, true);
+    EXPECT_EQ(ret, 0);
+}
+
+// Degenerate variant of the above: the control-channel payload is smaller
+// than the WKc itself (mssfix-ctrl may go as low as 256 while a WKc can be
+// up to 1024 bytes).  The WKc reservation must clamp instead of wrapping the
+// unsigned subtraction -- a wrap disables the trim entirely and the WKc
+// packet overflows the frame again.  The WKc of the test key is 328 bytes;
+// 278 puts the payload just below it.
+TEST_F(ProtoUnitTest, TlsCryptV2WkcLargerThanControlPayload)
+{
+    int ret = test(1, false, false, "tls-crypt-v2-client-with-serverkey.key", false, true, 278);
+    EXPECT_EQ(ret, 0);
+}
+
+// Every control packet, including the WKc-bearing one, must stay within the
+// configured mssfix_ctrl limit after all tls wrappings have been applied.
+// 420 leaves just enough room for the unsplittable WKc packet (~406 bytes
+// worst case: tls-crypt header + full ACK block + the 328 byte WKc).
+TEST_F(ProtoUnitTest, TlsCryptV2ControlPacketCapHonored)
+{
+    int ret = test(1, false, false, "tls-crypt-v2-client-with-serverkey.key", false, true, 378, 420);
     EXPECT_EQ(ret, 0);
 }
 #endif

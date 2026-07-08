@@ -239,7 +239,12 @@ class ClientOptions : public RC<thread_unsafe_refcount>
         const unsigned int tun_mtu_max = std::max(parse_tun_mtu_max(opt, TUN_MTU_DEFAULT + 100), tun_mtu);
 
         const MSSCtrlParms mc(opt);
-        frame = frame_init(true, tun_mtu_max, mc.mssfix_ctrl, true);
+        // Reserve the worst-case wrapping overhead when sizing the control
+        // channel ciphertext chunks, so the final packet stays within the
+        // mssfix_ctrl limit (the option minimum of 256 keeps this from
+        // underflowing).  The precise per-mode budget is enforced at
+        // runtime by ProtoContext.
+        frame = frame_init(true, tun_mtu_max, mc.mssfix_ctrl - ProtoContext::MAX_CONTROL_WRAP_OVERHEAD, true);
 
         // TCP queue limit
         tcp_queue_limit = opt.get_num<decltype(tcp_queue_limit)>("tcp-queue-limit", 1, tcp_queue_limit, 1, 65536);
@@ -345,6 +350,8 @@ class ClientOptions : public RC<thread_unsafe_refcount>
 
         // init transport config
         const std::string session_name = load_transport_config();
+        const Option *block = opt.get_ptr("block-outside-dns");
+        [[maybe_unused]] const bool allow = config.clientconf.allowLocalDnsResolvers || (block && block->parameter_exists("allow-loopback"));
 
         // initialize tun/tap
         if (dco)
@@ -362,8 +369,8 @@ class ClientOptions : public RC<thread_unsafe_refcount>
             tunconf.tun_prop.dhcp_search_domains_as_split_domains = config.clientconf.dhcpSearchDomainsAsSplitDomains;
             tunconf.tun_prop.remote_list = remote_list;
             tunconf.stop = config.stop;
-            tunconf.allow_local_dns_resolvers = config.clientconf.allowLocalDnsResolvers;
-#ifdef OPENVPN_PLATFORM_WIN
+            tunconf.allow_local_dns_resolvers = allow;
+#if defined(OPENVPN_PLATFORM_WIN)
             if (config.clientconf.tunPersist)
                 tunconf.tun_persist.reset(new TunWin::DcoTunPersist(true, TunWrapObjRetain::NO_RETAIN_NO_REPLACE, nullptr));
 #endif
@@ -491,7 +498,7 @@ class ClientOptions : public RC<thread_unsafe_refcount>
                 tunconf->stats = cli_stats;
                 tunconf->stop = config.stop;
                 tunconf->tun_type = config.clientconf.wintun ? TunWin::Wintun : TunWin::TapWindows6;
-                tunconf->allow_local_dns_resolvers = config.clientconf.allowLocalDnsResolvers;
+                tunconf->allow_local_dns_resolvers = allow;
                 if (config.clientconf.tunPersist)
                 {
                     tunconf->tun_persist.reset(new TunWin::TunPersist(true, TunWrapObjRetain::NO_RETAIN, nullptr));
