@@ -261,18 +261,29 @@ class Setup : public SetupBase
                                  ActionList &add_cmds,
                                  ActionList &remove_cmds_bypass_gw)
     {
-        if (!ipv6)
+        if (!gw.defined())
         {
-            if (!gw.local_route())
-            {
-                add_cmds.add(new WinCmd("netsh interface ip add route " + route + "/32 " + to_string(gw.interface_index()) + ' ' + gw.gateway_address() + " store=active"));
-                remove_cmds_bypass_gw.add(new WinCmd("netsh interface ip delete route " + route + "/32 " + to_string(gw.interface_index()) + ' ' + gw.gateway_address() + " store=active"));
-            }
-            else
-            {
-                OPENVPN_LOG("Skip bypass route to " << route << ", route is local");
-            }
+            OPENVPN_LOG("Skip bypass route to " << route << ", no gateway found");
+            return;
         }
+
+        if (gw.local_route())
+        {
+            OPENVPN_LOG("Skip bypass route to " << route << ", route is local");
+            return;
+        }
+
+        // A host bypass route keeps the transport socket reachable when the
+        // pushed routes (redirect-gateway / block-ipv6) would otherwise capture
+        // the path to the server. This is required for both IPv4 and IPv6
+        // servers - with dco-win the transport socket lives in the kernel and
+        // relies entirely on this route, so a missing IPv6 bypass route makes
+        // the server address fall into the block-ipv6 blackhole.
+        const std::string proto = ipv6 ? "ipv6" : "ip";
+        const std::string prefix = ipv6 ? "/128" : "/32";
+        const std::string route_args = route + prefix + " " + to_string(gw.interface_index()) + ' ' + gw.gateway_address() + " store=active";
+        add_cmds.add(new WinCmd("netsh interface " + proto + " add route " + route_args));
+        remove_cmds_bypass_gw.add(new WinCmd("netsh interface " + proto + " delete route " + route_args));
     }
 
   private:
