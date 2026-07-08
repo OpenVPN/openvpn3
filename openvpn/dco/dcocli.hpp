@@ -17,6 +17,7 @@
 
 #include <openvpn/buffer/asiobuf.hpp>
 #include <openvpn/common/exception.hpp>
+#include <openvpn/common/action.hpp>
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/to_string.hpp>
 #include <openvpn/time/time.hpp>
@@ -37,6 +38,14 @@
 #include <openvpn/dco/key.hpp>
 #include <openvpn/tun/linux/client/genl.hpp>
 #include <openvpn/tun/linux/client/sitnl.hpp>
+// Pre-include headers that ovpndcocli.hpp pulls in transitively.
+// These headers define symbols in their own namespaces (e.g. openvpn::TunNetlink).
+// Including them here, at global scope and before the namespace openvpn::DCOTransport
+// block opens below, ensures #pragma once prevents them from being re-included
+// inside that namespace block (which would create the spurious nested namespace
+// openvpn::DCOTransport::openvpn and break all unqualified openvpn:: references).
+#include <openvpn/tun/linux/client/tunnetlink.hpp>
+#include <openvpn/tun/client/tunconfigflags.hpp>
 #elif defined(ENABLE_OVPNDCOWIN)
 #include <bcrypt.h>
 #include <openvpn/dco/key.hpp>
