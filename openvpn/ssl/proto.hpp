@@ -2438,17 +2438,38 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
             std::memcpy(&wkc_len, wkc_raw + wkc_raw_size, sizeof(wkc_len));
             wkc_len = ntohs(wkc_len);
 
+            uint32_t k_id = 0;
+            const size_t serverkey_id_size = proto_config.tls_crypt_v2_serverkey_id ? sizeof(k_id) : 0;
+
             // There's also a payload here, so the assumption that the difference in size
             // from the TLS frame's end to the end of the packet constitutes the WKc no
             // longer holds. We can only rely on wkc_len for P_CONTROL_WKC_V1 packets.
             if (opcode_extract(orig_data[0]) != CONTROL_HARD_RESET_CLIENT_V3)
             {
+                // ``wkc_len`` is read straight from the last two bytes of the received
+                // packet and is therefore fully attacker-controlled. It must be validated
+                // before being used in the pointer arithmetic below: the WKc has to fit
+                // between the end of the tls-crypt frame and the end of the packet, and be
+                // large enough to hold the auth tag, the optional server key ID and the
+                // trailing length field. Without this guard a bogus ``wkc_len`` underflows
+                // the (unsigned) size computations and turns ``wkc_raw`` into a wild
+                // pointer, causing an out-of-bounds read during decryption (an
+                // unauthenticated remote DoS). ``orig_size >= tls_frame_size + hmac_size``
+                // was already established above, so ``orig_size - tls_frame_size`` is safe.
+                if (wkc_len < (sizeof(uint16_t) + hmac_size + serverkey_id_size)
+                    || wkc_len > (orig_size - tls_frame_size))
+                    return Error::CC_ERROR;
+
                 wkc_raw = orig_data + orig_size - wkc_len;
                 wkc_raw_size = wkc_len - sizeof(uint16_t);
             }
 
-            uint32_t k_id = 0;
-            const size_t serverkey_id_size = proto_config.tls_crypt_v2_serverkey_id ? sizeof(k_id) : 0;
+            // For both packet types the WKc must be large enough to hold the auth tag and
+            // the optional server key ID, otherwise the server key ID read below or the
+            // ciphertext length passed to decrypt() (``wkc_raw_size - hmac_size -
+            // serverkey_id_size``) would underflow and read out of bounds.
+            if (wkc_raw_size < (hmac_size + serverkey_id_size))
+                return Error::CC_ERROR;
 
             if (proto_config.tls_crypt_v2_serverkey_id)
             {

@@ -1407,6 +1407,79 @@ TEST_F(ProtoUnitTest, TlsCryptV2ControlPacketCapHonored)
     int ret = test_retry(N_RETRIES, {.tls_crypt_v2_key_fn = "tls-crypt-v2-client-with-serverkey.key", .force_resend_wkc = true, .mssfix_ctrl = 420});
     EXPECT_EQ(ret, 0);
 }
+
+// Security regression test: unwrap_tls_crypt_wkc() reads the 16-bit WKc length
+// (wkc_len) from the last two bytes of the received packet. For CONTROL_WKC_V1
+// packets that value is fully attacker-controlled and, before the bounds-check
+// fix, was fed straight into unsigned pointer arithmetic
+// (wkc_raw = orig_data + orig_size - wkc_len). A wkc_len larger than the packet
+// underflowed the size_t computation into a wild pointer and a bogus/oversized
+// ciphertext length, producing an out-of-bounds read during decryption -- a
+// pre-authentication remote crash (DoS). The unwrap must instead reject the
+// packet with Error::CC_ERROR without dereferencing out of bounds.
+//
+// Builds a minimal ProtoConfig / tls-crypt server context (no full handshake
+// needed) since the malformed length is rejected before any key material is
+// touched.
+class TlsCryptV2WkcUnwrapTest : public testing::Test
+{
+  protected:
+    ProtoContext::ProtoConfig::Ptr pcfg;
+    TLSCryptInstance::Ptr tls_crypt_server;
+
+    void SetUp() override
+    {
+        pcfg.reset(new ProtoContext::ProtoConfig());
+        pcfg->tls_crypt_factory.reset(new CryptoTLSCryptFactory<ClientCryptoAPI>());
+        pcfg->set_tls_crypt_algs();
+        // Fully initialize the server context (single server key, no key ID) so
+        // that a malformed packet which slips past the length validation reaches
+        // the real decrypt() read -- that is the read that goes out of bounds
+        // without the fix (a segfault / ASan SEGV), and which the fix must avoid
+        // by rejecting the packet up front.
+        pcfg->tls_crypt_key.parse(read_text(TEST_KEYCERT_DIR "tls-auth.key"));
+        tls_crypt_server = pcfg->tls_crypt_context->new_obj_recv();
+        tls_crypt_server->init(nullptr,
+                               pcfg->tls_crypt_key.slice(OpenVPNStaticKey::HMAC),
+                               pcfg->tls_crypt_key.slice(OpenVPNStaticKey::CIPHER));
+    }
+
+    // Build a CONTROL_WKC_V1 packet of the given size with the trailing 16-bit
+    // WKc length field set to wkc_len (host order). Contents are otherwise
+    // arbitrary -- the unwrap should bail on the length alone.
+    BufferAllocated make_wkc_v1_packet(size_t size, uint16_t wkc_len)
+    {
+        BufferAllocated buf(size, BufAllocFlags::CONSTRUCT_ZERO);
+        buf.set_size(size);
+        // op byte = op_compose(CONTROL_WKC_V1, key_id=0). CONTROL_WKC_V1 (11)
+        // and op_compose() are protected members of ProtoContext, so encode it
+        // directly here: (opcode << OPCODE_SHIFT[=3]) | key_id. Any opcode other
+        // than CONTROL_HARD_RESET_CLIENT_V3 (10) selects the attacker-controlled
+        // wkc_len branch being exercised.
+        buf.data()[0] = static_cast<unsigned char>(11u << 3);
+        const uint16_t net_wkc_len = htons(wkc_len);
+        std::memcpy(buf.data() + size - sizeof(net_wkc_len), &net_wkc_len, sizeof(net_wkc_len));
+        return buf;
+    }
+};
+
+// wkc_len far larger than the packet: pre-fix this underflowed wkc_raw into a
+// wild pointer read.
+TEST_F(TlsCryptV2WkcUnwrapTest, RejectsWkcLenLargerThanPacket)
+{
+    BufferAllocated buf = make_wkc_v1_packet(200, 60000);
+    EXPECT_EQ(ProtoContext::KeyContext::unwrap_tls_crypt_wkc(buf, *pcfg, *tls_crypt_server),
+              Error::CC_ERROR);
+}
+
+// wkc_len smaller than the auth tag: pre-fix the decrypt ciphertext length
+// (wkc_raw_size - hmac_size) underflowed to a huge oversized read.
+TEST_F(TlsCryptV2WkcUnwrapTest, RejectsWkcLenSmallerThanAuthTag)
+{
+    BufferAllocated buf = make_wkc_v1_packet(200, 4);
+    EXPECT_EQ(ProtoContext::KeyContext::unwrap_tls_crypt_wkc(buf, *pcfg, *tls_crypt_server),
+              Error::CC_ERROR);
+}
 #endif
 
 TEST_F(ProtoUnitTest, BaseMultipleThread)
