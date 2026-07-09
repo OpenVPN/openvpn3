@@ -1273,12 +1273,18 @@ int test(const int thread_num,
     return 0;
 }
 
-int test_retry(const int thread_num, const int n_retries, bool use_tls_ekm)
+int test_retry(const int thread_num,
+               const int n_retries,
+               bool use_tls_ekm,
+               const std::string &tls_crypt_v2_key_fn = "",
+               bool force_resend_wkc = false,
+               size_t control_payload = 378,
+               size_t mssfix_ctrl = 0)
 {
     int ret = 1;
     for (int i = 0; i < n_retries; ++i)
     {
-        ret = test(thread_num, use_tls_ekm, false);
+        ret = test(thread_num, use_tls_ekm, false, tls_crypt_v2_key_fn, force_resend_wkc, control_payload, mssfix_ctrl);
         if (!ret)
             return 0;
         std::cout << "Retry " << (i + 1) << '/' << n_retries << std::endl;
@@ -1369,7 +1375,7 @@ TEST_F(ProtoUnitTest, base_single_thread_tls_crypt_v2_with_missing_embedded_serv
 // frame by ~wkc.size() bytes and gets dropped, stalling the handshake.
 TEST_F(ProtoUnitTest, TlsCryptV2WkcRidesFirstControlPacket)
 {
-    int ret = test(1, false, false, "tls-crypt-v2-client-with-serverkey.key", true);
+    int ret = test_retry(1, N_RETRIES, false, "tls-crypt-v2-client-with-serverkey.key", true);
     EXPECT_EQ(ret, 0);
 }
 
@@ -1381,7 +1387,7 @@ TEST_F(ProtoUnitTest, TlsCryptV2WkcRidesFirstControlPacket)
 // 278 puts the payload just below it.
 TEST_F(ProtoUnitTest, TlsCryptV2WkcLargerThanControlPayload)
 {
-    int ret = test(1, false, false, "tls-crypt-v2-client-with-serverkey.key", true, 278);
+    int ret = test_retry(1, N_RETRIES, false, "tls-crypt-v2-client-with-serverkey.key", true, 278);
     EXPECT_EQ(ret, 0);
 }
 
@@ -1391,7 +1397,7 @@ TEST_F(ProtoUnitTest, TlsCryptV2WkcLargerThanControlPayload)
 // worst case: tls-crypt header + full ACK block + the 328 byte WKc).
 TEST_F(ProtoUnitTest, TlsCryptV2ControlPacketCapHonored)
 {
-    int ret = test(1, false, false, "tls-crypt-v2-client-with-serverkey.key", true, 378, 420);
+    int ret = test_retry(1, N_RETRIES, false, "tls-crypt-v2-client-with-serverkey.key", true, 378, 420);
     EXPECT_EQ(ret, 0);
 }
 #endif
