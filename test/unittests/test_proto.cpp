@@ -1003,15 +1003,20 @@ static auto create_client_proto_context(ClientSSLAPI::Config::Ptr cc, Frame::Ptr
     return cp;
 }
 
+// Configures one specific test run */
+struct proto_test
+{
+    bool use_tls_ekm = false;
+    bool tls_version_mismatch = false;
+    const std::string &tls_crypt_v2_key_fn = "";
+    bool use_tls_auth_with_tls_crypt_v2 = false;
+    bool force_resend_wkc = false;
+    size_t control_payload = 378;
+    size_t mssfix_ctrl = 0;
+};
+
 // execute the unit test in one thread
-int test(const int thread_num,
-         bool use_tls_ekm,
-         bool tls_version_mismatch,
-         const std::string &tls_crypt_v2_key_fn = "",
-         bool use_tls_auth_with_tls_crypt_v2 = false,
-         bool force_resend_wkc = false,
-         size_t control_payload = 378,
-         size_t mssfix_ctrl = 0)
+int test(const struct proto_test &t)
 {
     try
     {
@@ -1021,7 +1026,7 @@ int test(const int thread_num,
         // mssfix-ctrl does in production (see frame_init()): the cleartext
         // staging buffers (e.g. WRITE_SSL_CLEARTEXT, used for the auth
         // message) keep their normal size.
-        (*frame)[Frame::READ_BIO_MEMQ_STREAM] = Frame::Context(128, control_payload, 128, 0, 16, BufAllocFlags::NO_FLAGS);
+        (*frame)[Frame::READ_BIO_MEMQ_STREAM] = Frame::Context(128, t.control_payload, 128, 0, 16, BufAllocFlags::NO_FLAGS);
 
         // RNG
         ClientRandomAPI::Ptr prng_cli(new ClientRandomAPI());
@@ -1038,19 +1043,19 @@ int test(const int thread_num,
         const std::string server_key = read_text(TEST_KEYCERT_DIR "server.key");
         const std::string dh_pem = read_text(TEST_KEYCERT_DIR "dh.pem");
         const std::string tls_auth_key = read_text(TEST_KEYCERT_DIR "tls-auth.key");
-        const std::string tls_crypt_v2_server_key = tls_crypt_v2_key_fn.empty()
+        const std::string tls_crypt_v2_server_key = t.tls_crypt_v2_key_fn.empty()
                                                         ? read_text(TEST_KEYCERT_DIR "tls-crypt-v2-server.key")
                                                         : "";
 
         // client config
-        ClientSSLAPI::Config::Ptr cc = create_client_ssl_config(frame, prng_cli, tls_version_mismatch);
+        ClientSSLAPI::Config::Ptr cc = create_client_ssl_config(frame, prng_cli, t.tls_version_mismatch);
         MySessionStats::Ptr cli_stats(new MySessionStats);
 
-        auto cp = create_client_proto_context(std::move(cc), frame, prng_cli, cli_stats, time, tls_crypt_v2_key_fn);
-        if (use_tls_ekm)
+        auto cp = create_client_proto_context(std::move(cc), frame, prng_cli, cli_stats, time, t.tls_crypt_v2_key_fn);
+        if (t.use_tls_ekm)
             cp->dc.set_key_derivation(CryptoAlgs::KeyDerivation::TLS_EKM);
-        if (mssfix_ctrl)
-            cp->mssfix_ctrl = mssfix_ctrl;
+        if (t.mssfix_ctrl)
+            cp->mssfix_ctrl = t.mssfix_ctrl;
 
         // server config
         MySessionStats::Ptr serv_stats(new MySessionStats);
@@ -1063,7 +1068,7 @@ int test(const int thread_num,
         sc->load_cert(server_crt);
         sc->load_private_key(server_key);
         sc->load_dh(dh_pem);
-        sc->set_tls_version_min(tls_version_mismatch ? TLSVersion::Type::V1_3 : TLS_VER_MIN);
+        sc->set_tls_version_min(t.tls_version_mismatch ? TLSVersion::Type::V1_3 : TLS_VER_MIN);
 #ifdef VERBOSE
         sc->set_debug_level(1);
 #endif
@@ -1087,7 +1092,7 @@ int test(const int thread_num,
         sp->comp_ctx = CompressContext(COMP_METH, false);
         sp->dc.set_cipher(CryptoAlgs::lookup(PROTO_CIPHER));
         sp->dc.set_digest(CryptoAlgs::lookup(PROTO_DIGEST));
-        if (use_tls_ekm)
+        if (t.use_tls_ekm)
             sp->dc.set_key_derivation(CryptoAlgs::KeyDerivation::TLS_EKM);
 #ifdef USE_TLS_AUTH
         sp->tls_auth_factory.reset(new CryptoOvpnHMACFactory<ServerCryptoAPI>());
@@ -1104,7 +1109,7 @@ int test(const int thread_num,
 #ifdef USE_TLS_CRYPT_V2
         sp->tls_crypt_factory.reset(new CryptoTLSCryptFactory<ClientCryptoAPI>());
 
-        if (tls_crypt_v2_key_fn.empty())
+        if (t.tls_crypt_v2_key_fn.empty())
         {
             TLSCryptV2ServerKey tls_crypt_v2_key;
             tls_crypt_v2_key.parse(tls_crypt_v2_server_key);
@@ -1114,10 +1119,10 @@ int test(const int thread_num,
         sp->set_tls_crypt_algs();
         sp->tls_crypt_metadata_factory.reset(new CryptoTLSCryptMetadataFactory());
         sp->tls_crypt_ = ProtoContext::ProtoConfig::TLSCrypt::V2;
-        sp->tls_crypt_v2_serverkey_id = !tls_crypt_v2_key_fn.empty();
+        sp->tls_crypt_v2_serverkey_id = !t.tls_crypt_v2_key_fn.empty();
         sp->tls_crypt_v2_serverkey_dir = TEST_KEYCERT_DIR;
 
-        if (use_tls_auth_with_tls_crypt_v2)
+        if (t.use_tls_auth_with_tls_crypt_v2)
         {
             sp->tls_auth_factory.reset(new CryptoOvpnHMACFactory<ServerCryptoAPI>());
             sp->tls_auth_key.parse(tls_auth_key);
@@ -1186,7 +1191,7 @@ int test(const int thread_num,
                 serv_proto.app_send_templ_init(message);
 #endif
 
-                if (force_resend_wkc)
+                if (t.force_resend_wkc)
                 {
                     // Pretend the server asked the client to resend the
                     // tls-crypt-v2 WKc on the first control packet, so the
@@ -1207,15 +1212,15 @@ int test(const int thread_num,
                     // Even the WKc-bearing packet must stay within headroom +
                     // payload; without the reservation fix it overflows by
                     // ~wkc.size() bytes.
-                    if (!cli_proto.verify_wkc_packets_fit(128 + control_payload))
+                    if (!cli_proto.verify_wkc_packets_fit(128 + t.control_payload))
                         return 1;
                     // when a wire cap is configured, every emitted control
                     // packet must stay within it after all wrappings
-                    if (mssfix_ctrl && cli_proto.max_ctrl_pkt_size() > mssfix_ctrl)
+                    if (t.mssfix_ctrl && cli_proto.max_ctrl_pkt_size() > t.mssfix_ctrl)
                     {
                         std::cerr << "control packet exceeded mssfix_ctrl: "
                                   << cli_proto.max_ctrl_pkt_size()
-                                  << " > " << mssfix_ctrl << '\n';
+                                  << " > " << t.mssfix_ctrl << '\n';
                         return 1;
                     }
                     return 0;
@@ -1275,19 +1280,12 @@ int test(const int thread_num,
     return 0;
 }
 
-int test_retry(const int thread_num,
-               const int n_retries,
-               bool use_tls_ekm,
-               const std::string &tls_crypt_v2_key_fn = "",
-               bool use_tls_auth_with_tls_crypt_v2 = false,
-               bool force_resend_wkc = false,
-               size_t control_payload = 378,
-               size_t mssfix_ctrl = 0)
+int test_retry(const int n_retries, const struct proto_test &test_config)
 {
     int ret = 1;
     for (int i = 0; i < n_retries; ++i)
     {
-        ret = test(thread_num, use_tls_ekm, false, tls_crypt_v2_key_fn, use_tls_auth_with_tls_crypt_v2, force_resend_wkc, control_payload, mssfix_ctrl);
+        ret = test(test_config);
         if (!ret)
             return 0;
         std::cout << "Retry " << (i + 1) << '/' << n_retries << '\n';
@@ -1332,7 +1330,7 @@ TEST_F(ProtoUnitTest, BaseSingleThreadTlsEkm)
 
     int ret = 0;
 
-    ret = test_retry(1, N_RETRIES, true);
+    ret = test_retry(N_RETRIES, {.use_tls_ekm = true});
 
     EXPECT_EQ(ret, 0);
 }
@@ -1341,7 +1339,7 @@ TEST_F(ProtoUnitTest, BaseSingleThreadNoTlsEkm)
 {
     int ret = 0;
 
-    ret = test_retry(1, N_RETRIES, false);
+    ret = test_retry(N_RETRIES, {.use_tls_ekm = false});
 
     EXPECT_EQ(ret, 0);
 }
@@ -1352,7 +1350,7 @@ TEST_F(ProtoUnitTest, BaseSingleThreadNoTlsEkm)
 #ifdef USE_OPENSSL
 TEST_F(ProtoUnitTest, BaseSingleThreadTlsVersionMismatch)
 {
-    int ret = test(1, false, true);
+    int ret = test({.tls_version_mismatch = true});
     EXPECT_NE(ret, 0);
 }
 #endif
@@ -1360,19 +1358,19 @@ TEST_F(ProtoUnitTest, BaseSingleThreadTlsVersionMismatch)
 #ifdef USE_TLS_CRYPT_V2
 TEST_F(ProtoUnitTest, BaseSingleThreadTlsCryptV2WithEmbeddedServerkey)
 {
-    int ret = test_retry(1, N_RETRIES, false, "tls-crypt-v2-client-with-serverkey.key");
+    int ret = test_retry(N_RETRIES, {.tls_crypt_v2_key_fn = "tls-crypt-v2-client-with-serverkey.key"});
     EXPECT_EQ(ret, 0);
 }
 
 TEST_F(ProtoUnitTest, BaseSingleThreadTlsCryptV2WithMissingEmbeddedServerkey)
 {
-    int ret = test(1, false, "tls-crypt-v2-client-with-missing-serverkey.key");
+    int ret = test({.tls_crypt_v2_key_fn = "tls-crypt-v2-client-with-missing-serverkey.key"});
     EXPECT_NE(ret, 0);
 }
 
 TEST_F(ProtoUnitTest, BaseSingleThreadTlsCryptV2WithTlsAuthAlsoActive)
 {
-    int ret = test_retry(1, N_RETRIES, false, "tls-crypt-v2-client-with-serverkey.key", true);
+    int ret = test_retry(N_RETRIES, {.tls_crypt_v2_key_fn = "tls-crypt-v2-client-with-serverkey.key", .use_tls_auth_with_tls_crypt_v2 = true});
     EXPECT_EQ(ret, 0);
 }
 
@@ -1384,7 +1382,7 @@ TEST_F(ProtoUnitTest, BaseSingleThreadTlsCryptV2WithTlsAuthAlsoActive)
 // frame by ~wkc.size() bytes and gets dropped, stalling the handshake.
 TEST_F(ProtoUnitTest, TlsCryptV2WkcRidesFirstControlPacket)
 {
-    int ret = test_retry(1, N_RETRIES, false, "tls-crypt-v2-client-with-serverkey.key", false, true);
+    int ret = test_retry(N_RETRIES, {.tls_crypt_v2_key_fn = "tls-crypt-v2-client-with-serverkey.key", .force_resend_wkc = true});
     EXPECT_EQ(ret, 0);
 }
 
@@ -1396,7 +1394,7 @@ TEST_F(ProtoUnitTest, TlsCryptV2WkcRidesFirstControlPacket)
 // 278 puts the payload just below it.
 TEST_F(ProtoUnitTest, TlsCryptV2WkcLargerThanControlPayload)
 {
-    int ret = test_retry(1, N_RETRIES, false, "tls-crypt-v2-client-with-serverkey.key", false, true, 278);
+    int ret = test_retry(N_RETRIES, {.tls_crypt_v2_key_fn = "tls-crypt-v2-client-with-serverkey.key", .force_resend_wkc = true, .control_payload = 278});
     EXPECT_EQ(ret, 0);
 }
 
@@ -1406,7 +1404,7 @@ TEST_F(ProtoUnitTest, TlsCryptV2WkcLargerThanControlPayload)
 // worst case: tls-crypt header + full ACK block + the 328 byte WKc).
 TEST_F(ProtoUnitTest, TlsCryptV2ControlPacketCapHonored)
 {
-    int ret = test_retry(1, N_RETRIES, false, "tls-crypt-v2-client-with-serverkey.key", false, true, 378, 420);
+    int ret = test_retry(N_RETRIES, {.tls_crypt_v2_key_fn = "tls-crypt-v2-client-with-serverkey.key", .force_resend_wkc = true, .mssfix_ctrl = 420});
     EXPECT_EQ(ret, 0);
 }
 #endif
@@ -1427,7 +1425,7 @@ TEST_F(ProtoUnitTest, BaseMultipleThread)
                                      {
             /* Use ekm on odd threads */
             const bool use_ekm = openvpn::SSLLib::SSLAPI::support_key_material_export() && (i % 2 == 0);
-            results[i] = test_retry(static_cast<int>(i), N_RETRIES, use_ekm); });
+            results[i] = test_retry(N_RETRIES, { .use_tls_ekm = use_ekm }); });
     }
     for (unsigned int i = 0; i < num_threads; ++i)
     {
