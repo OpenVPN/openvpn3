@@ -1278,14 +1278,16 @@ int test(const int thread_num,
 int test_retry(const int thread_num,
                const int n_retries,
                bool use_tls_ekm,
-               bool tls_version_mismatch = false,
                const std::string &tls_crypt_v2_key_fn = "",
-               bool use_tls_auth_with_tls_crypt_v2 = false)
+               bool use_tls_auth_with_tls_crypt_v2 = false,
+               bool force_resend_wkc = false,
+               size_t control_payload = 378,
+               size_t mssfix_ctrl = 0)
 {
     int ret = 1;
     for (int i = 0; i < n_retries; ++i)
     {
-        ret = test(thread_num, use_tls_ekm, tls_version_mismatch, tls_crypt_v2_key_fn, use_tls_auth_with_tls_crypt_v2);
+        ret = test(thread_num, use_tls_ekm, false, tls_crypt_v2_key_fn, use_tls_auth_with_tls_crypt_v2, force_resend_wkc, control_payload, mssfix_ctrl);
         if (!ret)
             return 0;
         std::cout << "Retry " << (i + 1) << '/' << n_retries << '\n';
@@ -1358,19 +1360,19 @@ TEST_F(ProtoUnitTest, BaseSingleThreadTlsVersionMismatch)
 #ifdef USE_TLS_CRYPT_V2
 TEST_F(ProtoUnitTest, BaseSingleThreadTlsCryptV2WithEmbeddedServerkey)
 {
-    int ret = test_retry(1, N_RETRIES, false, false, "tls-crypt-v2-client-with-serverkey.key");
+    int ret = test_retry(1, N_RETRIES, false, "tls-crypt-v2-client-with-serverkey.key");
     EXPECT_EQ(ret, 0);
 }
 
 TEST_F(ProtoUnitTest, BaseSingleThreadTlsCryptV2WithMissingEmbeddedServerkey)
 {
-    int ret = test(1, false, false, "tls-crypt-v2-client-with-missing-serverkey.key");
+    int ret = test(1, false, "tls-crypt-v2-client-with-missing-serverkey.key");
     EXPECT_NE(ret, 0);
 }
 
 TEST_F(ProtoUnitTest, BaseSingleThreadTlsCryptV2WithTlsAuthAlsoActive)
 {
-    int ret = test_retry(1, N_RETRIES, false, false, "tls-crypt-v2-client-with-serverkey.key", true);
+    int ret = test_retry(1, N_RETRIES, false, "tls-crypt-v2-client-with-serverkey.key", true);
     EXPECT_EQ(ret, 0);
 }
 
@@ -1382,7 +1384,7 @@ TEST_F(ProtoUnitTest, BaseSingleThreadTlsCryptV2WithTlsAuthAlsoActive)
 // frame by ~wkc.size() bytes and gets dropped, stalling the handshake.
 TEST_F(ProtoUnitTest, TlsCryptV2WkcRidesFirstControlPacket)
 {
-    int ret = test(1, false, false, "tls-crypt-v2-client-with-serverkey.key", false, true);
+    int ret = test_retry(1, N_RETRIES, false, "tls-crypt-v2-client-with-serverkey.key", false, true);
     EXPECT_EQ(ret, 0);
 }
 
@@ -1394,7 +1396,7 @@ TEST_F(ProtoUnitTest, TlsCryptV2WkcRidesFirstControlPacket)
 // 278 puts the payload just below it.
 TEST_F(ProtoUnitTest, TlsCryptV2WkcLargerThanControlPayload)
 {
-    int ret = test(1, false, false, "tls-crypt-v2-client-with-serverkey.key", false, true, 278);
+    int ret = test_retry(1, N_RETRIES, false, "tls-crypt-v2-client-with-serverkey.key", false, true, 278);
     EXPECT_EQ(ret, 0);
 }
 
@@ -1404,7 +1406,7 @@ TEST_F(ProtoUnitTest, TlsCryptV2WkcLargerThanControlPayload)
 // worst case: tls-crypt header + full ACK block + the 328 byte WKc).
 TEST_F(ProtoUnitTest, TlsCryptV2ControlPacketCapHonored)
 {
-    int ret = test(1, false, false, "tls-crypt-v2-client-with-serverkey.key", false, true, 378, 420);
+    int ret = test_retry(1, N_RETRIES, false, "tls-crypt-v2-client-with-serverkey.key", false, true, 378, 420);
     EXPECT_EQ(ret, 0);
 }
 #endif
