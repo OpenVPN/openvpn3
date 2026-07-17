@@ -43,18 +43,12 @@ class Agent
     }
 
   private:
-    // If path starts with C:\..., lower-case the drive letter.
+    // Convert to lower-case (in some cases GetModuleFileNameW returns lower case path).
     // Then strip off the basename and only return the dir.
     static std::string normalize_exe_path(const std::string &path)
     {
         std::string p;
-        if (path.length() >= 3
-            && std::isalpha(static_cast<unsigned char>(path[0])) != 0
-            && path[1] == ':'
-            && path[2] == '\\')
-            p = string::to_lower_copy(path.substr(0, 3)) + path.substr(3);
-        else
-            p = path;
+        std::transform(p.begin(), p.end(), p.begin(), std::towlower);
         p = path::dirname(p);
         return p;
     }
