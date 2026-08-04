@@ -137,14 +137,14 @@ static inline std::string x509_get_field(::X509 *cert, const int nid)
 {
     static const char nullc = '\0';
     std::string ret;
-    X509_NAME *x509_name = X509_get_subject_name(cert);
+    const X509_NAME *x509_name = X509_get_subject_name(cert);
     int i = X509_NAME_get_index_by_NID(x509_name, nid, -1);
     if (i >= 0)
     {
-        X509_NAME_ENTRY *ent = X509_NAME_get_entry(x509_name, i);
+        const X509_NAME_ENTRY *ent = X509_NAME_get_entry(x509_name, i);
         if (ent)
         {
-            ASN1_STRING *val = X509_NAME_ENTRY_get_data(ent);
+            const ASN1_STRING *val = X509_NAME_ENTRY_get_data(ent);
             unsigned char *buf;
             buf = (unsigned char *)1; // bug in OpenSSL 0.9.6b ASN1_STRING_to_UTF8
                                       // requires this workaround
@@ -162,7 +162,11 @@ static inline std::string x509_get_field(::X509 *cert, const int nid)
         i = X509_get_ext_by_NID(cert, nid, -1);
         if (i >= 0)
         {
+#if OPENSSL_VERSION_NUMBER < 0x40000000L
             X509_EXTENSION *ext = X509_get_ext(cert, i);
+#else
+            const X509_EXTENSION *ext = X509_get_ext(cert, i);
+#endif
             if (ext)
             {
                 BIO *bio = BIO_new(BIO_s_mem());
@@ -223,7 +227,7 @@ static inline std::string x509_get_serial(::X509 *cert)
 static inline std::string x509_get_serial_hex(::X509 *cert)
 {
     const ASN1_INTEGER *asn1_i = X509_get_serialNumber(cert);
-    return render_hex_sep(asn1_i->data, asn1_i->length, ':', false);
+    return render_hex_sep(ASN1_STRING_get0_data(asn1_i), ASN1_STRING_length(asn1_i), ':', false);
 }
 
 /**

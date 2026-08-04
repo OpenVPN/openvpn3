@@ -1824,7 +1824,7 @@ class OpenSSLContext : public SSLFactoryAPI
         const ASN1_INTEGER *ai = X509_get_serialNumber(cert);
         if (!ai)
             return;
-        if (ai->type == V_ASN1_NEG_INTEGER) // negative serial number is considered to be undefined
+        if (ASN1_STRING_type(ai) == V_ASN1_NEG_INTEGER) // negative serial number is considered to be undefined
             return;
         if (!is_safe_conversion<int>(authcert.serial.size()))
             return;
