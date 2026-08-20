@@ -162,8 +162,11 @@
 #define COMP_METH CompressContext::LZO_STUB
 #endif
 
+#include <filesystem>
+
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/file.hpp>
+#include <openvpn/common/hexstr.hpp>
 #include <openvpn/common/count.hpp>
 #include <openvpn/time/time.hpp>
 #include <openvpn/random/mtrandapi.hpp>
@@ -905,12 +908,13 @@ static auto create_client_proto_context(ClientSSLAPI::Config::Ptr cc,
                                         Time &time,
                                         const std::string &tls_crypt_v2_key_fn = "",
                                         bool tls_auth_only = false,
-                                        bool use_dynamic_tls_crypt = false)
+                                        bool use_dynamic_tls_crypt = false,
+                                        const std::string &tls_crypt_v2_dir = TEST_KEYCERT_DIR)
 {
     const std::string tls_auth_key = read_text(TEST_KEYCERT_DIR "tls-auth.key");
     const std::string tls_crypt_v2_client_key = tls_crypt_v2_key_fn.empty()
                                                     ? read_text(TEST_KEYCERT_DIR "tls-crypt-v2-client.key")
-                                                    : read_text(TEST_KEYCERT_DIR + tls_crypt_v2_key_fn);
+                                                    : read_text(tls_crypt_v2_dir + tls_crypt_v2_key_fn);
 
     // client ProtoContext config
     using ClientProtoContext = ProtoContext;
@@ -1007,6 +1011,9 @@ struct proto_test
     bool use_tls_ekm = false;
     bool tls_version_mismatch = false;
     const std::string &tls_crypt_v2_key_fn = "";
+    //! Where the client key named above and the server keys it names by K_id are
+    //! read from. A test minting its own keys points this at them.
+    const std::string &tls_crypt_v2_dir = TEST_KEYCERT_DIR;
     bool use_tls_auth_with_tls_crypt_v2 = false;
     bool client_tls_auth_only = false;
     bool spoof_hard_reset_v3 = false;
@@ -1052,7 +1059,7 @@ int test(const struct proto_test &t)
         ClientSSLAPI::Config::Ptr cc = create_client_ssl_config(frame, prng_cli, t.tls_version_mismatch);
         MySessionStats::Ptr cli_stats(new MySessionStats);
 
-        auto cp = create_client_proto_context(std::move(cc), frame, prng_cli, cli_stats, time, t.tls_crypt_v2_key_fn, t.client_tls_auth_only, t.use_dynamic_tls_crypt);
+        auto cp = create_client_proto_context(std::move(cc), frame, prng_cli, cli_stats, time, t.tls_crypt_v2_key_fn, t.client_tls_auth_only, t.use_dynamic_tls_crypt, t.tls_crypt_v2_dir);
         if (t.use_tls_ekm)
             cp->dc.set_key_derivation(CryptoAlgs::KeyDerivation::TLS_EKM);
         if (t.mssfix_ctrl)
@@ -1121,7 +1128,7 @@ int test(const struct proto_test &t)
         sp->tls_crypt_metadata_factory.reset(new CryptoTLSCryptMetadataFactory());
         sp->tls_crypt_ = ProtoContext::ProtoConfig::TLSCrypt::V2;
         sp->tls_crypt_v2_serverkey_id = !t.tls_crypt_v2_key_fn.empty();
-        sp->tls_crypt_v2_serverkey_dir = TEST_KEYCERT_DIR;
+        sp->tls_crypt_v2_serverkey_dir = t.tls_crypt_v2_dir;
 
         if (t.use_dynamic_tls_crypt)
             sp->enable_dynamic_tls_crypt();
@@ -1404,6 +1411,78 @@ TEST_F(ProtoUnitTest, BaseSingleThreadTlsCryptV2WithTlsAuthAlsoActive)
 {
     int ret = test_retry(N_RETRIES, {.tls_crypt_v2_key_fn = "tls-crypt-v2-client-with-serverkey.key", .use_tls_auth_with_tls_crypt_v2 = true});
     EXPECT_EQ(ret, 0);
+}
+
+/**
+ * @brief Mint a tls-crypt-v2 key pair the way the deployment tooling does.
+ *
+ * @param dir        Directory to write both keys to; created if absent.
+ * @param client_fn  Basename for the client key file.
+ * @param k_id       Server key ID to name the server key by.
+ * @param metadata   Metadata to embed in the client key's WKc.
+ */
+static void write_generated_tls_crypt_v2_keys(const std::string &dir,
+                                              const std::string &client_fn,
+                                              const std::uint32_t k_id,
+                                              const std::string &metadata)
+{
+    ServerRandomAPI::Ptr rng(new ServerRandomAPI());
+
+    TLSCryptV2ServerKey server_key;
+    server_key.generate(*rng);
+
+    // <NN>/<KID8>.key, NN being the first two digits of the uppercase hex K_id:
+    // the path unwrap_tls_crypt_wkc() composes from the K_id on the wire.
+    const std::string k_id_hex = render_hex_number(k_id, true);
+    const std::string key_dir = dir + k_id_hex.substr(0, 2);
+    std::filesystem::create_directories(key_dir);
+    write_string(key_dir + "/" + k_id_hex + ".key", server_key.render());
+
+    TLSCryptFactory::Ptr tls_crypt_factory(new CryptoTLSCryptFactory<ServerCryptoAPI>());
+    TLSCryptContext::Ptr tls_crypt_context = tls_crypt_factory->new_obj(nullptr,
+                                                                        CryptoAlgs::lookup("SHA256"),
+                                                                        CryptoAlgs::lookup("AES-256-CTR"));
+    TLSCryptV2ClientKey client_key(tls_crypt_context);
+    client_key.generate(*rng, server_key, metadata, 0x00, k_id);
+    write_string(dir + client_fn, client_key.render());
+}
+
+// Everything the generator feeds (the SCT's client cohort, the KVM test's client) is only
+// as good as its wire format, so mint a pair here and run the full handshake against it,
+// through the same server-key-ID path the checked-in fixtures exercise. Fails if the tag
+// stops covering the length prefix or K_id, if the CTR IV drifts from the tag, or if K_id
+// lands anywhere but between the ciphertext and the trailing length.
+TEST_F(ProtoUnitTest, BaseSingleThreadTlsCryptV2WithGeneratedKeys)
+{
+    const std::string dir = getTempDirPath("ovpn3-tls-crypt-v2-generated/");
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+
+    write_generated_tls_crypt_v2_keys(dir, "client.key", 0x1A2B3C4D, "v=1,type=connector,tenant=SCT-01");
+
+    int ret = test_retry(N_RETRIES, {.tls_crypt_v2_key_fn = "client.key", .tls_crypt_v2_dir = dir});
+    EXPECT_EQ(ret, 0);
+
+    std::filesystem::remove_all(dir);
+}
+
+// The same, against a server that also holds a tls-auth key: the mixed shape the SCT
+// runs, where a tls-crypt-v2 client converts a session the server started in TLS_AUTH mode.
+TEST_F(ProtoUnitTest, BaseSingleThreadTlsCryptV2WithGeneratedKeysAndTlsAuth)
+{
+    const std::string dir = getTempDirPath("ovpn3-tls-crypt-v2-generated-ta/");
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+
+    write_generated_tls_crypt_v2_keys(dir, "client.key", 0x00FF0011, "v=1,type=connector,tenant=SCT-02");
+
+    int ret = test_retry(N_RETRIES,
+                         {.tls_crypt_v2_key_fn = "client.key",
+                          .tls_crypt_v2_dir = dir,
+                          .use_tls_auth_with_tls_crypt_v2 = true});
+    EXPECT_EQ(ret, 0);
+
+    std::filesystem::remove_all(dir);
 }
 
 // A server holding both keys becomes a tls-crypt-v2 one on the say-so of an opcode, which
