@@ -455,9 +455,7 @@ class PsidCookieTlsCryptV2Test : public PsidCookieInterceptTest
         pcfg.frame = frame_init_simple(2048);
 
         // our own copy of that key, to wrap with; unwrap overwrites pcfg.tls_crypt_key
-        TLSCryptV2ServerKey server_key;
-        server_key.parse(read_text(UNITTEST_SOURCE_DIR "/../ssl/06/063FE634.key"));
-        server_key.extract_key(server_key_);
+        server_key_.parse(read_text(UNITTEST_SOURCE_DIR "/../ssl/06/063FE634.key"));
 
         // The cookie code needs an ssl_factory for libctx() and, via mode(), for the
         // client key's direction. No handshake happens here, but a server-mode context
@@ -490,11 +488,6 @@ class PsidCookieTlsCryptV2Test : public PsidCookieInterceptTest
     /**
      * @brief Build the WKc a client appends to its handshake packets.
      *
-     * @code
-     *   T   = HMAC-SHA256(Ka, len || K_id || Kc || metadata)
-     *   WKc = T || AES-256-CTR(Ke, IV = T, Kc || metadata) || K_id || len
-     * @endcode
-     *
      * @param metadata       Metadata payload; empty for a WKc carrying none.
      * @param metadata_type  Type byte prefixed to @p metadata: 0x00 for user metadata,
      *                       0x01 for the timestamp stock tls-crypt-v2-genkey emits.
@@ -513,56 +506,19 @@ class PsidCookieTlsCryptV2Test : public PsidCookieInterceptTest
                              size_t kc_size = OpenVPNStaticKey::KEY_SIZE)
     {
         ProtoContext::ProtoConfig &pcfg = pcookie_impl->pcfg_;
-        const size_t hmac_size = pcfg.tls_crypt_context->digest_size();
-
-        // a single key set, so sliced without direction or mode, as unwrap does
-        TLSCryptInstance::Ptr wrap = pcfg.tls_crypt_context->new_obj_send();
-        wrap->init(pcfg.ssl_factory->libctx(),
-                   server_key_.slice(OpenVPNStaticKey::HMAC),
-                   server_key_.slice(OpenVPNStaticKey::CIPHER));
-
-        // the encrypted part: Kc, then the metadata behind its type byte
-        BufferAllocated inner(OpenVPNStaticKey::KEY_SIZE + 1 + metadata.size(), BufAllocFlags::GROW);
-        inner.write(kc, kc_size);
-        if (!metadata.empty())
-        {
-            inner.push_back(static_cast<unsigned char>(metadata_type));
-            inner.write(metadata.c_str(), metadata.size());
-        }
 
         // A WKc names its server key by K_id only where the server looks keys up that way.
-        const bool with_k_id = pcfg.tls_crypt_v2_serverkey_id;
-        const std::uint32_t k_id_be = htonl(SERVER_KEY_ID);
-        const size_t k_id_size = with_k_id ? sizeof(k_id_be) : 0;
+        const std::optional<std::uint32_t> k_id = pcfg.tls_crypt_v2_serverkey_id ? std::optional<std::uint32_t>(SERVER_KEY_ID)
+                                                                                 : std::nullopt;
 
-        // the trailing length counts itself, the tag, the ciphertext and K_id
-        const std::uint16_t wkc_len = static_cast<std::uint16_t>(sizeof(std::uint16_t) + hmac_size
-                                                                 + inner.size() + k_id_size);
-        const std::uint16_t wkc_len_be = htons(wkc_len);
-
-        // the tag covers the length prefix and K_id as well as the plaintext
-        BufferAllocated hmac_input(sizeof(wkc_len_be) + k_id_size + inner.size(), BufAllocFlags::GROW);
-        hmac_input.write(&wkc_len_be, sizeof(wkc_len_be));
-        if (with_k_id)
-            hmac_input.write(&k_id_be, sizeof(k_id_be));
-        hmac_input.write(inner.c_data(), inner.size());
-
-        BufferAllocated wkc(wkc_len, BufAllocFlags::GROW);
-        unsigned char *tag = wkc.write_alloc(hmac_size);
-        wrap->hmac_gen(tag, 0, hmac_input.c_data(), hmac_input.size());
-
-        // the tag doubles as the CTR IV, as on the server's decrypt
-        const size_t ciphertext_bytes = wrap->encrypt(tag,
-                                                      wkc.data() + hmac_size,
-                                                      wkc.max_size() - hmac_size,
-                                                      inner.c_data(),
-                                                      inner.size());
-        wkc.inc_size(ciphertext_bytes);
-        if (with_k_id)
-            wkc.write(&k_id_be, sizeof(k_id_be));
-        wkc.write(&wkc_len_be, sizeof(wkc_len_be));
-
-        return wkc;
+        return TLSCryptV2ClientKey::wrap(*pcfg.tls_crypt_context,
+                                         server_key_,
+                                         kc,
+                                         kc_size,
+                                         metadata,
+                                         metadata_type,
+                                         k_id,
+                                         pcfg.ssl_factory->libctx());
     }
 
     /**
@@ -705,8 +661,8 @@ class PsidCookieTlsCryptV2Test : public PsidCookieInterceptTest
 
     RCPtr<MetadataRecorderFactory> meta_factory;
     unsigned char client_key_raw_[OpenVPNStaticKey::KEY_SIZE];
-    OpenVPNStaticKey client_key_; //!< Kc, as the client keys its tls-crypt instance
-    OpenVPNStaticKey server_key_; //!< Ka/Ke, used here to wrap the WKc
+    OpenVPNStaticKey client_key_;    //!< Kc, as the client keys its tls-crypt instance
+    TLSCryptV2ServerKey server_key_; //!< Ka/Ke, used here to wrap the WKc
 };
 
 // The session created for this client strips the WKc itself, uniformly for this copy and
@@ -920,7 +876,7 @@ class PsidCookieSingleServerKeyTest : public PsidCookieTlsCryptV2Test
         ProtoContext::ProtoConfig &pcfg = pcookie_impl->pcfg_;
         pcfg.tls_crypt_v2_serverkey_id = false;
         pcfg.tls_crypt_v2_serverkey_dir.clear();
-        pcfg.tls_crypt_key = server_key_;
+        server_key_.extract_key(pcfg.tls_crypt_key);
     }
 };
 
@@ -1113,14 +1069,18 @@ class TlsCryptV1SessionTest : public PsidCookieTlsCryptV2Test
         pcfg.tls_crypt_ = ProtoContext::ProtoConfig::TLSCrypt::V1;
         pcfg.tls_crypt_v2_serverkey_id = false;
         pcfg.tls_crypt_v2_serverkey_dir.clear();
-        pcfg.tls_crypt_key = server_key_;
+        server_key_.extract_key(shared_key_);
+        pcfg.tls_crypt_key = shared_key_;
     }
 
     //! A CONTROL_V1 frame from @p cli_psid, wrapped with the shared key and echoing @p srv_psid
     BufferAllocated v1_packet(const ProtoSessionID &cli_psid, const ProtoSessionID &srv_psid)
     {
-        return wrap_third_packet(server_key_, cli_psid, srv_psid, BufferAllocated(), control_v1_op_field(), 0);
+        return wrap_third_packet(shared_key_, cli_psid, srv_psid, BufferAllocated(), control_v1_op_field(), 0);
     }
+
+    //! The one key a v1 server shares with every client, in the form both sides slice
+    OpenVPNStaticKey shared_key_;
 };
 
 // A pre-filter's verdict must not depend on what it was handed before. It pinned the peer
