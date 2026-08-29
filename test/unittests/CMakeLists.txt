@@ -96,6 +96,7 @@ add_executable(coreUnitTests
         test_cliopt.cpp
         test_string.cpp
         test_buffer.cpp
+        test_bufstream.cpp
         test_proto.cpp
         test_peerid.cpp
 )
