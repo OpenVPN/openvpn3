@@ -100,6 +100,20 @@ struct Send : public SendBase
     virtual void pre_stop() = 0;
     virtual void stop() = 0;
 
+    /**
+     * @brief Report why this session is being torn down, immediately before
+     *  @c pre_stop()/@c stop().
+     * @details Not pure: an implementation that does not surface disconnect
+     *  reasons needs no override. Always paired with a following @c stop(),
+     *  so an implementation may treat it purely as a cause annotation on the
+     *  teardown it is about to receive.
+     * @param cause Why the session is ending.
+     */
+    virtual void disconnect_notify(const DisconnectCause cause)
+    {
+        (void)cause;
+    }
+
     // clang-format off
     virtual void auth_request(const AuthCreds::Ptr &auth_creds,
                               const AuthCert::Ptr &auth_cert,

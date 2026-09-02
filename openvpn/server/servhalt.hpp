@@ -45,3 +45,46 @@ inline std::string to_string(Type type)
     }
 }
 } // namespace openvpn::HaltRestart
+
+namespace openvpn {
+/**
+ * @brief Why a server-side session is being torn down.
+ * @details Recorded by the protocol session as the cause becomes known and
+ *  handed to the management layer immediately before teardown, so an
+ *  embedder's disconnect callback can distinguish an orderly client exit from
+ *  a keepalive timeout from a server shutdown. @c UNKNOWN covers the paths
+ *  that carry no distinguishing signal: transport errors, protocol errors,
+ *  and session invalidation other than keepalive.
+ */
+enum class DisconnectCause
+{
+    UNKNOWN,
+    KEEPALIVE_TIMEOUT,
+    CLIENT_EXIT,
+    SERVER_SHUTDOWN,
+};
+
+/**
+ * @brief Render a cause for logging.
+ * @param type The cause to render.
+ * @return A stable, human-readable name.
+ */
+inline std::string to_string(const DisconnectCause type)
+{
+    using enum DisconnectCause;
+
+    switch (type)
+    {
+    case UNKNOWN:
+        return "UNKNOWN";
+    case KEEPALIVE_TIMEOUT:
+        return "KEEPALIVE_TIMEOUT";
+    case CLIENT_EXIT:
+        return "CLIENT_EXIT";
+    case SERVER_SHUTDOWN:
+        return "SERVER_SHUTDOWN";
+    default:
+        return "DisconnectCause_?";
+    }
+}
+} // namespace openvpn

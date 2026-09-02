@@ -161,7 +161,10 @@ class ServerProto
                 housekeeping_timer.cancel();
 
                 if (ManLink::send)
+                {
+                    ManLink::send->disconnect_notify(disconnect_cause);
                     ManLink::send->pre_stop();
+                }
 
                 // deliver final peer stats to management layer
                 if (TransportLink::send && ManLink::send)
@@ -388,6 +391,7 @@ class ServerProto
             else if (msg == "EXIT")
             {
                 OPENVPN_LOG("Client disconnecting from server, EXIT received");
+                disconnect_cause = DisconnectCause::CLIENT_EXIT;
                 disconnect_type = DT_HALT_RESTART;
                 disconnect_in(Time::Duration::seconds(1));
             }
@@ -754,8 +758,11 @@ class ServerProto
         {
             switch (err)
             {
-            case Error::KEV_NEGOTIATE_ERROR:
             case Error::KEEPALIVE_TIMEOUT:
+                disconnect_cause = DisconnectCause::KEEPALIVE_TIMEOUT;
+                error();
+                break;
+            case Error::KEV_NEGOTIATE_ERROR:
                 error();
                 break;
             default:
@@ -771,6 +778,11 @@ class ServerProto
             return "UNNAMED_CLIENT";
         }
 
+        void set_disconnect_cause(const DisconnectCause cause) override
+        {
+            disconnect_cause = cause;
+        }
+
         // higher values are higher priority
         enum DisconnectType
         {
@@ -781,6 +793,7 @@ class ServerProto
         };
 
         ProtoContext proto_context;
+        DisconnectCause disconnect_cause = DisconnectCause::UNKNOWN;
         int disconnect_type = DT_NONE;
         bool preserve_session_id = true;
 

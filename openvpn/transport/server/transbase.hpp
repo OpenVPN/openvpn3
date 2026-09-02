@@ -141,6 +141,19 @@ struct Recv : public virtual RC<thread_unsafe_refcount>
                                        const std::string &reason,
                                        const std::string &client_reason) = 0;
     // clang-format on
+
+    /**
+     * @brief Record why this session is about to be torn down.
+     * @details Lets a caller that knows the cause -- the transport server
+     *  stopping every session on shutdown, say -- annotate the teardown it is
+     *  about to trigger, for delivery to the management layer. Not pure: a
+     *  session that does not track a cause needs no override.
+     * @param cause Why the session is ending.
+     */
+    virtual void set_disconnect_cause(const DisconnectCause cause)
+    {
+        (void)cause;
+    }
 };
 
 // Base class for factory used to create Recv objects.
