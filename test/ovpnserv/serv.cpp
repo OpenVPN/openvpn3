@@ -371,18 +371,19 @@ int main(int argc, char *argv[])
         OPENVPN_LOG("ovpnserv: listening on " << args.bind_addr << ":" << args.port
                                               << data_path << ", auth disabled");
 
-        // The server runs on its own internal thread once start() returns;
-        // this thread just waits for a signal and then stops it.
+        // The server runs on its own internal thread once start() returns.
+        // This thread waits for a signal; consuming it leaves this io_context
+        // with no work, run() returns, and the server's destructor stops and
+        // joins on the way out. Deliberately no stop() call here: a server is
+        // stopped by its own destruction and by nothing else, which is what
+        // keeps "which thread may stop it" from being a question at all.
         openvpn_io::io_context signal_io_context(1);
         ASIOSignals signals(signal_io_context);
         signals.register_signals_all(
             [&](const openvpn_io::error_code &error, int signum)
             {
                 if (!error)
-                {
                     OPENVPN_LOG("signal " << signum << ", shutting down");
-                    server.stop();
-                }
             });
         signal_io_context.run();
 
