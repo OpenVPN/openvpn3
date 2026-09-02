@@ -168,6 +168,7 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
       test_udptransserv.cpp
       test_peerroutes.cpp
       test_tunreal.cpp
+      test_netpolicy.cpp
       test_dcoserv.cpp
       )
 
