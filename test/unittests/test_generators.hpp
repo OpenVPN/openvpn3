@@ -10,8 +10,10 @@
 #endif
 
 #include <algorithm>
+#include <cstddef>
 #include <cstdint>
 #include <limits>
+#include <numeric>
 #include <optional>
 #include <utility>
 #include <string>
@@ -1178,6 +1180,30 @@ inline auto genAddrMaskPairString(const openvpn::IP::Addr::Version version, cons
                                             {shape_weight, gen::apply(three_terms, genIPAddressString(version), genPrefixLength(version), genPrefixLength(version))},
                                             {shape_weight, gen::just(std::string{})},
                                             {shape_weight, gen::nonEmpty(string_from_allowed_chars(ALPHA_CHARACTERS))}});
+}
+
+/**
+ * @brief Generates a permutation of the indices [0, @p count).
+ *
+ * Fisher-Yates over drawn selection indices, so no draw can be rejected and shrinking
+ * walks each selection toward the front, ending at the identity order.
+ */
+inline auto genIndexPermutation(const size_t count) -> Gen<std::vector<size_t>>
+{
+    return gen::exec([count]
+                     {
+        std::vector<size_t> remaining(count);
+        std::iota(remaining.begin(), remaining.end(), size_t{0});
+
+        std::vector<size_t> order;
+        order.reserve(count);
+        while (!remaining.empty())
+        {
+            const auto pick = *gen::inRange(size_t{0}, remaining.size());
+            order.push_back(remaining[pick]);
+            remaining.erase(remaining.begin() + static_cast<std::ptrdiff_t>(pick));
+        }
+        return order; });
 }
 } // namespace rc
 #endif // TEST_GENERATORS_HPP
