@@ -77,6 +77,19 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
             SKIP_RETURN_CODE 77 TIMEOUT 180 LABELS "integration;privileged")
     endforeach ()
 
+    # Interop against the reference OpenVPN 2 binary, both directions. Every
+    # other test here is ours-against-ours, which proves self-consistency, not
+    # that we speak the protocol. Self-skips (77) when no reference binary is
+    # present, so a host without one is not a failure.
+    foreach (iop_mode ref-client-udp ref-client-tcp ref-server-udp ref-server-tcp
+                      tls-crypt-v2 ncp ncp-mismatch)
+        add_test(NAME ServerInterop-${iop_mode}
+            COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/integration/test_server_interop.sh
+                    ${PROJECT_BINARY_DIR} ${iop_mode})
+        set_tests_properties(ServerInterop-${iop_mode} PROPERTIES
+            SKIP_RETURN_CODE 77 TIMEOUT 180 LABELS "integration;privileged;interop")
+    endforeach ()
+
     # Config-file support for the reference binary. 'refuse' needs neither root
     # nor a network, so it is labelled integration but not privileged.
     add_test(NAME ServerConfigFile-refuse
