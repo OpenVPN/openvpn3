@@ -131,6 +131,12 @@ endif ()
 if (${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
     add_libcap(coreUnitTests)
     target_sources(coreUnitTests PRIVATE test_sitnl.cpp)
+
+    # Socket buffer sizing (openvpn/common/sockopt.hpp,
+    # openvpn/transport/sockbuf.hpp). Reads net.core.{r,w}mem_max and uses
+    # libcap to gate the privileged SO_*BUFFORCE cases, so it belongs here
+    # rather than in the generic UNIX block.
+    target_sources(coreUnitTests PRIVATE test_sockbuf.cpp)
 endif ()
 
 if (UNIX)
