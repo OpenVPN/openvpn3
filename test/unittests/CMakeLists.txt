@@ -164,6 +164,7 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
     target_sources(coreUnitTests PRIVATE
       # O3 server engine (openvpn/server/{nulltun,simpleman,udptransserv,peerroutes,realtun}.hpp)
       test_tunsink.cpp
+      test_simpleman.cpp
       test_udptransserv.cpp
       test_peerroutes.cpp
       test_tunreal.cpp
