@@ -46,7 +46,13 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
     endforeach ()
 
     # Client-to-client policy on the classic path, one entry per scenario.
-    foreach (c2c_mode deny allow spoof spoof-allow)
+    # deny-dco/allow-dco run the same policy assertions on the kernel DCO netdev
+    # rather than the classic tun. Enforcement lives in netfilter (netpolicy.hpp)
+    # and attaches to whichever netdev the active data path created, so these are
+    # what demonstrate the policy is datapath-independent. They self-skip without
+    # the ovpn module, and assert an ovpn-type netdev exists so a silent fallback
+    # to the classic path cannot pass as a DCO run.
+    foreach (c2c_mode deny allow spoof spoof-allow deny-dco allow-dco)
         add_test(NAME ServerC2CIntegration-${c2c_mode}
             COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/integration/test_server_c2c.sh
                     ${PROJECT_BINARY_DIR} ${c2c_mode})

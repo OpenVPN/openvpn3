@@ -48,7 +48,7 @@ SERV_BIN="${BUILD_DIR}/test/ovpnserv/ovpnserv"
 CLI_BIN="${BUILD_DIR}/test/ovpncli/ovpncli"
 SSL_DIR="${CORE_ROOT}/test/ssl"
 
-PREFIX="$(case "${MODE}" in deny) echo c2cd ;; allow) echo c2ca ;; spoof) echo c2cs ;; spoof-allow) echo c2csa ;; esac)"   # kept short: link names are IFNAMSIZ-bound (see lib.sh mc_link)
+PREFIX="$(case "${MODE}" in deny) echo c2cd ;; allow) echo c2ca ;; spoof) echo c2cs ;; spoof-allow) echo c2csa ;; deny-dco) echo c2cdd ;; allow-dco) echo c2cad ;; esac)"   # kept short: link names are IFNAMSIZ-bound (see lib.sh mc_link)
 SUBNET="192.168.94"
 N_CLIENTS=2
 GATEWAY="10.8.0.1"
@@ -59,6 +59,8 @@ deny) PORT=11594 ;;
 allow) PORT=11595 ;;
 spoof) PORT=11596 ;;
 spoof-allow) PORT=11597 ;;
+deny-dco) PORT=11598 ;;
+allow-dco) PORT=11599 ;;
 *)
     echo "unknown mode: ${MODE}" >&2
     exit 2
@@ -117,6 +119,16 @@ if ! command -v tcpdump >/dev/null 2>&1 && [[ "${MODE}" == spoof* ]]; then
     echo "SKIP: tcpdump required to observe the spoofed-source drop"
     exit 77
 fi
+if [[ "${MODE}" == *-dco ]]; then
+    if ! modprobe -n ovpn 2>/dev/null; then
+        echo "SKIP: mainline ovpn kernel module not available"
+        exit 77
+    fi
+    modprobe ovpn 2>/dev/null || {
+        echo "SKIP: failed to load ovpn kernel module"
+        exit 77
+    }
+fi
 
 mkdir -p "${LOG_DIR}"
 rm -f "${LOG_DIR}"/*.log "${LOG_DIR}"/*.ovpn "${LOG_DIR}"/*.pcap
@@ -132,19 +144,46 @@ echo "      server ${SERVER_IP}, clients $(mc_client_ip "${PREFIX}" "${SUBNET}" 
 
 C2C_ARGS=()
 case "${MODE}" in
-allow | spoof-allow) C2C_ARGS=(--client-to-client) ;;
+allow | spoof-allow | allow-dco) C2C_ARGS=(--client-to-client) ;;
 esac
 
-echo "[2/5] Starting classic ovpnserv${C2C_ARGS[0]:+ ${C2C_ARGS[0]}}..."
+# The -dco modes exist because client-to-client enforcement moved into netfilter
+# (netpolicy.hpp), which attaches to whichever netdev the active data path
+# created. That makes the policy datapath-independent in principle; these modes
+# are what actually demonstrate it on the kernel DCO netdev rather than only on
+# the classic tun.
+DP_ARGS=(--disable-dco)
+DP_LABEL="classic"
+if [[ "${MODE}" == *-dco ]]; then
+    DP_ARGS=()
+    DP_LABEL="kernel DCO"
+fi
+
+echo "[2/5] Starting ${DP_LABEL} ovpnserv${C2C_ARGS[0]:+ ${C2C_ARGS[0]}}..."
 ns_bg "${NS_SERVER}" "${SERV_BIN}" \
     --ca "${SSL_DIR}/ca.crt" --cert "${SSL_DIR}/server.crt" --key "${SSL_DIR}/server.key" \
-    --dh "${SSL_DIR}/dh.pem" --bind "${SERVER_IP}" --port "${PORT}" --disable-dco \
+    --dh "${SSL_DIR}/dh.pem" --bind "${SERVER_IP}" --port "${PORT}" "${DP_ARGS[@]}" \
     "${C2C_ARGS[@]}" \
     >"${SERVER_LOG}" 2>&1 &
 SERVER_PID=$!
 sleep 2
 kill -0 "${SERVER_PID}" 2>/dev/null || fail "Server exited immediately" "${SERVER_LOG}" /dev/null
 echo "      Server PID: ${SERVER_PID}"
+
+# A -dco mode that silently fell back to the classic tun would still pass every
+# assertion below while proving nothing about the DCO netdev, so confirm which
+# data path came up before testing policy on it.
+if [[ "${MODE}" == *-dco ]]; then
+    if ! ns_exec "${NS_SERVER}" ip -d link show type ovpn 2>/dev/null | grep -q .; then
+        fail "no ovpn-type netdev: DCO did not engage, so this mode would not be testing it" \
+            "${SERVER_LOG}" /dev/null
+    fi
+    echo "      kernel DCO engaged (ovpn-type netdev present)"
+else
+    if ns_exec "${NS_SERVER}" ip -d link show type ovpn 2>/dev/null | grep -q .; then
+        fail "an ovpn-type netdev exists despite --disable-dco" "${SERVER_LOG}" /dev/null
+    fi
+fi
 
 # Forwarding on the tun device is the server's own job (NetPolicy enables
 # net.ipv4.conf.<dev>.forwarding on attach). Deliberately not set here: the
@@ -195,7 +234,7 @@ echo "      both clients reach the gateway"
 
 echo "[5/5] Scenario: ${MODE}"
 case "${MODE}" in
-deny)
+deny | deny-dco)
     if ping_through_tunnel "${NS_C0}" "${TUN_IPS[1]}" 2 3 "${LOG_DIR}/ping-c2c.log"; then
         cat "${LOG_DIR}/ping-c2c.log" || true
         fail "client-0 reached client-1 at ${TUN_IPS[1]} with client_to_client off" \
@@ -204,7 +243,7 @@ deny)
     echo "      client-0 -> client-1 blocked, as required"
     ;;
 
-allow)
+allow | allow-dco)
     if ! ping_through_tunnel "${NS_C0}" "${TUN_IPS[1]}" 3 3 "${LOG_DIR}/ping-c2c.log"; then
         cat "${LOG_DIR}/ping-c2c.log" || true
         fail "client-0 could not reach client-1 at ${TUN_IPS[1]} with --client-to-client" \
