@@ -55,6 +55,7 @@
 #include <openvpn/addr/ip.hpp>
 #include <openvpn/auth/authcert.hpp>
 #include <openvpn/auth/authcreds.hpp>
+#include <openvpn/common/exception.hpp>
 #include <openvpn/crypto/cryptoalgs.hpp>
 #include <openvpn/log/logger.hpp>
 #include <openvpn/server/dcoserv.hpp>
@@ -219,14 +220,16 @@ class ManSend : public ManClientInstance::Send, public detail::AuthTarget
             Handler &handler,
             DcoServ::Channel::Ptr dco_channel,
             const std::uint64_t instance_id,
-            PeerRoutes::Lease &&lease)
+            PeerRoutes::Lease &&lease,
+            LiveCounters::Ptr counters)
         : parent_(parent),
           transport_recv_(transport_recv),
           config_(std::move(config)),
           handler_(handler),
           dco_channel_(std::move(dco_channel)),
           instance_id_(instance_id),
-          lease_(std::move(lease))
+          lease_(std::move(lease)),
+          counters_(std::move(counters))
     {
         instance_name_ = "CLI_" + std::to_string(instance_id_);
     }
@@ -409,6 +412,7 @@ class ManSend : public ManClientInstance::Send, public detail::AuthTarget
         verdict_ = Verdict::Allowed;
         const ClientInfo info = client_info();
         connected_notified_ = true;
+        counters_->client_connected();
         handler_.on_client_connected(info);
         maybe_engage_dco();
         maybe_push();
@@ -514,6 +518,7 @@ class ManSend : public ManClientInstance::Send, public detail::AuthTarget
         if (!connected_notified_ || disconnect_notified_)
             return;
         disconnect_notified_ = true;
+        counters_->client_disconnected();
         handler_.on_client_disconnected(client_info(), reason);
     }
 
@@ -629,6 +634,10 @@ class ManSend : public ManClientInstance::Send, public detail::AuthTarget
     bool stopped_ = false;
     bool connected_notified_ = false;
     bool disconnect_notified_ = false;
+
+    // Shared with the engine, which reports the count this maintains. Never
+    // null -- ManFactory refuses one, so these two call sites need no guard.
+    LiveCounters::Ptr counters_;
     bool dco_engaged_ = false;
     DisconnectCause disconnect_cause_ = DisconnectCause::UNKNOWN;
 };
@@ -646,13 +655,17 @@ class ManFactory : public ManClientInstance::Factory
                Handler &handler,
                PeerRoutes::AddressPool *pool,
                PeerRoutes::RouteTable *routes,
+               LiveCounters::Ptr counters,
                DcoServ::Channel::Ptr dco_channel = DcoServ::Channel::Ptr())
         : config_(std::move(config)),
           handler_(handler),
           pool_(pool),
           routes_(routes),
-          dco_channel_(std::move(dco_channel))
+          dco_channel_(std::move(dco_channel)),
+          counters_(std::move(counters))
     {
+        if (!counters_)
+            throw Exception("HandlerMan::ManFactory: counters must not be null");
     }
 
     void start() override
@@ -668,7 +681,7 @@ class ManFactory : public ManClientInstance::Factory
         PeerRoutes::Lease lease(*pool_, *routes_, dynamic_cast<TunClientInstance::Recv *>(instance));
         auto *transport_recv = dynamic_cast<TransportClientInstance::Recv *>(instance);
         return ManClientInstance::Send::Ptr(
-            new ManSend<Handler>(instance, transport_recv, config_, handler_, dco_channel_, ++last_instance_id_, std::move(lease)));
+            new ManSend<Handler>(instance, transport_recv, config_, handler_, dco_channel_, ++last_instance_id_, std::move(lease), counters_));
     }
 
   private:
@@ -677,6 +690,7 @@ class ManFactory : public ManClientInstance::Factory
     PeerRoutes::AddressPool *pool_;
     PeerRoutes::RouteTable *routes_;
     DcoServ::Channel::Ptr dco_channel_;
+    LiveCounters::Ptr counters_;
     std::uint64_t last_instance_id_ = 0;
 };
 

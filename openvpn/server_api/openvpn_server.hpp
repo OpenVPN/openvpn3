@@ -52,6 +52,7 @@
 #include <openvpn/io/io.hpp>
 #include <openvpn/log/logger.hpp>
 #include <openvpn/log/sessionstats.hpp>
+#include <openvpn/time/asiotimer.hpp>
 #include <openvpn/random/mtrandapi.hpp>
 #include <openvpn/server/dcoserv.hpp>
 #include <openvpn/server/netpolicy.hpp>
@@ -153,6 +154,8 @@ class OpenVPNServer
             openvpn_io::post(*io_context_,
                              [this]()
                              {
+                                 if (stats_timer_)
+                                     stats_timer_->cancel();
                                  transport_->stop();
                                  net_policy_.shutdown();
                                  if (real_tun_device_)
@@ -252,7 +255,9 @@ class OpenVPNServer
         ServerProto::Factory::Ptr proto_factory(new ServerProto::Factory(*io_context_, *proto_config));
         proto_factory->proto_context_config = proto_config;
         proto_factory->stats = stats_;
-        proto_factory->man_factory.reset(new HandlerMan::ManFactory<Handler>(man_config, handler_, address_pool_.get(), routes_.get(), dco_channel_));
+        counters_.reset(new LiveCounters());
+        proto_factory->man_factory.reset(new HandlerMan::ManFactory<Handler>(
+            man_config, handler_, address_pool_.get(), routes_.get(), counters_, dco_channel_));
         if (dco_channel_)
             proto_factory->tun_factory.reset(new TunSink::TunFactory());
         else if (real_tun_device_)
@@ -299,6 +304,14 @@ class OpenVPNServer
         transport_->start();
         if (dco_channel_)
             dco_channel_->set_transport_fd(udp_transport_->native_handle());
+
+        if (config_.stats_interval_seconds)
+        {
+            stats_timer_ = std::make_unique<AsioTimer>(*io_context_);
+            if (dco_channel_)
+                dco_channel_->poll_link_stats();
+            schedule_stats();
+        }
 
         running_.store(true);
         thread_ = std::thread([this]()
@@ -404,6 +417,58 @@ class OpenVPNServer
     }
 
     /**
+     * @brief Re-arm the stats timer for one more interval.
+     * @details Holds no reference to the server: the timer is a member, so it
+     *  is cancelled and destroyed before the object it would have to outlive.
+     */
+    void schedule_stats()
+    {
+        stats_timer_->expires_after(Time::Duration::seconds(config_.stats_interval_seconds));
+        stats_timer_->async_wait([this](const openvpn_io::error_code &error)
+                                 {
+                                     if (error)
+                                         return;
+                                     report_stats();
+                                     schedule_stats(); });
+    }
+
+    /**
+     * @brief Collect one aggregate snapshot and hand it to the embedder.
+     *
+     * @details
+     * Runs on the server's own thread, so `on_stats` arrives on the same
+     * thread as every other handler callback.
+     *
+     * Byte totals come from two places, and which one carries a given
+     * session's traffic depends on its data path. `SessionStats` counts what
+     * crossed the userspace socket, which for a classic session is everything
+     * and for an offloaded one is only the control channel. The kernel's
+     * per-peer counters supply the rest, so the two are added rather than
+     * chosen between.
+     *
+     * The kernel half is requested at the end of each interval and read at the
+     * start of the next, since the request is asynchronous -- so under DCO a
+     * report describes traffic up to roughly one interval ago.
+     */
+    void report_stats()
+    {
+        ServerStats stats;
+        stats.connected_clients = counters_->connected_clients();
+        stats.total_rx_bytes = static_cast<std::uint64_t>(stats_->get_stat(SessionStats::BYTES_IN));
+        stats.total_tx_bytes = static_cast<std::uint64_t>(stats_->get_stat(SessionStats::BYTES_OUT));
+
+        if (dco_channel_)
+        {
+            const PeerStats kernel = dco_channel_->link_stats();
+            stats.total_rx_bytes += kernel.rx_bytes;
+            stats.total_tx_bytes += kernel.tx_bytes;
+            dco_channel_->poll_link_stats();
+        }
+
+        handler_.on_stats(stats);
+    }
+
+    /**
      * @brief Build the shared protocol configuration from @c config_.
      * @return A fully populated protocol configuration.
      * @throws openvpn::Exception if PKI content cannot be parsed.
@@ -504,6 +569,12 @@ class OpenVPNServer
     DcoServ::Channel::Ptr dco_channel_;
     NetPolicy::Policy net_policy_;
     TransportServer::Ptr transport_;
+
+    // Shared with the management layer, which maintains the client count.
+    LiveCounters::Ptr counters_;
+
+    // Null unless Config::stats_interval_seconds asked for reporting.
+    std::unique_ptr<AsioTimer> stats_timer_;
 
     // Non-owning view of transport_ when it is the UDP server, else null.
     UDPTransportServer::Server *udp_transport_ = nullptr;

@@ -159,15 +159,19 @@ struct TestRoutes
 RCPtr<TestInstance> make_instance(TestRoutes &routes,
                                   FakeSession *session,
                                   RecordingHandler &handler,
-                                  const std::uint64_t instance_id = 1)
+                                  const std::uint64_t instance_id = 1,
+                                  LiveCounters::Ptr counters = LiveCounters::Ptr())
 {
+    if (!counters)
+        counters.reset(new LiveCounters());
+
     // No TransportClientInstance::Recv / DcoServ::Channel here: these tests
     // exercise the handler-driven auth/push machinery, not DCO engagement
     // (see test_dcoserv.cpp and the dedicated DCO-aware fixture below for
     // that) -- nullptr/empty Ptr mirrors what Factory::new_man_obj()'s
     // dynamic_cast yields for a session that doesn't implement the
     // transport interface, exactly what FakeSession is here.
-    return RCPtr<TestInstance>(new TestInstance(session, nullptr, make_config(), handler, DcoServ::Channel::Ptr(), instance_id, routes.lease(session)));
+    return RCPtr<TestInstance>(new TestInstance(session, nullptr, make_config(), handler, DcoServ::Channel::Ptr(), instance_id, routes.lease(session), std::move(counters)));
 }
 
 } // namespace
@@ -482,7 +486,8 @@ TEST(HandlerManSend, StopReleasesPoolAddressForConnectedSession)
 {
     TestRoutes routes;
     RecordingHandler handler;
-    HandlerMan::ManFactory<RecordingHandler> factory(make_config(), handler, &routes.pool, &routes.table);
+    LiveCounters::Ptr counters(new LiveCounters());
+    HandlerMan::ManFactory<RecordingHandler> factory(make_config(), handler, &routes.pool, &routes.table, counters);
 
     FakeSession session;
     ManClientInstance::Send::Ptr inst = factory.new_man_obj(&session);
@@ -500,7 +505,8 @@ TEST(HandlerManSend, DestructionAloneReleasesThePoolAddress)
 {
     TestRoutes routes;
     RecordingHandler handler;
-    HandlerMan::ManFactory<RecordingHandler> factory(make_config(), handler, &routes.pool, &routes.table);
+    LiveCounters::Ptr counters(new LiveCounters());
+    HandlerMan::ManFactory<RecordingHandler> factory(make_config(), handler, &routes.pool, &routes.table, counters);
 
     FakeSession session;
     {
@@ -516,7 +522,8 @@ TEST(HandlerManFactory, AssignsAddressAndConstructsInstance)
 {
     TestRoutes routes;
     RecordingHandler handler;
-    HandlerMan::ManFactory<RecordingHandler> factory(make_config(), handler, &routes.pool, &routes.table);
+    LiveCounters::Ptr counters(new LiveCounters());
+    HandlerMan::ManFactory<RecordingHandler> factory(make_config(), handler, &routes.pool, &routes.table, counters);
 
     FakeSession session;
     ManClientInstance::Send::Ptr inst = factory.new_man_obj(&session);
@@ -586,4 +593,144 @@ TEST(HandlerManNcp, CipherMembershipIsExactAndTokenwise)
     ASSERT_FALSE(ncp_cipher_in_list("AES-256-GCM", "aes-256-gcm"));
     ASSERT_FALSE(ncp_cipher_in_list("", "AES-256-GCM"));
     ASSERT_FALSE(ncp_cipher_in_list("AES-256-GCM", ""));
+}
+
+// ── LiveCounters ─────────────────────────────────────────────────────
+//
+// The count behind ServerStats::connected_clients. What matters is not the
+// arithmetic but that it can never disagree with the connect/disconnect
+// callbacks, since an embedder sees both and would have no way to tell which
+// one was lying.
+
+TEST(LiveCounters, StartsEmptyAndTracksConnects)
+{
+    LiveCounters c;
+    ASSERT_EQ(c.connected_clients(), 0u);
+    c.client_connected();
+    c.client_connected();
+    ASSERT_EQ(c.connected_clients(), 2u);
+    c.client_disconnected();
+    ASSERT_EQ(c.connected_clients(), 1u);
+}
+
+// An unbalanced decrement must not wrap a size_t to ~1.8e19 and report that as
+// a client count.
+TEST(LiveCounters, DisconnectBelowZeroClampsInsteadOfWrapping)
+{
+    LiveCounters c;
+    c.client_disconnected();
+    ASSERT_EQ(c.connected_clients(), 0u);
+    c.client_connected();
+    c.client_disconnected();
+    c.client_disconnected();
+    ASSERT_EQ(c.connected_clients(), 0u);
+}
+
+TEST(HandlerManCounters, AdmittedClientIsCounted)
+{
+    TestRoutes routes;
+    FakeSession session;
+    RecordingHandler handler;
+    LiveCounters::Ptr counters(new LiveCounters());
+    auto inst = make_instance(routes, &session, handler, 1, counters);
+
+    inst->auth_request(make_auth_creds("alice"), AuthCert::Ptr(), PeerAddr::Ptr());
+    ASSERT_EQ(counters->connected_clients(), 0u); // authenticating, not admitted
+
+    handler.pending_decision->allow();
+    ASSERT_EQ(handler.connected_calls, 1);
+    ASSERT_EQ(counters->connected_clients(), 1u);
+
+    inst->stop();
+    ASSERT_EQ(handler.disconnected_calls, 1);
+    ASSERT_EQ(counters->connected_clients(), 0u);
+}
+
+// A denied client reports a disconnect it never had a connect for. Decrementing
+// on that path would drive the count below zero for every failed auth.
+TEST(HandlerManCounters, DeniedClientIsNeverCounted)
+{
+    TestRoutes routes;
+    FakeSession session;
+    RecordingHandler handler;
+    LiveCounters::Ptr counters(new LiveCounters());
+    auto inst = make_instance(routes, &session, handler, 1, counters);
+
+    inst->auth_request(make_auth_creds("alice"), AuthCert::Ptr(), PeerAddr::Ptr());
+    handler.pending_decision->deny(DenyReason::InvalidCredentials);
+
+    ASSERT_EQ(handler.disconnected_calls, 1); // the embedder still hears about it
+    ASSERT_EQ(counters->connected_clients(), 0u);
+
+    inst->stop();
+    ASSERT_EQ(counters->connected_clients(), 0u);
+}
+
+// stop() is reachable more than once (pre_stop, then a transport-driven stop),
+// and notify_disconnected() is what makes the second one inert.
+TEST(HandlerManCounters, RepeatedStopDecrementsOnce)
+{
+    TestRoutes routes;
+    FakeSession session;
+    RecordingHandler handler;
+    LiveCounters::Ptr counters(new LiveCounters());
+    auto inst = make_instance(routes, &session, handler, 1, counters);
+
+    inst->auth_request(make_auth_creds("alice"), AuthCert::Ptr(), PeerAddr::Ptr());
+    handler.pending_decision->allow();
+    ASSERT_EQ(counters->connected_clients(), 1u);
+
+    inst->stop();
+    inst->stop();
+    ASSERT_EQ(handler.disconnected_calls, 1);
+    ASSERT_EQ(counters->connected_clients(), 0u);
+}
+
+TEST(HandlerManCounters, CountIsSharedAcrossInstances)
+{
+    TestRoutes routes;
+    FakeSession s1;
+    FakeSession s2;
+    RecordingHandler h1;
+    RecordingHandler h2;
+    LiveCounters::Ptr counters(new LiveCounters());
+    auto i1 = make_instance(routes, &s1, h1, 1, counters);
+    auto i2 = make_instance(routes, &s2, h2, 2, counters);
+
+    i1->auth_request(make_auth_creds("alice"), AuthCert::Ptr(), PeerAddr::Ptr());
+    h1.pending_decision->allow();
+    i2->auth_request(make_auth_creds("bob"), AuthCert::Ptr(), PeerAddr::Ptr());
+    h2.pending_decision->allow();
+    ASSERT_EQ(counters->connected_clients(), 2u);
+
+    i1->stop();
+    ASSERT_EQ(counters->connected_clients(), 1u);
+    i2->stop();
+    ASSERT_EQ(counters->connected_clients(), 0u);
+}
+
+// A client that never authenticated at all -- the transport dropped it -- must
+// not decrement, since it was never added.
+TEST(HandlerManCounters, StopWithoutAuthLeavesTheCountAlone)
+{
+    TestRoutes routes;
+    FakeSession session;
+    RecordingHandler handler;
+    LiveCounters::Ptr counters(new LiveCounters());
+    counters->client_connected(); // another client, already connected
+
+    auto inst = make_instance(routes, &session, handler, 1, counters);
+    inst->stop();
+
+    ASSERT_EQ(handler.disconnected_calls, 0);
+    ASSERT_EQ(counters->connected_clients(), 1u);
+}
+
+TEST(HandlerManFactory, RefusesNullCounters)
+{
+    TestRoutes routes;
+    RecordingHandler handler;
+    ASSERT_THROW(HandlerMan::ManFactory<RecordingHandler>(
+                     make_config(), handler, &routes.pool, &routes.table, LiveCounters::Ptr()),
+                 Exception);
 }

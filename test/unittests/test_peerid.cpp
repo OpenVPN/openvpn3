@@ -19,13 +19,35 @@
 
 #include "test_common.hpp"
 
+#include <cstddef>
+
 #include <openvpn/server/peerid.hpp>
 
 using namespace openvpn;
 
+namespace {
+
+// gcc 12 through 14 mis-fire -Warray-bounds here: with both the table's size
+// and an out-of-range index available as constants after inlining, they report
+// the guarded access inside release()/find()/update() even though in_range()
+// makes that path unreachable. Fixed in gcc 15, but the CI matrix still builds
+// 12, 13 and 14, and -Werror turns it into a build failure.
+//
+// Hiding the size from the optimizer is enough, and covers every access in a
+// test rather than each out-of-range literal individually -- so construct
+// tables through this, not with a bare literal, whenever the test passes ids
+// the table cannot hold.
+std::size_t opaque(const std::size_t size)
+{
+    volatile std::size_t v = size;
+    return v;
+}
+
+} // namespace
+
 TEST(PeerIdTable, IdsStartAtZeroAndAscend)
 {
-    PeerId::Table<int> t(4);
+    PeerId::Table<int> t(opaque(4));
     ASSERT_EQ(t.acquire(10).value(), 0);
     ASSERT_EQ(t.acquire(11).value(), 1);
     ASSERT_EQ(t.acquire(12).value(), 2);
@@ -37,7 +59,7 @@ TEST(PeerIdTable, IdsStartAtZeroAndAscend)
 // field.
 TEST(PeerIdTable, ReleasedIdsComeBack)
 {
-    PeerId::Table<int> t(3);
+    PeerId::Table<int> t(opaque(3));
     ASSERT_EQ(t.acquire(10).value(), 0);
     ASSERT_EQ(t.acquire(11).value(), 1);
     ASSERT_EQ(t.acquire(12).value(), 2);
@@ -53,7 +75,7 @@ TEST(PeerIdTable, ReleasedIdsComeBack)
 // round-robin or most-recently-freed.
 TEST(PeerIdTable, ReuseTakesTheLowestFreeSlot)
 {
-    PeerId::Table<int> t(4);
+    PeerId::Table<int> t(opaque(4));
     for (int i = 0; i < 4; ++i)
         ASSERT_TRUE(t.acquire(i).has_value());
 
@@ -65,7 +87,7 @@ TEST(PeerIdTable, ReuseTakesTheLowestFreeSlot)
 
 TEST(PeerIdTable, ExhaustionIsReportedNotWrapped)
 {
-    PeerId::Table<int> t(2);
+    PeerId::Table<int> t(opaque(2));
     ASSERT_TRUE(t.acquire(1).has_value());
     ASSERT_TRUE(t.acquire(2).has_value());
     ASSERT_FALSE(t.acquire(3).has_value());
@@ -78,15 +100,15 @@ TEST(PeerIdTable, ExhaustionIsReportedNotWrapped)
 // individual allocation can produce an id that will not fit the header.
 TEST(PeerIdTable, CapacityBeyondTheWireFieldIsRefused)
 {
-    ASSERT_THROW(PeerId::Table<int>(static_cast<std::size_t>(PeerId::UNDEF)), Exception);
-    ASSERT_THROW(PeerId::Table<int>(static_cast<std::size_t>(PeerId::UNDEF) + 1), Exception);
+    ASSERT_THROW(PeerId::Table<int>(opaque(static_cast<std::size_t>(PeerId::UNDEF))), Exception);
+    ASSERT_THROW(PeerId::Table<int>(opaque(static_cast<std::size_t>(PeerId::UNDEF) + 1)), Exception);
     // One below the reserved value is the largest usable table.
-    ASSERT_NO_THROW(PeerId::Table<int>(static_cast<std::size_t>(PeerId::UNDEF) - 1));
+    ASSERT_NO_THROW(PeerId::Table<int>(opaque(static_cast<std::size_t>(PeerId::UNDEF) - 1)));
 }
 
 TEST(PeerIdTable, EveryIssuedIdFitsTheWireField)
 {
-    PeerId::Table<int> t(64);
+    PeerId::Table<int> t(opaque(64));
     for (int i = 0; i < 64; ++i)
     {
         const auto id = t.acquire(i);
@@ -98,7 +120,7 @@ TEST(PeerIdTable, EveryIssuedIdFitsTheWireField)
 
 TEST(PeerIdTable, FindResolvesOnlyIssuedIds)
 {
-    PeerId::Table<int> t(4);
+    PeerId::Table<int> t(opaque(4));
     const int id = t.acquire(42).value();
     ASSERT_NE(t.find(id), nullptr);
     ASSERT_EQ(*t.find(id), 42);
@@ -115,7 +137,7 @@ TEST(PeerIdTable, FindResolvesOnlyIssuedIds)
 // the allocation.
 TEST(PeerIdTable, UpdateRepointsWithoutReallocating)
 {
-    PeerId::Table<int> t(4);
+    PeerId::Table<int> t(opaque(4));
     const int id = t.acquire(100).value();
     t.update(id, 200);
     ASSERT_EQ(*t.find(id), 200);
@@ -126,7 +148,7 @@ TEST(PeerIdTable, UpdateRepointsWithoutReallocating)
 
 TEST(PeerIdTable, UpdateAndReleaseIgnoreIdsThatWereNeverIssued)
 {
-    PeerId::Table<int> t(4);
+    PeerId::Table<int> t(opaque(4));
     // Teardown paths call release() unconditionally, including for a session
     // that never got an id (peer_id defaults to -1), so this must be inert.
     ASSERT_NO_THROW(t.release(-1));
@@ -146,7 +168,7 @@ TEST(PeerIdTable, UpdateAndReleaseIgnoreIdsThatWereNeverIssued)
 
 TEST(PeerIdTable, ClearReleasesEverything)
 {
-    PeerId::Table<int> t(3);
+    PeerId::Table<int> t(opaque(3));
     t.acquire(1);
     t.acquire(2);
     t.clear();
@@ -159,7 +181,7 @@ TEST(PeerIdTable, ClearReleasesEverything)
 // it must refuse rather than hand out an out-of-range index.
 TEST(PeerIdTable, ZeroCapacityIssuesNothing)
 {
-    PeerId::Table<int> t(0);
+    PeerId::Table<int> t(opaque(0));
     ASSERT_EQ(t.max_supported_slots(), 0u);
     ASSERT_FALSE(t.acquire(1).has_value());
     ASSERT_EQ(t.find(0), nullptr);

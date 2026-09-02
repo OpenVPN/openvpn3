@@ -45,6 +45,7 @@
 #include <openvpn/dco/ovpn_dco_linux.h>
 #include <openvpn/log/logger.hpp>
 #include <openvpn/server/peeraddr.hpp>
+#include <openvpn/server/peerstats.hpp>
 #include <openvpn/tun/linux/client/sitnl.hpp>
 #include <openvpn/tun/linux/client/tunnetlink.hpp>
 #include <openvpn/tun/server/tunbase.hpp>
@@ -392,8 +393,60 @@ class Channel : public RC<thread_unsafe_refcount>
     {
         if (peer_to_session_.erase(peer_id) == 0)
             return;
+        retire_link_stats(peer_id);
         OPENVPN_LOG("DCO: deleting peer " << peer_id);
         genl_->del_peer(peer_id);
+    }
+
+    /**
+     * @brief Ask the kernel for every live peer's byte counters.
+     *
+     * @details
+     * Asynchronous: this only sends the requests. Replies arrive on the
+     * netlink socket like any other notification and land in the cache that
+     * @c link_stats() reads, so a caller polling on a timer sees the answer to
+     * *this* call on its next tick. That is deliberate -- the synchronous form
+     * of `GeNL::get_peer()` blocks the reactor waiting on a socket read, once
+     * per peer, which is not something a server should do on a timer.
+     *
+     * A peer the kernel has already dropped produces a logged netlink error
+     * rather than a reply; the window is small, since a peer leaves
+     * `peer_to_session_` as soon as either side deletes it.
+     */
+    void poll_link_stats()
+    {
+        if (!genl_)
+            return;
+        for (const auto &[peer_id, session] : peer_to_session_)
+        {
+            (void)session;
+            genl_->get_peer(peer_id, false);
+        }
+    }
+
+    /**
+     * @brief The kernel's view of transport bytes across all offloaded peers.
+     *
+     * @details
+     * Cumulative for the channel's lifetime: live peers contribute their last
+     * polled counters and departed peers the last values seen before they went
+     * away, so the total does not drop when a client disconnects.
+     *
+     * Reflects the most recent @c poll_link_stats() to have been answered, so
+     * it lags a caller that polls and reads in the same breath by one interval.
+     *
+     * @return Summed receive and transmit byte counts.
+     */
+    PeerStats link_stats() const
+    {
+        PeerStats total = retired_link_stats_;
+        for (const auto &[peer_id, stats] : peer_link_stats_)
+        {
+            (void)peer_id;
+            total.rx_bytes += stats.rx_bytes;
+            total.tx_bytes += stats.tx_bytes;
+        }
+        return total;
     }
 
     /**
@@ -413,6 +466,11 @@ class Channel : public RC<thread_unsafe_refcount>
         // session down, and each del_peer() erased its own entry -- but that
         // ordering is the caller's, not this class's, so do not leave raw
         // pointers behind on the strength of it.
+        for (const auto &[peer_id, session] : peer_to_session_)
+        {
+            (void)session;
+            retire_link_stats(peer_id);
+        }
         peer_to_session_.clear();
     }
 
@@ -438,6 +496,22 @@ class Channel : public RC<thread_unsafe_refcount>
                 uint8_t reason = 0;
                 buf.read(&reason, sizeof(reason));
                 handle_peer_del_ntf(static_cast<int>(peer_id), reason);
+                break;
+            }
+        case OVPN_CMD_PEER_GET:
+            {
+                struct OvpnDcoPeer peer{};
+                buf.read(&peer, sizeof(peer));
+                // Only for a peer still tracked here: a reply that overtook the
+                // peer's own deletion would otherwise resurrect it in the cache
+                // and be counted twice, having already been retired.
+                const int peer_id = static_cast<int>(peer.id);
+                if (peer_to_session_.contains(peer_id))
+                {
+                    PeerStats &stats = peer_link_stats_[peer_id];
+                    stats.rx_bytes = peer.transport.rx_bytes;
+                    stats.tx_bytes = peer.transport.tx_bytes;
+                }
                 break;
             }
         case -1:
@@ -553,6 +627,7 @@ class Channel : public RC<thread_unsafe_refcount>
         OPENVPN_LOG("DCO: peer " << peer_id << " deleted by kernel, reason " << static_cast<int>(reason)
                                  << " -- stopping session");
         peer_to_session_.erase(peer_id);
+        retire_link_stats(peer_id);
         session->stop();
     }
 
@@ -580,9 +655,31 @@ class Channel : public RC<thread_unsafe_refcount>
     // Declared before genl_ so that reverse-order destruction closes the
     // netlink socket bound to this netdev before deleting the netdev itself.
     Netdev iface_;
+    /**
+     * @brief Move a departing peer's counters into the cumulative total.
+     * @details Called on every path that stops tracking a peer, so the
+     *  aggregate is continuous across a disconnect instead of dropping by that
+     *  peer's traffic.
+     * @param peer_id The peer being dropped.
+     */
+    void retire_link_stats(const int peer_id)
+    {
+        const auto it = peer_link_stats_.find(peer_id);
+        if (it == peer_link_stats_.end())
+            return;
+        retired_link_stats_.rx_bytes += it->second.rx_bytes;
+        retired_link_stats_.tx_bytes += it->second.tx_bytes;
+        peer_link_stats_.erase(it);
+    }
+
     GeNL<Channel *>::Ptr genl_;
     int transport_fd_ = -1;
     std::map<int, TransportClientInstance::Recv *> peer_to_session_;
+
+    // Last counters polled for each live peer, and the sum of those seen for
+    // peers that have since gone away.
+    std::map<int, PeerStats> peer_link_stats_;
+    PeerStats retired_link_stats_;
 };
 
 inline void PeerReceiver::rekey(const CryptoDCInstance::RekeyType type, const KoRekey::Info &info)

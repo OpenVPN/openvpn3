@@ -113,4 +113,12 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
         COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/integration/test_server_dco.sh ${PROJECT_BINARY_DIR})
     set_tests_properties(ServerDcoIntegration PROPERTIES
         SKIP_RETURN_CODE 77 TIMEOUT 90 LABELS "integration;privileged")
+
+    foreach (mode classic dco)
+        add_test(NAME ServerStats-${mode}
+            COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/integration/test_server_stats.sh
+                    ${PROJECT_BINARY_DIR} ${mode})
+        set_tests_properties(ServerStats-${mode} PROPERTIES
+            SKIP_RETURN_CODE 77 TIMEOUT 150 LABELS "integration;privileged")
+    endforeach ()
 endif ()

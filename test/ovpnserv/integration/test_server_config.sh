@@ -35,10 +35,15 @@ SERV_BIN="${BUILD_DIR}/test/ovpnserv/ovpnserv"
 SSL_DIR="${CORE_ROOT}/test/ssl"
 REF_BIN="${OPENVPN_REF:-/usr/sbin/openvpn}"
 
-NS_SERVER="ns-cfg-s"
-NS_CLIENT="ns-cfg-c"
-VETH_SERVER="vcfgs"
-VETH_CLIENT="vcfgc"
+# Namespace and link names derive from the mode so the two scenarios run in
+# parallel under ctest. `refuse` creates none of these, but its cleanup trap
+# still tears them down on exit -- with shared names that deleted the `run`
+# scenario's namespaces out from under it, and `run`'s server then could not
+# bind its listener address.
+NS_SERVER="ns-cfg-${MODE}-s"
+NS_CLIENT="ns-cfg-${MODE}-c"
+VETH_SERVER="vcfg${MODE:0:3}s"
+VETH_CLIENT="vcfg${MODE:0:3}c"
 SERVER_VETH_IP="192.168.86.1"
 CLIENT_VETH_IP="192.168.86.2"
 PORT=12394
@@ -224,7 +229,7 @@ grep -q "Initialization Sequence Completed" "${CLIENT_LOG}" \
     || fail "Reference client did not connect" "${SERVER_LOG}" "${CLIENT_LOG}"
 
 # The addressing must come from `server <net> <mask>`, not ovpnserv's defaults.
-if ! ns_exec "${NS_CLIENT}" ip -4 addr show | grep -q "${CONF_FIRST_CLIENT}"; then
+if ! wait_for_addr "${NS_CLIENT}" "${CONF_FIRST_CLIENT}" "$(scaled 10)"; then
     ns_exec "${NS_CLIENT}" ip -4 addr show || true
     fail "Client was not assigned ${CONF_FIRST_CLIENT} from 'server ${CONF_NETWORK} ${CONF_NETMASK}'" \
         "${SERVER_LOG}" "${CLIENT_LOG}"

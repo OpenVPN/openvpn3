@@ -189,6 +189,25 @@ wait_for_connected() {
     return 1
 }
 
+# Poll a namespace until an IPv4 address appears on any of its interfaces.
+#
+# A client logs that it has connected slightly before its ifconfig has actually
+# landed, so checking once right after that log line is a race: it holds on an
+# idle machine and fails under `ctest -j32`, with the diagnostic dump that
+# follows the failure showing the address present.
+#
+# Usage: wait_for_addr NS ADDR TIMEOUT_SECONDS
+wait_for_addr() {
+    local ns="$1" addr="$2" timeout="$3"
+    local elapsed=0
+    while ((elapsed < timeout)); do
+        ns_exec "${ns}" ip -4 addr show 2>/dev/null | grep -q "inet ${addr}[/ ]" && return 0
+        sleep 1
+        ((elapsed++)) || true
+    done
+    return 1
+}
+
 # Skip with 77 unless ping is present. The build images ship iproute2 but not
 # iputils-ping, so every test that measures reachability has to check first.
 # Usage: require_ping

@@ -104,6 +104,9 @@ struct ServerArgs
     std::size_t max_clients = 1024;
     int n_parallel = 4;
     unsigned int reap_interval = 5;
+
+    // 0 keeps on_stats() unwired, matching ServerAPI::Config's default.
+    unsigned int stats_interval = 0;
 };
 
 /**
@@ -153,6 +156,8 @@ static void usage(const char *argv0)
         << "  --max-clients N      maximum concurrent sessions, default 1024\n"
         << "  --n-parallel N       parallel session-handling slots, default 4\n"
         << "  --reap-interval N    idle-session reap interval seconds, default 5\n"
+        << "  --stats-interval N   log aggregate server stats every N seconds, default 0\n"
+        << "                       (0 disables reporting entirely)\n"
         << "  --tun-name NAME      requested tun (or DCO netdev) device name, default\n"
         << "                       kernel-assigned\n"
         << "  --tun-mtu N          tun device MTU, default 1500\n"
@@ -241,6 +246,8 @@ static bool parse_args(int argc, char *argv[], ServerArgs &args)
             args.n_parallel = std::stoi(next("--n-parallel"));
         else if (opt == "--reap-interval")
             args.reap_interval = static_cast<unsigned int>(std::stoi(next("--reap-interval")));
+        else if (opt == "--stats-interval")
+            args.stats_interval = static_cast<unsigned int>(std::stoi(next("--stats-interval")));
         else if (opt == "--tun-name")
             args.tun_name = next("--tun-name");
         else if (opt == "--tun-mtu")
@@ -277,9 +284,6 @@ static bool parse_args(int argc, char *argv[], ServerArgs &args)
 
     if (!args.config_file.empty())
     {
-        // Refusing beats guessing a precedence order between a file and flags:
-        // a server's PKI and admission settings are exactly where a silently
-        // losing override would matter most.
         std::string conflicts;
         for (const std::string &flag : args.seen)
             if (flag != "--config")
@@ -327,10 +331,6 @@ static Config build_config(const ServerArgs &args)
         config.dh = read_text_utf8(args.dh_file);
     if (!args.crl_file.empty())
         config.crl = read_text_utf8(args.crl_file);
-    // Read every one of tls-auth/tls-crypt/tls-crypt-v2 that was given, rather
-    // than silently letting one win: OpenVPNServer::build_proto_config()
-    // throws if more than one ends up set, giving a clear error instead of
-    // quietly dropping whichever the CLI author didn't mean to combine.
     if (!args.tls_auth_file.empty())
     {
         config.tls_auth = read_text_utf8(args.tls_auth_file);
@@ -363,6 +363,7 @@ static Config build_config(const ServerArgs &args)
     config.max_clients = args.max_clients;
     config.n_parallel = args.n_parallel;
     config.reap_interval_seconds = args.reap_interval;
+    config.stats_interval_seconds = args.stats_interval;
     return config;
 }
 

@@ -38,6 +38,7 @@
 #ifndef OPENVPN_SERVER_API_SERVER_API_H
 #define OPENVPN_SERVER_API_SERVER_API_H
 
+#include <cstddef>
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -122,6 +123,15 @@ struct Config
     std::size_t tcp_send_queue_max_packets = 1024;
     int n_parallel = 4;
     unsigned int reap_interval_seconds = 5;
+
+    /**
+     * How often `ServerEventHandler::on_stats` is called, in seconds. 0
+     * disables it, and the handler is then never invoked.
+     * @details Off by default: an embedder that does not want aggregate
+     *  reporting should not pay for the netlink round trip per offloaded peer
+     *  that collecting it costs under DCO.
+     */
+    unsigned int stats_interval_seconds = 0;
 };
 
 /**
@@ -202,12 +212,85 @@ inline std::string to_string(const DisconnectReason reason)
 
 /**
  * @brief Aggregate server counters, handed to `on_stats`.
+ *
+ * @details
+ * A snapshot of the whole server, not of one client. Byte counts are
+ * cumulative over the server's lifetime and include clients that have since
+ * disconnected, so they only ever rise; an embedder wanting a rate differences
+ * two consecutive snapshots.
+ *
+ * Counts are transport-level -- bytes on the wire, encapsulation and control
+ * channel included -- not payload. They are therefore larger than the traffic
+ * the tunnel carried, and are the figure to compare against a link budget
+ * rather than against a user's data allowance.
  */
 struct ServerStats
 {
+    /**
+     * Clients currently connected, meaning those for which
+     * `on_client_connected` has fired and `on_client_disconnected` has not.
+     * @details Counts admitted clients only: one still authenticating, or
+     *  denied, is never included. Consistent with the connect/disconnect
+     *  callbacks by construction, since it is maintained at those two call
+     *  sites.
+     */
     std::size_t connected_clients = 0;
+
+    /** Cumulative transport bytes received from clients. */
     std::uint64_t total_rx_bytes = 0;
+
+    /** Cumulative transport bytes sent to clients. */
     std::uint64_t total_tx_bytes = 0;
+};
+
+/**
+ * @brief The live client count behind `ServerStats::connected_clients`.
+ *
+ * @details
+ * Shared between the engine, which reports the count, and the management
+ * layer, which is the only place that knows it changed: connect and disconnect
+ * are decided there, and deriving the number from a transport session table
+ * instead would count clients that have not been admitted yet.
+ *
+ * Held by pointer rather than returned by a callback so the two cannot drift:
+ * the increment and the decrement sit on the same statements that fire
+ * `on_client_connected` and `on_client_disconnected`.
+ *
+ * Single-threaded, like everything else on the server's control path -- it is
+ * touched only from the thread that runs the handler callbacks.
+ */
+class LiveCounters : public RC<thread_unsafe_refcount>
+{
+  public:
+    using Ptr = RCPtr<LiveCounters>;
+
+    /** @brief Record a client entering the connected state. */
+    void client_connected()
+    {
+        ++connected_clients_;
+    }
+
+    /**
+     * @brief Record a connected client leaving it.
+     * @details Clamped at zero rather than trusted to balance, so a
+     *  double-report degrades the count instead of wrapping it to a huge
+     *  number. Callers pair this with `on_client_disconnected`, which is
+     *  itself gated on having connected.
+     */
+    void client_disconnected()
+    {
+        if (connected_clients_)
+            --connected_clients_;
+    }
+
+    /** @brief How many clients are currently connected. */
+    std::size_t connected_clients() const
+    {
+        return connected_clients_;
+    }
+
+  private:
+    std::size_t connected_clients_ = 0;
 };
 
 /**
