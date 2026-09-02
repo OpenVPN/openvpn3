@@ -50,10 +50,13 @@
 #include <openvpn/asio/asiosignal.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/file.hpp>
+
+#include "servconf.hpp"
 #include <openvpn/server_api/openvpn_server.hpp>
 
 using namespace openvpn;
 using namespace openvpn::ServerAPI;
+using namespace openvpn::ovpnserv;
 
 /**
  * @brief Command-line configuration for the reference server.
@@ -83,7 +86,9 @@ struct ServerArgs
     unsigned int sndbuf = 0;
     std::string tun_name; // empty lets the kernel assign one
     unsigned int tun_mtu = 1500;
-    bool tcp = false; // outer transport; UDP by default
+    std::string config_file;    // --config; mutually exclusive with the rest
+    std::set<std::string> seen; // flags actually supplied, for conflict reporting
+    bool tcp = false;           // outer transport; UDP by default
     unsigned int tcp_handshake_timeout = 30;
     unsigned int tcp_max_conns_per_addr = 8;
     unsigned int tcp_send_queue_max_packets = 1024;
@@ -110,9 +115,11 @@ static void usage(const char *argv0)
     std::cerr
         << "usage: " << argv0 << " --ca FILE --cert FILE --key FILE [options]\n"
         << "\n"
-        << "  --ca FILE            CA certificate bundle (required)\n"
-        << "  --cert FILE          server certificate (required)\n"
-        << "  --key FILE           server private key (required)\n"
+        << "  --config FILE        read OpenVPN-style directives from FILE instead of\n"
+        << "                       flags; may not be combined with other options\n"
+        << "  --ca FILE            CA certificate bundle (required unless --config)\n"
+        << "  --cert FILE          server certificate (required unless --config)\n"
+        << "  --key FILE           server private key (required unless --config)\n"
         << "  --dh FILE            Diffie-Hellman parameters\n"
         << "  --crl-verify FILE    CRL bundle; rejects a peer cert it revokes\n"
         << "  --tls-auth FILE      tls-auth static key (enables the psid cookie gate)\n"
@@ -180,6 +187,9 @@ static bool parse_args(int argc, char *argv[], ServerArgs &args)
             return argv[++i];
         };
 
+        if (opt.starts_with("--"))
+            args.seen.insert(opt);
+
         if (opt == "--ca")
             args.ca_file = next("--ca");
         else if (opt == "--cert")
@@ -235,6 +245,8 @@ static bool parse_args(int argc, char *argv[], ServerArgs &args)
             args.tun_name = next("--tun-name");
         else if (opt == "--tun-mtu")
             args.tun_mtu = static_cast<unsigned int>(std::stoi(next("--tun-mtu")));
+        else if (opt == "--config")
+            args.config_file = next("--config");
         else if (opt == "--proto")
         {
             const std::string proto = next("--proto");
@@ -263,6 +275,21 @@ static bool parse_args(int argc, char *argv[], ServerArgs &args)
             throw Exception("unrecognized option: " + opt);
     }
 
+    if (!args.config_file.empty())
+    {
+        // Refusing beats guessing a precedence order between a file and flags:
+        // a server's PKI and admission settings are exactly where a silently
+        // losing override would matter most.
+        std::string conflicts;
+        for (const std::string &flag : args.seen)
+            if (flag != "--config")
+                conflicts += (conflicts.empty() ? "" : " ") + flag;
+        if (!conflicts.empty())
+            throw Exception("--config may not be combined with other options, but got: "
+                            + conflicts);
+        return true;
+    }
+
     return !(args.ca_file.empty() || args.cert_file.empty() || args.key_file.empty());
 }
 
@@ -275,6 +302,21 @@ static bool parse_args(int argc, char *argv[], ServerArgs &args)
  */
 static Config build_config(const ServerArgs &args)
 {
+    if (!args.config_file.empty())
+    {
+        Config config;
+        std::vector<std::string> ignored;
+        ServConf::apply_file(args.config_file, config, ignored);
+        if (!ignored.empty())
+        {
+            std::string list;
+            for (const std::string &name : ignored)
+                list += (list.empty() ? "" : ", ") + name;
+            OPENVPN_LOG("config: accepted and ignored (no effect on this binary): " << list);
+        }
+        return config;
+    }
+
     Config config;
     config.bind_addr = args.bind_addr;
     config.port = args.port;
@@ -401,7 +443,9 @@ int main(int argc, char *argv[])
         server.start();
         const char *data_path = server.is_dco_active() ? ", kernel DCO data path" : config.null_tun ? ", null data path"
                                                                                                     : ", real tun device";
-        OPENVPN_LOG("ovpnserv: listening on " << args.bind_addr << ":" << args.port
+        // From config, not args: with --config the argv fields are untouched, and
+        // reporting their defaults would contradict the listener that just came up.
+        OPENVPN_LOG("ovpnserv: listening on " << config.bind_addr << ":" << config.port
                                               << (config.proto.is_tcp() ? " tcp" : " udp")
                                               << data_path << ", auth disabled");
 

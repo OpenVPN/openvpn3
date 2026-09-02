@@ -77,6 +77,20 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
             SKIP_RETURN_CODE 77 TIMEOUT 180 LABELS "integration;privileged")
     endforeach ()
 
+    # Config-file support for the reference binary. 'refuse' needs neither root
+    # nor a network, so it is labelled integration but not privileged.
+    add_test(NAME ServerConfigFile-refuse
+        COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/integration/test_server_config.sh
+                ${PROJECT_BINARY_DIR} refuse)
+    set_tests_properties(ServerConfigFile-refuse PROPERTIES
+        SKIP_RETURN_CODE 77 TIMEOUT 60 LABELS "integration")
+
+    add_test(NAME ServerConfigFile-run
+        COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/integration/test_server_config.sh
+                ${PROJECT_BINARY_DIR} run)
+    set_tests_properties(ServerConfigFile-run PROPERTIES
+        SKIP_RETURN_CODE 77 TIMEOUT 120 LABELS "integration;privileged;interop")
+
     add_test(NAME ServerClassicIntegration
         COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/integration/test_server_classic.sh ${PROJECT_BINARY_DIR})
     set_tests_properties(ServerClassicIntegration PROPERTIES
