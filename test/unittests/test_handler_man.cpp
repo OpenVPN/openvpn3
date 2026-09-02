@@ -524,3 +524,66 @@ TEST(HandlerManFactory, AssignsAddressAndConstructsInstance)
     ASSERT_TRUE(inst);
     ASSERT_NE(inst->describe_user(false).find("10.8.0.2"), std::string::npos);
 }
+
+// ── NCP peer-cipher handling (OpenVPN 2 alignment) ───────────────────
+//
+// The three announcement cases are not interchangeable, and conflating them
+// would reject peers that connect today. `ssl_ncp.c:217` (tls_peer_ncp_list) is
+// the reference; these lock our reading of it to the same behaviour.
+
+namespace {
+
+// Parse a peer-info block the way AuthCreds does, then read the cipher list.
+std::string peer_list(const std::string &peer_info_text)
+{
+    openvpn::OptionList o;
+    o.parse_from_peer_info(peer_info_text, nullptr);
+    o.update_map();
+    return openvpn::ServerAPI::HandlerMan::ncp_peer_cipher_list(o);
+}
+
+} // namespace
+
+TEST(HandlerManNcp, IvCiphersIsTakenVerbatim)
+{
+    ASSERT_EQ(peer_list("IV_CIPHERS=AES-256-GCM:CHACHA20-POLY1305\n"),
+              "AES-256-GCM:CHACHA20-POLY1305");
+}
+
+// A peer that says IV_NCP=2 but enumerates nothing is stating support for the
+// AES-GCM pair; v2 substitutes that list rather than treating it as unknown.
+TEST(HandlerManNcp, IvNcp2ImpliesTheAesGcmPair)
+{
+    ASSERT_EQ(peer_list("IV_NCP=2\n"), "AES-256-GCM:AES-128-GCM");
+}
+
+TEST(HandlerManNcp, IvCiphersWinsOverIvNcp)
+{
+    ASSERT_EQ(peer_list("IV_NCP=2\nIV_CIPHERS=CHACHA20-POLY1305\n"), "CHACHA20-POLY1305");
+}
+
+// The case that must not become a refusal: silence means "unknown", so the
+// caller proceeds instead of denying.
+TEST(HandlerManNcp, NoAnnouncementYieldsAnEmptyList)
+{
+    ASSERT_TRUE(peer_list("IV_VER=2.7.0\nIV_PLAT=linux\n").empty());
+    ASSERT_TRUE(peer_list("").empty());
+    ASSERT_TRUE(peer_list("IV_NCP=1\n").empty());
+}
+
+// Exact, case-sensitive token match, per tls_item_in_cipher_list (ssl_ncp.c:197).
+TEST(HandlerManNcp, CipherMembershipIsExactAndTokenwise)
+{
+    using openvpn::ServerAPI::HandlerMan::ncp_cipher_in_list;
+    ASSERT_TRUE(ncp_cipher_in_list("AES-256-GCM", "AES-256-GCM"));
+    ASSERT_TRUE(ncp_cipher_in_list("AES-256-GCM", "CHACHA20-POLY1305:AES-256-GCM"));
+    ASSERT_TRUE(ncp_cipher_in_list("AES-256-GCM", "AES-256-GCM:AES-128-GCM"));
+    ASSERT_FALSE(ncp_cipher_in_list("AES-256-GCM", "CHACHA20-POLY1305:AES-128-GCM"));
+    // A substring must not count as a member.
+    ASSERT_FALSE(ncp_cipher_in_list("AES-256-GCM", "AES-256-GCM-SIV"));
+    ASSERT_FALSE(ncp_cipher_in_list("AES-128-GCM", "AES-128-GCM-X:Y"));
+    // Case-sensitive, matching the reference.
+    ASSERT_FALSE(ncp_cipher_in_list("AES-256-GCM", "aes-256-gcm"));
+    ASSERT_FALSE(ncp_cipher_in_list("", "AES-256-GCM"));
+    ASSERT_FALSE(ncp_cipher_in_list("AES-256-GCM", ""));
+}

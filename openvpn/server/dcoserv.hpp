@@ -81,8 +81,7 @@ class Channel;
  * @brief Look up the session registered for a kernel peer id.
  * @details Factored out of `Channel::handle_peer_del_ntf()` as a pure
  *  function so the dispatch logic is directly unit-testable without a real
- *  netlink socket -- same split this repo already uses for
- *  `TunReal::should_forward()`.
+ *  netlink socket.
  * @param peer_to_session The channel's peer-id-to-session map.
  * @param peer_id The id to look up.
  * @return The session, or `nullptr` if no session is registered for it.

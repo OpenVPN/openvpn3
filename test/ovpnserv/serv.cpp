@@ -83,6 +83,10 @@ struct ServerArgs
     unsigned int sndbuf = 0;
     std::string tun_name; // empty lets the kernel assign one
     unsigned int tun_mtu = 1500;
+    bool tcp = false; // outer transport; UDP by default
+    unsigned int tcp_handshake_timeout = 30;
+    unsigned int tcp_max_conns_per_addr = 8;
+    unsigned int tcp_send_queue_max_packets = 1024;
     bool null_tun = false;             // control-plane-only diagnostic mode, see tunsink.hpp
     bool client_to_client = false;     // off by default; enforced by netpolicy.hpp
     bool client_cert_optional = false; // off by default, matches OpenVPN 2
@@ -130,6 +134,15 @@ static void usage(const char *argv0)
         << "  --reneg-sec N        data-channel key renegotiation interval, default 3600\n"
         << "  --rcvbuf N           socket receive buffer bytes\n"
         << "  --sndbuf N           socket send buffer bytes\n"
+        << "  --proto udp|tcp      outer transport, default udp (tcp forces the\n"
+        << "                       classic data path: no kernel DCO over TCP)\n"
+        << "  --handshake-timeout N  tcp: seconds a connection may stay open without\n"
+        << "                       a validated first packet, default 30, 0 disables\n"
+        << "  --max-conns-per-addr N tcp: concurrent connections per source address,\n"
+        << "                       default 8, 0 disables\n"
+        << "  --send-queue-max-packets N\n"
+        << "                       tcp: queued outbound packets per connection before\n"
+        << "                       it is dropped, default 1024, 0 disables\n"
         << "  --max-clients N      maximum concurrent sessions, default 1024\n"
         << "  --n-parallel N       parallel session-handling slots, default 4\n"
         << "  --reap-interval N    idle-session reap interval seconds, default 5\n"
@@ -222,6 +235,22 @@ static bool parse_args(int argc, char *argv[], ServerArgs &args)
             args.tun_name = next("--tun-name");
         else if (opt == "--tun-mtu")
             args.tun_mtu = static_cast<unsigned int>(std::stoi(next("--tun-mtu")));
+        else if (opt == "--proto")
+        {
+            const std::string proto = next("--proto");
+            if (proto == "tcp" || proto == "tcp-server")
+                args.tcp = true;
+            else if (proto == "udp")
+                args.tcp = false;
+            else
+                throw Exception("--proto must be udp or tcp, got: " + proto);
+        }
+        else if (opt == "--handshake-timeout")
+            args.tcp_handshake_timeout = static_cast<unsigned int>(std::stoi(next("--handshake-timeout")));
+        else if (opt == "--max-conns-per-addr")
+            args.tcp_max_conns_per_addr = static_cast<unsigned int>(std::stoi(next("--max-conns-per-addr")));
+        else if (opt == "--send-queue-max-packets")
+            args.tcp_send_queue_max_packets = static_cast<unsigned int>(std::stoi(next("--send-queue-max-packets")));
         else if (opt == "--null-tun")
             args.null_tun = true;
         else if (opt == "--client-to-client")
@@ -283,6 +312,10 @@ static Config build_config(const ServerArgs &args)
     config.null_tun = args.null_tun;
     config.client_to_client = args.client_to_client;
     config.disable_dco = args.disable_dco;
+    config.proto = args.tcp ? Protocol(Protocol::TCPv4) : Protocol(Protocol::UDPv4);
+    config.tcp_handshake_timeout = args.tcp_handshake_timeout;
+    config.tcp_max_conns_per_addr = args.tcp_max_conns_per_addr;
+    config.tcp_send_queue_max_packets = args.tcp_send_queue_max_packets;
     config.rcvbuf = args.rcvbuf;
     config.sndbuf = args.sndbuf;
     config.max_clients = args.max_clients;
@@ -369,6 +402,7 @@ int main(int argc, char *argv[])
         const char *data_path = server.is_dco_active() ? ", kernel DCO data path" : config.null_tun ? ", null data path"
                                                                                                     : ", real tun device";
         OPENVPN_LOG("ovpnserv: listening on " << args.bind_addr << ":" << args.port
+                                              << (config.proto.is_tcp() ? " tcp" : " udp")
                                               << data_path << ", auth disabled");
 
         // The server runs on its own internal thread once start() returns.

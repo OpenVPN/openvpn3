@@ -158,11 +158,11 @@ inline std::optional<IP::Addr> extract_dest_addr(const Buffer &buf)
 /**
  * @brief Decide whether a packet arriving from a client may be written to the
  *  tun device, given the address that client was assigned.
- * @details The ingress counterpart to @c should_forward(), and the check that
- *  makes @c should_forward()'s client-to-client policy mean anything: nothing
- *  in the protocol stops a client putting an arbitrary source address in its
- *  own authenticated data channel, and a source that resolves to no session
- *  reads to @c should_forward() as "not client-to-client". Without this, a
+ * @details The ingress counterpart to the client-to-client policy now enforced
+ *  in netfilter (`server/netpolicy.hpp`), and the check that makes that policy
+ *  mean anything: nothing in the protocol stops a client putting an arbitrary
+ *  source address in its own authenticated data channel, and a source outside
+ *  the pool does not match the intra-pool drop rule at all. Without this, a
  *  client reaches any other client by sourcing from an address outside the
  *  pool, and can impersonate arbitrary hosts to anything routable behind the
  *  server.

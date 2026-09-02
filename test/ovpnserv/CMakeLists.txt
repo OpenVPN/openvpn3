@@ -60,6 +60,23 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
             SKIP_RETURN_CODE 77 TIMEOUT 180 LABELS "integration;privileged")
     endforeach ()
 
+    # TCP outer transport. Its own tier rather than a mode of the classic test:
+    # the transport differs, and DCO must be declined rather than merely absent.
+    add_test(NAME ServerTcpIntegration
+        COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/integration/test_server_tcp.sh ${PROJECT_BINARY_DIR})
+    set_tests_properties(ServerTcpIntegration PROPERTIES
+        SKIP_RETURN_CODE 77 TIMEOUT 120 LABELS "integration;privileged")
+
+    # TCP accept-side defenses, one entry per scenario. These drive the server
+    # with raw sockets rather than ovpncli, so a failure names the defense.
+    foreach (tcp_mode timeout prevalidate per-addr max-clients overflow)
+        add_test(NAME ServerTcpLimits-${tcp_mode}
+            COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/integration/test_server_tcp_limits.sh
+                    ${PROJECT_BINARY_DIR} ${tcp_mode})
+        set_tests_properties(ServerTcpLimits-${tcp_mode} PROPERTIES
+            SKIP_RETURN_CODE 77 TIMEOUT 180 LABELS "integration;privileged")
+    endforeach ()
+
     add_test(NAME ServerClassicIntegration
         COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/integration/test_server_classic.sh ${PROJECT_BINARY_DIR})
     set_tests_properties(ServerClassicIntegration PROPERTIES

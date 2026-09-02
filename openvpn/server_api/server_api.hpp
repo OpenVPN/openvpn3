@@ -44,6 +44,7 @@
 
 #include <openvpn/addr/ip.hpp>
 #include <openvpn/common/rc.hpp>
+#include <openvpn/transport/protocol.hpp>
 
 namespace openvpn::ServerAPI {
 
@@ -57,6 +58,14 @@ struct Config
     // Listener
     std::string bind_addr = "0.0.0.0";
     unsigned short port = 1194;
+
+    /**
+     * Outer transport to listen on. Only UDP and TCP are implemented.
+     * @note TCP always runs the classic userspace data path: the kernel DCO
+     *  handoff needs a datagram socket fd, which a TCP listener has no
+     *  equivalent of.
+     */
+    Protocol proto{Protocol::UDPv4};
 
     std::string ca;
     std::string cert;
@@ -98,6 +107,19 @@ struct Config
     int rcvbuf = 0;
     int sndbuf = 0;
     std::size_t max_clients = 1024;
+
+    /** TCP only: seconds a connection may stay open without a first packet
+     *  that passes prevalidation. 0 disables the timeout. */
+    unsigned int tcp_handshake_timeout = 30;
+
+    /** TCP only: concurrent connections permitted from one source address,
+     *  or 0 for no limit. */
+    std::size_t tcp_max_conns_per_addr = 8;
+
+    /** TCP only: outbound packets that may sit queued for one connection
+     *  before it is dropped, or 0 to disable the limit. A packet count, not a
+     *  byte total. */
+    std::size_t tcp_send_queue_max_packets = 1024;
     int n_parallel = 4;
     unsigned int reap_interval_seconds = 5;
 };
@@ -196,6 +218,15 @@ enum class DenyReason
     InvalidCredentials,
     PolicyDenied,
     ServerFull,
+
+    /**
+     * The peer announced a data-cipher list that does not contain this
+     * server's cipher.
+     * @details Reported to the client with OpenVPN 2's own wording, so an
+     *  existing client shows the message it already knows. Raised by the
+     *  server itself before the embedder's policy runs, not by an embedder.
+     */
+    CipherMismatch,
 };
 
 namespace detail {

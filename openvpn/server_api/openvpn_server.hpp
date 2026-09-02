@@ -21,7 +21,7 @@
  * `ServerProto::Factory`, `UDPTransportServer::Server`, and (whichever
  * data-plane backend is active) a `NetPolicy::Policy` attachment for IP
  * forwarding and client-to-client isolation -- behind one constructor and a
- * `start()`/`stop()` pair. `serv.cpp` becomes a thin
+ * one-shot `start()`, with teardown owned by the destructor. `serv.cpp` becomes a thin
  * consumer defining a concrete `Handler`, the same relationship
  * `test/ovpncli/cli.cpp` has to `ClientAPI::OpenVPNClient`.
  *
@@ -59,6 +59,7 @@
 #include <openvpn/server/peerroutes.hpp>
 #include <openvpn/server/tunreal.hpp>
 #include <openvpn/server/servproto.hpp>
+#include <openvpn/server/tcptransserv.hpp>
 #include <openvpn/server/udptransserv.hpp>
 #include <openvpn/server_api/handler_man.hpp>
 #include <openvpn/ssl/proto.hpp>
@@ -113,21 +114,12 @@ class OpenVPNServer
      */
     void start()
     {
-        if (running_.load())
-            throw Exception("OpenVPNServer::start() called while already running");
-
-        // A previous run may have stopped from a handler callback, leaving
-        // the worker to finish draining after stop() returned.
-        if (thread_.joinable())
-            thread_.join();
-
-        // Release anything a previous run left behind before the io_context
-        server_.reset();
-        net_policy_.shutdown();
-        dco_channel_.reset();
-        real_tun_device_.reset();
-        routes_.reset();
-        address_pool_.reset();
+        // One-shot by design: a server runs once and is stopped by its own
+        // destructor. Restart is constructing another one, which is why there
+        // is no state to release here and no previous worker to re-join.
+        if (started_)
+            throw Exception("OpenVPNServer::start() may only be called once");
+        started_ = true;
 
         try
         {
@@ -141,6 +133,39 @@ class OpenVPNServer
     }
 
   private:
+    /**
+     * @brief Stop the server and join its worker thread.
+     * @details Private: a server is stopped by its own destructor and by
+     *  nothing else. That is the whole thread-safety argument -- there is no
+     *  contract to document about which thread may call this, because the only
+     *  caller is destruction, which the owner already has to serialize against
+     *  everything else.
+     *
+     *  Idempotent, and the join is skipped when the caller *is* the worker
+     *  (joining yourself is @c resource_deadlock_would_occur, thrown out of an
+     *  asio handler), which is reachable if a handler callback destroys the
+     *  server.
+     */
+    void stop()
+    {
+        if (running_.exchange(false))
+        {
+            openvpn_io::post(*io_context_,
+                             [this]()
+                             {
+                                 transport_->stop();
+                                 net_policy_.shutdown();
+                                 if (real_tun_device_)
+                                     real_tun_device_->stop();
+                                 if (dco_channel_)
+                                     dco_channel_->stop();
+                             });
+        }
+
+        if (thread_.joinable() && thread_.get_id() != std::this_thread::get_id())
+            thread_.join();
+    }
+
     /** @brief The body of @c start(), separated so a failure can unwind. */
     void build_and_start()
     {
@@ -172,9 +197,19 @@ class OpenVPNServer
         man_config->keepalive_ping = config_.keepalive_ping;
         man_config->keepalive_timeout = config_.keepalive_timeout;
         man_config->extra_push = config_.extra_push;
+        // Canonical wire spelling, so the comparison against the peer's
+        // announced list is exact regardless of how the operator spelled it.
+        man_config->cipher = CryptoAlgs::name(CryptoAlgs::lookup(config_.cipher), "");
 
-        // Opportunistic DCO, matching OpenVPN 2
-        if (!config_.null_tun && !config_.disable_dco
+        // Announced only when DCO would otherwise have engaged, so a host
+        // without DCO support does not get a misleading warning.
+        if (config_.proto.is_tcp() && !config_.null_tun && !config_.disable_dco
+            && CryptoAlgs::mode(CryptoAlgs::lookup(config_.cipher)) == CryptoAlgs::AEAD
+            && DcoServ::Channel::available())
+            OPENVPN_LOG("kernel DCO is available but will not be used with TCP");
+
+        // Opportunistic DCO, matching OpenVPN 2.
+        if (!config_.null_tun && !config_.disable_dco && !config_.proto.is_tcp()
             && CryptoAlgs::mode(CryptoAlgs::lookup(config_.cipher)) == CryptoAlgs::AEAD
             && DcoServ::Channel::available())
         {
@@ -225,24 +260,45 @@ class OpenVPNServer
         else
             proto_factory->tun_factory.reset(new TunSink::TunFactory());
 
-        UDPTransportServer::Config::Ptr transport_config(new UDPTransportServer::Config());
-        transport_config->bind_addr = config_.bind_addr;
-        transport_config->port = config_.port;
-        transport_config->frame = frame_;
-        transport_config->stats = stats_;
-        transport_config->max_clients = config_.max_clients;
-        transport_config->rcvbuf = config_.rcvbuf;
-        transport_config->sndbuf = config_.sndbuf;
-        transport_config->n_parallel = config_.n_parallel;
-        transport_config->reap_interval = config_.reap_interval_seconds;
+        if (config_.proto.is_tcp())
+        {
+            TCPTransportServer::Config::Ptr transport_config(new TCPTransportServer::Config());
+            transport_config->bind_addr = config_.bind_addr;
+            transport_config->port = config_.port;
+            transport_config->frame = frame_;
+            transport_config->stats = stats_;
+            transport_config->max_clients = config_.max_clients;
+            transport_config->handshake_timeout = config_.tcp_handshake_timeout;
+            transport_config->max_conns_per_addr = config_.tcp_max_conns_per_addr;
+            transport_config->send_queue_max_packets = config_.tcp_send_queue_max_packets;
+            transport_config->reap_interval = config_.reap_interval_seconds;
 
-        server_.reset(new UDPTransportServer::Server(*io_context_, transport_config, proto_factory));
+            transport_ = new TCPTransportServer::Server(*io_context_, transport_config, proto_factory);
+        }
+        else
+        {
+            UDPTransportServer::Config::Ptr transport_config(new UDPTransportServer::Config());
+            transport_config->bind_addr = config_.bind_addr;
+            transport_config->port = config_.port;
+            transport_config->frame = frame_;
+            transport_config->stats = stats_;
+            transport_config->max_clients = config_.max_clients;
+            transport_config->rcvbuf = config_.rcvbuf;
+            transport_config->sndbuf = config_.sndbuf;
+            transport_config->n_parallel = config_.n_parallel;
+            transport_config->reap_interval = config_.reap_interval_seconds;
+
+            UDPTransportServer::Server::Ptr udp_server(
+                new UDPTransportServer::Server(*io_context_, transport_config, proto_factory));
+            udp_transport_ = udp_server.get();
+            transport_ = udp_server;
+        }
 
         if (real_tun_device_)
             real_tun_device_->start(config_.n_parallel);
-        server_->start();
+        transport_->start();
         if (dco_channel_)
-            dco_channel_->set_transport_fd(server_->native_handle());
+            dco_channel_->set_transport_fd(udp_transport_->native_handle());
 
         running_.store(true);
         thread_ = std::thread([this]()
@@ -271,9 +327,10 @@ class OpenVPNServer
      */
     void unwind_failed_start()
     {
-        if (server_)
-            server_->stop();
-        server_.reset();
+        if (transport_)
+            transport_->stop();
+        transport_.reset();
+        udp_transport_ = nullptr;
         net_policy_.shutdown();
         if (real_tun_device_)
             real_tun_device_->stop();
@@ -286,38 +343,6 @@ class OpenVPNServer
     }
 
   public:
-    /**
-     * @brief Stop the server and join its worker thread.
-     * @details Idempotent, and safe to call from any thread, including from
-     *  inside a handler callback: the shutdown work is posted onto the
-     *  control @c io_context rather than touching its objects directly, and
-     *  the join is skipped when the caller *is* the worker (joining yourself
-     *  is @c resource_deadlock_would_occur, thrown out of an asio handler).
-     *  Called from the worker, @c stop() therefore returns before the loop
-     *  has actually wound down; a later @c stop() from any other thread --
-     *  including the destructor's -- performs the join, even though the
-     *  shutdown itself was already initiated.
-     */
-    void stop()
-    {
-        if (running_.exchange(false))
-        {
-            openvpn_io::post(*io_context_,
-                             [this]()
-                             {
-                                 server_->stop();
-                                 net_policy_.shutdown();
-                                 if (real_tun_device_)
-                                     real_tun_device_->stop();
-                                 if (dco_channel_)
-                                     dco_channel_->stop();
-                             });
-        }
-
-        if (thread_.joinable() && thread_.get_id() != std::this_thread::get_id())
-            thread_.join();
-    }
-
     /** @brief Whether the server is currently running. */
     bool is_running() const
     {
@@ -327,11 +352,12 @@ class OpenVPNServer
     /**
      * @brief What killed the event loop, if anything did.
      * @details Empty unless an exception escaped a handler and unwound
-     *  @c io_context::run(). The loop does not restart after that: the server
-     *  stops processing but @c is_running() stays true until @c stop(), so an
-     *  embedder that wants to notice has to ask. Only meaningful after
-     *  @c stop() has joined the worker, or on a server that has visibly gone
-     *  quiet.
+     *  @c io_context::run(). The loop does not come back after that: the
+     *  server stops processing but @c is_running() stays @c true, so an
+     *  embedder that wants to notice has to ask. That is the case this exists
+     *  for, and it is readable exactly then -- the loop dying does not destroy
+     *  the server. Reading it on a healthy server races the worker for no
+     *  purpose; ask when the server has visibly gone quiet.
      * @return The exception's message, or an empty string.
      */
     const std::string &fatal_error() const
@@ -412,7 +438,7 @@ class OpenVPNServer
         pc->now = &now_;
         pc->rng = rng;
         pc->prng = rng;
-        pc->protocol = Protocol(Protocol::UDPv4);
+        pc->protocol = config_.proto;
         pc->layer = Layer(Layer::OSI_LAYER_3);
         pc->dc.set_cipher(CryptoAlgs::lookup(config_.cipher));
         pc->dc.set_digest(CryptoAlgs::lookup("SHA256"));
@@ -477,9 +503,15 @@ class OpenVPNServer
     TunReal::Device::Ptr real_tun_device_;
     DcoServ::Channel::Ptr dco_channel_;
     NetPolicy::Policy net_policy_;
-    UDPTransportServer::Server::Ptr server_;
+    TransportServer::Ptr transport_;
+
+    // Non-owning view of transport_ when it is the UDP server, else null.
+    UDPTransportServer::Server *udp_transport_ = nullptr;
     std::thread thread_;
     std::atomic<bool> running_{false};
+
+    /** Set by @c start(); never cleared, since a server runs at most once. */
+    bool started_ = false;
 
     std::string fatal_error_;
 };

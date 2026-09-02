@@ -58,74 +58,42 @@ Config make_config()
 
 } // namespace
 
-TEST(OpenVPNServer, StartStopIsClean)
-{
-    RecordingHandler handler;
-    OpenVPNServer<RecordingHandler> server(make_config(), handler);
-
-    ASSERT_FALSE(server.is_running());
-    server.start();
-    ASSERT_TRUE(server.is_running());
-    server.stop();
-    ASSERT_FALSE(server.is_running());
-}
-
-TEST(OpenVPNServer, StopWithoutStartIsANoOp)
-{
-    RecordingHandler handler;
-    OpenVPNServer<RecordingHandler> server(make_config(), handler);
-    server.stop();
-    ASSERT_FALSE(server.is_running());
-}
-
-TEST(OpenVPNServer, DoubleStopIsANoOp)
-{
-    RecordingHandler handler;
-    OpenVPNServer<RecordingHandler> server(make_config(), handler);
-    server.start();
-    server.stop();
-    server.stop();
-    ASSERT_FALSE(server.is_running());
-}
-
+// Destruction is the only way to stop a server, so it is the only teardown
+// path there is to test. StartStopIsClean, StopWithoutStartIsANoOp,
+// DoubleStopIsANoOp and StartStopStartIsClean were all removed with the public
+// stop() and restart: they tested an API that no longer exists.
 TEST(OpenVPNServer, DestructorStopsARunningServer)
 {
     RecordingHandler handler;
     {
         OpenVPNServer<RecordingHandler> server(make_config(), handler);
+        ASSERT_FALSE(server.is_running());
         server.start();
         ASSERT_TRUE(server.is_running());
     }
     // No crash and no leaked thread on scope exit is the assertion here.
 }
 
-// Restart is a supported operation, and the one that most easily outlives an
-// io_context: start() replaces io_context_, so anything the previous run left
-// holding a socket or timer bound to the old one must be released first.
-// Under ASAN this is where that shows up as a use-after-free.
-TEST(OpenVPNServer, StartStopStartIsClean)
-{
-    RecordingHandler handler;
-    OpenVPNServer<RecordingHandler> server(make_config(), handler);
-
-    server.start();
-    ASSERT_TRUE(server.is_running());
-    server.stop();
-    ASSERT_FALSE(server.is_running());
-
-    server.start();
-    ASSERT_TRUE(server.is_running());
-    server.stop();
-    ASSERT_FALSE(server.is_running());
-}
-
-TEST(OpenVPNServer, DoubleStartThrows)
+// A server runs at most once. Second start() must be refused rather than
+// quietly replacing the io_context the first run's sockets and timers are
+// bound to -- which is what the old restart path had to unpick by hand.
+TEST(OpenVPNServer, SecondStartThrows)
 {
     RecordingHandler handler;
     OpenVPNServer<RecordingHandler> server(make_config(), handler);
     server.start();
     ASSERT_THROW(server.start(), Exception);
-    server.stop();
+}
+
+// Refused even after the run has been stopped by nothing but time: started_ is
+// never cleared, so the one-shot rule does not depend on is_running().
+TEST(OpenVPNServer, StartIsRefusedForeverOnceUsed)
+{
+    RecordingHandler handler;
+    OpenVPNServer<RecordingHandler> server(make_config(), handler);
+    server.start();
+    ASSERT_THROW(server.start(), Exception);
+    ASSERT_THROW(server.start(), Exception);
 }
 
 // An IPv6 gateway used to parse fine and then die with "to_ipv4: address is
@@ -140,11 +108,12 @@ TEST(OpenVPNServer, DoubleStartThrows)
 TEST(OpenVPNServer, WorkerThreadInheritsTheLogContext)
 {
     RecordingHandler handler;
-    OpenVPNServer<RecordingHandler> server(make_config(), handler);
 
     testLog->startCollecting();
-    server.start();
-    server.stop();
+    {
+        OpenVPNServer<RecordingHandler> server(make_config(), handler);
+        server.start();
+    } // destructor stops, which is what emits the line asserted on below
     const std::string log = testLog->stopCollecting();
 
     // Asserted on the stop line, not the listening line: start() opens the
@@ -246,7 +215,6 @@ TEST(OpenVPNServer, TlsCryptV2ServerKeyStartsCleanly)
     OpenVPNServer<RecordingHandler> server(std::move(config), handler);
     server.start();
     ASSERT_TRUE(server.is_running());
-    server.stop();
 }
 
 // client_cert_optional sets SSLConst::PEER_CERT_OPTIONAL on the SSL config;
@@ -261,7 +229,6 @@ TEST(OpenVPNServer, ClientCertOptionalStartsCleanly)
     OpenVPNServer<RecordingHandler> server(std::move(config), handler);
     server.start();
     ASSERT_TRUE(server.is_running());
-    server.stop();
 }
 
 // The pushed ifconfig netmask comes from prefix_len, so a pool that leaves the
@@ -291,7 +258,6 @@ TEST(OpenVPNServer, PoolFillingTheSubnetExactlyIsAccepted)
 
     OpenVPNServer<RecordingHandler> server(std::move(config), handler);
     ASSERT_NO_THROW(server.start());
-    server.stop();
 }
 
 // The event loop runs behind an exception barrier; a clean run must not set it.
@@ -300,6 +266,8 @@ TEST(OpenVPNServer, CleanRunReportsNoFatalError)
     RecordingHandler handler;
     OpenVPNServer<RecordingHandler> server(make_config(), handler);
     server.start();
-    server.stop();
+    // Read while alive, which is how an embedder actually uses it: an
+    // exception unwinding run() leaves the loop dead but the object intact,
+    // and is_running() still true, so noticing means asking.
     ASSERT_TRUE(server.fatal_error().empty());
 }

@@ -137,7 +137,71 @@ struct Config : public RC<thread_unsafe_refcount>
     unsigned int keepalive_ping = 10;
     unsigned int keepalive_timeout = 60;
     std::vector<std::string> extra_push;
+
+    /**
+     * The single data-channel cipher this server will push, in the canonical
+     * spelling used on the wire.
+     * @details Needed at auth time, not just at push time, so a peer whose
+     *  announced list excludes it can be refused before a pool address is
+     *  allocated.
+     */
+    std::string cipher;
 };
+
+/**
+ * @brief The peer's data-cipher list, per OpenVPN 2's @c tls_peer_ncp_list().
+ *
+ * @details Reproduces the reference server's three cases exactly
+ * (`ssl_ncp.c:217`), because they are not interchangeable:
+ *
+ *   - @c IV_CIPHERS present: that list, verbatim.
+ *   - otherwise @c IV_NCP>=2: the peer supports the AES-GCM pair but did not
+ *     enumerate it, which v2 treats as an implied
+ *     @c "AES-256-GCM:AES-128-GCM".
+ *   - neither: an empty list, meaning *unknown*, not *nothing*. A peer that
+ *     announced no capability must not be refused for lacking one.
+ *
+ * @param peer_info Peer-info block as received from the client, already
+ *  parsed by @c AuthCreds.
+ * @return The peer's colon-separated cipher list, or an empty string when the
+ *  peer announced no capability at all.
+ */
+inline std::string ncp_peer_cipher_list(const OptionList &peer_info)
+{
+    std::string ciphers = peer_info.get_optional("IV_CIPHERS", 1, 1024);
+    if (!ciphers.empty())
+        return ciphers;
+    if (peer_info.get_num<unsigned int>("IV_NCP", 1, 0) >= 2)
+        return "AES-256-GCM:AES-128-GCM";
+    return std::string();
+}
+
+/**
+ * @brief Whether a cipher appears in a colon-separated list.
+ * @details Exact, case-sensitive token comparison, matching OpenVPN 2's
+ *  @c tls_item_in_cipher_list() (`ssl_ncp.c:197`). Both sides are canonical
+ *  wire spellings, so no case folding is wanted here.
+ * @param cipher Cipher name to look for.
+ * @param list Colon-separated list to search.
+ * @return True if the list contains the cipher.
+ */
+inline bool ncp_cipher_in_list(const std::string &cipher, const std::string &list)
+{
+    if (cipher.empty())
+        return false;
+    size_t pos = 0;
+    while (pos <= list.size())
+    {
+        const size_t sep = list.find(':', pos);
+        const size_t end = (sep == std::string::npos) ? list.size() : sep;
+        if (list.compare(pos, end - pos, cipher) == 0)
+            return true;
+        if (sep == std::string::npos)
+            break;
+        pos = sep + 1;
+    }
+    return false;
+}
 
 /**
  * @brief Per-client policy object driving an embedder's `Handler` for the
@@ -178,6 +242,32 @@ class ManSend : public ManClientInstance::Send, public detail::AuthTarget
         if (auth_cert)
             cert_common_name_ = auth_cert->get_cn();
         peer_addr_ = peer_addr;
+
+        // Cipher check before the embedder's policy: this server pushes one
+        // cipher and cannot negotiate, so a peer whose announced list excludes
+        // it can never complete. Refusing here means it is told why, and costs
+        // no pool address -- previously such a peer was pushed a cipher it
+        // could not use, failed the push, and retried indefinitely.
+        //
+        // An empty list means the peer announced nothing, which v2 treats as
+        // unknown rather than incompatible; those still proceed, this server's
+        // single cipher standing in for v2's --data-ciphers-fallback.
+        if (auth_creds && !config_->cipher.empty())
+        {
+            const std::string peer_ciphers = ncp_peer_cipher_list(auth_creds->peer_info);
+            if (!peer_ciphers.empty()
+                && !ncp_cipher_in_list(config_->cipher, peer_ciphers))
+            {
+                // Both lists logged server-side, as v2 does: the terse reason
+                // reaching the client is not enough to diagnose from.
+                OPENVPN_LOG("auth denied: no common cipher between server and client. "
+                            "Server cipher: '"
+                            << config_->cipher << "', client supported ciphers '"
+                            << peer_ciphers << "'");
+                AuthDecision(detail::AuthTarget::Ptr(this)).deny(DenyReason::CipherMismatch);
+                return;
+            }
+        }
 
         AuthRequest req;
         req.common_name = cert_common_name_;
@@ -363,6 +453,10 @@ class ManSend : public ManClientInstance::Send, public detail::AuthTarget
             return "denied by policy";
         case DenyReason::ServerFull:
             return "server full";
+        case DenyReason::CipherMismatch:
+            // OpenVPN 2's own wording (multi.c, auth_set_client_reason), so a
+            // client that already knows this failure shows a familiar message.
+            return "Data channel cipher negotiation failed (no shared cipher)";
         }
         return "denied";
     }
