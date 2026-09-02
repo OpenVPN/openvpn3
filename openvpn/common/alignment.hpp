@@ -41,6 +41,25 @@ T alignment_safe_extract(const void *toAlign) noexcept
     return ret;
 }
 
+/**
+ * @brief Stores a value into a byte buffer, avoiding undefined behavior due to alignment.
+ * @details The write-side counterpart to @c alignment_safe_extract(). A wire buffer places
+ * each field where the previous one ended, so a pointer into one is not guaranteed to satisfy
+ * the alignment of the type being written through it. As with the read side, this should boil
+ * down to a straight memcpy.
+ * @note It is assumed that the destination pointed to by the passed pointer is large enough to
+ * hold the type T, and that the type T is trivially copyable.
+ * @tparam T type to store
+ * @param toAlign starting address of the bytes to be written
+ * @param value value to store
+ */
+template <typename T>
+    requires ::std::is_trivially_copyable_v<T>
+void alignment_safe_store(void *toAlign, const T &value) noexcept
+{
+    std::memcpy(toAlign, &value, sizeof(T));
+}
+
 } // namespace openvpn
 
 #endif
