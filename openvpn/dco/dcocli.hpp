@@ -36,7 +36,7 @@
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/common/uniqueptr.hpp>
 #include <openvpn/dco/key.hpp>
-#include <openvpn/tun/linux/client/genl.hpp>
+#include <openvpn/dco/genl.hpp>
 #include <openvpn/tun/linux/client/sitnl.hpp>
 // Pre-include headers that ovpndcocli.hpp pulls in transitively.
 // These headers define symbols in their own namespaces (e.g. openvpn::TunNetlink).

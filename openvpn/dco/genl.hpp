@@ -80,12 +80,12 @@ struct OvpnDcoPeer
     struct
     {
         __u64 rx_bytes, tx_bytes;
-        __u32 rx_pkts, tx_pkts;
+        __u64 rx_pkts, tx_pkts;
     } vpn;
     struct
     {
         __u64 rx_bytes, tx_bytes;
-        __u32 rx_pkts, tx_pkts;
+        __u64 rx_pkts, tx_pkts;
     } transport;
 };
 
@@ -639,7 +639,17 @@ class GeNL : public RC<thread_unsafe_refcount>
                            });
     }
 
-    NlMsgPtr create_msg(int cmd)
+    /**
+     * Allocate a generic netlink message for an ovpn command, pre-filled with
+     * the target interface index.
+     *
+     * @param cmd OVPN_CMD_* command, typed as \p genlmsg_put takes it
+     *
+     * @return the message, owning its nlmsg allocation
+     *
+     * @throws netlink_error thrown if the ifindex attribute does not fit
+     */
+    NlMsgPtr create_msg(uint8_t cmd)
     {
         NlMsgPtr msg_ptr(nlmsg_alloc(), nlmsg_free);
         genlmsg_put(msg_ptr.get(), 0, 0, ovpn_dco_id, 0, 0, cmd, 0);
