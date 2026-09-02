@@ -170,6 +170,7 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
       test_tunreal.cpp
       test_netpolicy.cpp
       test_handler_man.cpp
+      test_openvpn_server.cpp
       test_dcoserv.cpp
       )
 
