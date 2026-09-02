@@ -95,6 +95,7 @@ add_executable(coreUnitTests
         test_string.cpp
         test_buffer.cpp
         test_proto.cpp
+        test_peerid.cpp
 )
 
 # The compile flags for test_proto.cpp, prefixed with PROTO_ to avoid collision with other defines
