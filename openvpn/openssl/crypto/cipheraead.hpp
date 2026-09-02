@@ -26,6 +26,7 @@
 #include <openvpn/crypto/cryptoalgs.hpp>
 #include <openvpn/crypto/aead_usage_limit.hpp>
 #include <openvpn/openssl/util/error.hpp>
+#include <openvpn/openssl/compat.hpp>
 
 namespace openvpn::OpenSSLCrypto {
 class CipherContextAEAD

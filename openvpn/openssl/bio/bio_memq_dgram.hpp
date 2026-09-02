@@ -20,6 +20,7 @@
 #include <openssl/err.h>
 #include <openssl/bio.h>
 
+#include <openvpn/openssl/compat.hpp>
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/frame/frame.hpp>
