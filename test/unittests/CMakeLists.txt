@@ -167,7 +167,20 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
       test_udptransserv.cpp
       test_peerroutes.cpp
       test_tunreal.cpp
+      test_dcoserv.cpp
       )
+
+    # test_handler_man.cpp/test_openvpn_server.cpp/test_dcoserv.cpp pull in
+    # openvpn/server/dcoserv.hpp (kernel DCO, attempted opportunistically at
+    # runtime -- see that file's doc comment) unconditionally, same as
+    # ovpnserv itself. ENABLE_OVPNDCO selects KoRekey::OvpnDcoKey in
+    # kocrypto.hpp; it is not an opt-in build variant here the way
+    # CLI_OVPNDCO is for ovpncli.
+    target_compile_definitions(coreUnitTests PRIVATE -DENABLE_OVPNDCO)
+    find_package(PkgConfig)
+    pkg_search_module(LIBNL REQUIRED libnl-genl-3.0)
+    target_include_directories(coreUnitTests PRIVATE ${LIBNL_INCLUDE_DIRS})
+    target_link_libraries(coreUnitTests ${LIBNL_LIBRARIES})
 endif ()
 
 if (WIN32)
