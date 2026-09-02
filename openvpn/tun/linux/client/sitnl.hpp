@@ -1103,6 +1103,97 @@ class SITNL
         return -1;
     }
 
+    /**
+     * @brief Add a new "ovpn"-type interface in multi-peer (server) mode.
+     * @details Every mainline `ovpn` netdev defaults to @c OVPN_MODE_P2P at
+     *  creation (see the kernel driver's @c ovpn_newlink_common()); a server
+     *  needs @c OVPN_MODE_MP instead, since @c OVPN_CMD_PEER_NEW requires a
+     *  VPN IP attribute in MP mode and rejects it outright in P2P mode --
+     *  confirmed live: a P2P-mode device NAKs the server's first
+     *  @c new_peer() call with @c EINVAL. @c net_iface_new() (above) has no
+     *  way to request this and stays P2P-only, matching every existing
+     *  caller (the client only ever wants P2P); this is a separate function
+     *  rather than a new parameter there to keep that call site unchanged.
+     * @param iface Interface name.
+     * @return 0 on success, negative error code on error.
+     */
+    static int
+    net_iface_new_mp(const std::string &iface)
+    {
+        // rtnetlink link-info constants for ovpn-type devices. Not in this
+        // repo's vendored ovpn_dco_linux.h (that file is the genl *family*
+        // uapi, auto-generated from the kernel's netlink spec and explicitly
+        // "do not edit directly"); these come from a different uapi surface,
+        // <linux/if_link.h>, which does not define them on a host whose
+        // headers predate 6.16.
+        //
+        // Declared unconditionally under local names rather than #ifndef'd
+        // against the kernel's: IFLA_OVPN_MODE is an enumerator, not a macro,
+        // so no preprocessor test can tell whether the build host already
+        // provides it. A guard reading `#ifndef IFLA_OVPN_MODE` is always
+        // true, which meant these local values silently shadowed the header's
+        // on every host -- working only because the two agree. Distinct names
+        // make the choice explicit and the shadowing impossible. Values are
+        // uapi and must match <linux/if_link.h>.
+        enum
+        {
+            SITNL_OVPN_MODE_P2P = 0,
+            SITNL_OVPN_MODE_MP = 1,
+        };
+        enum
+        {
+            SITNL_IFLA_OVPN_UNSPEC = 0,
+            SITNL_IFLA_OVPN_MODE = 1,
+        };
+
+        struct sitnl_link_req req = {};
+        struct rtattr *linkinfo_tail = NULL;
+        struct rtattr *infodata_tail = NULL;
+        const uint8_t mode = SITNL_OVPN_MODE_MP;
+
+        if (iface.empty())
+        {
+            OPENVPN_LOG(__func__ << ": passed empty interface");
+            return -EINVAL;
+        }
+
+        req.n.nlmsg_len = NLMSG_LENGTH(sizeof(req.i));
+        req.n.nlmsg_flags = NLM_F_REQUEST | NLM_F_CREATE | NLM_F_EXCL;
+        req.n.nlmsg_type = RTM_NEWLINK;
+
+        if (!is_safe_conversion<uint16_t>(iface.length() + 1))
+            return -1;
+        SITNL_ADDATTR(&req.n, sizeof(req), IFLA_IFNAME, iface.c_str(), static_cast<uint16_t>(iface.length() + 1));
+
+        linkinfo_tail = NLMSG_TAIL(&req.n);
+        SITNL_ADDATTR(&req.n, sizeof(req), IFLA_LINKINFO, NULL, 0);
+
+        if (!is_safe_conversion<uint16_t>(std::string("ovpn").length() + 1))
+            return -1;
+        SITNL_ADDATTR(&req.n, sizeof(req), IFLA_INFO_KIND, "ovpn", static_cast<uint16_t>(std::string("ovpn").length() + 1));
+
+        infodata_tail = NLMSG_TAIL(&req.n);
+        SITNL_ADDATTR(&req.n, sizeof(req), IFLA_INFO_DATA, NULL, 0);
+        SITNL_ADDATTR(&req.n, sizeof(req), SITNL_IFLA_OVPN_MODE, &mode, sizeof(mode));
+        if (!is_safe_conversion<decltype(infodata_tail->rta_len)>((uint8_t *)NLMSG_TAIL(&req.n) - (uint8_t *)infodata_tail))
+            return -1;
+        infodata_tail->rta_len = static_cast<decltype(infodata_tail->rta_len)>((uint8_t *)NLMSG_TAIL(&req.n) - (uint8_t *)infodata_tail);
+
+        if (!is_safe_conversion<decltype(linkinfo_tail->rta_len)>((uint8_t *)NLMSG_TAIL(&req.n) - (uint8_t *)linkinfo_tail))
+            return -1;
+        linkinfo_tail->rta_len = static_cast<decltype(linkinfo_tail->rta_len)>((uint8_t *)NLMSG_TAIL(&req.n) - (uint8_t *)linkinfo_tail);
+
+        req.i.ifi_family = AF_PACKET;
+        req.i.ifi_index = 0;
+
+        OPENVPN_LOG(__func__ << ": add " << iface << " type ovpn (multi-peer)");
+
+        return sitnl_send(&req.n, 0, 0, NULL, NULL);
+        /* for SITNL_ADDATTR */
+    err:
+        return -1;
+    }
+
     static int
     net_iface_del(const std::string &iface)
     {

@@ -93,19 +93,7 @@ class TunIO : public RC<thread_unsafe_refcount>
                     }
                 }
 
-                // write data to tun device
-                const size_t wrote = stream->write_some(buf.const_buffer());
-                if (stats)
-                {
-                    stats->inc_stat(SessionStats::TUN_BYTES_OUT, wrote);
-                    stats->inc_stat(SessionStats::TUN_PACKETS_OUT, 1);
-                }
-                if (wrote == buf.size())
-                    return true;
-
-                OPENVPN_LOG_TUN_ERROR("TUN partial write error");
-                tun_error(Error::TUN_WRITE_ERROR, nullptr);
-                return false;
+                return write_to_device(buf);
             }
             catch (openvpn_io::system_error &e)
             {
@@ -117,6 +105,45 @@ class TunIO : public RC<thread_unsafe_refcount>
         }
         else
             return false;
+    }
+
+    /**
+     * @brief Write a packet that must not be modified.
+     * @details Where no packet prefix is needed -- Linux and Windows, where
+     *  @c tun_prefix is false -- this hands the caller's buffer straight to
+     *  the device with no copy. Only the platforms that prepend an address
+     *  family (macOS utun) need a writable buffer, and only those pay for a
+     *  copy here.
+     * @param buf The packet to write. Not modified.
+     * @return True if the whole packet was written.
+     */
+    bool write_const(const Buffer &buf)
+    {
+        if (halt)
+            return false;
+
+        if (tun_prefix)
+        {
+            // prepend_pf_inet() writes into the buffer's headroom, so this
+            // platform genuinely needs its own copy -- allocated with the
+            // offset that write()'s prefix path requires.
+            BufferAllocated copy(buf.size() + 4, BufAllocFlags::NO_FLAGS);
+            copy.init_headroom(4);
+            copy.write(buf.c_data(), buf.size());
+            return write(copy);
+        }
+
+        try
+        {
+            return write_to_device(buf);
+        }
+        catch (openvpn_io::system_error &e)
+        {
+            OPENVPN_LOG_TUN_ERROR("TUN write exception: " << e.what());
+            const openvpn_io::error_code code(e.code());
+            tun_error(Error::TUN_WRITE_ERROR, &code);
+            return false;
+        }
     }
 
     template <class BUFSEQ>
@@ -187,6 +214,28 @@ class TunIO : public RC<thread_unsafe_refcount>
     }
 
   private:
+    /**
+     * @brief Hand a fully-framed packet to the device and account for it.
+     * @param buf The packet, prefix already applied if the platform needs one.
+     * @return True if the whole packet was written.
+     * @throws openvpn_io::system_error propagated from the write.
+     */
+    bool write_to_device(const Buffer &buf)
+    {
+        const size_t wrote = stream->write_some(buf.const_buffer());
+        if (stats)
+        {
+            stats->inc_stat(SessionStats::TUN_BYTES_OUT, wrote);
+            stats->inc_stat(SessionStats::TUN_PACKETS_OUT, 1);
+        }
+        if (wrote == buf.size())
+            return true;
+
+        OPENVPN_LOG_TUN_ERROR("TUN partial write error");
+        tun_error(Error::TUN_WRITE_ERROR, nullptr);
+        return false;
+    }
+
     void prepend_pf_inet(Buffer &buf, const std::uint32_t value)
     {
         const std::uint32_t net_value = htonl(value);
