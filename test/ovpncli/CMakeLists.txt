@@ -1,5 +1,5 @@
 
-option(CLI_NULLTUN "Build ovpncli variant with null tun" OFF)
+option(CLI_NULLTUN "Build ovpncli variant with null tun" ON)
 option(CLI_KOVPN "Build ovpncli variant with kovpn kernel module support" OFF)
 option(CLI_OVPNDCO "Build ovpncli with ovpn-dco kernel module support" OFF)
 option(CLI_OVPNDCOWIN "Build ovpncli with ovpn-dco-win driver support" OFF)
