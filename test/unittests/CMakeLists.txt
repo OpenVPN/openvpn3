@@ -158,6 +158,15 @@ if (UNIX)
       )
 endif ()
 
+# Linux-only: needs <linux/if_tun.h>, openvpn/dco/*, sitnl.hpp, and
+# libnl-genl-3.0, none of which exist on macOS/Android (both UNIX).
+if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    target_sources(coreUnitTests PRIVATE
+      # O3 server engine (openvpn/server/{nulltun,simpleman,udptransserv,peerroutes,realtun}.hpp)
+      test_udptransserv.cpp
+      )
+endif ()
+
 if (WIN32)
     target_sources(coreUnitTests PRIVATE test_iphelper.cpp test_wstring.cpp)
 endif ()
