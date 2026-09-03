@@ -166,9 +166,6 @@ class ClientOptions : public RC<thread_unsafe_refcount>
         int default_key_direction = -1;
 
         PeerInfo::Set::Ptr extra_peer_info;
-#ifdef OPENVPN_PLATFORM_ANDROID
-        bool enable_route_emulation = true;
-#endif
 #ifdef OPENVPN_GREMLIN
         Gremlin::Config::Ptr gremlin_config;
 #endif
@@ -421,7 +418,7 @@ class ClientOptions : public RC<thread_unsafe_refcount>
 #if defined(OPENVPN_PLATFORM_ANDROID)
                 // Android VPN API only supports excluded IP prefixes starting with Android 13/API 33,
                 // so we must emulate them for earlier platforms
-                if (config.enable_route_emulation)
+                if (config.clientconf.enableRouteEmulation)
                 {
                     tunconf->eer_factory.reset(new EmulateExcludeRouteFactoryImpl(false));
                 }
