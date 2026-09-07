@@ -1044,6 +1044,36 @@ inline auto genPrefixLength(const openvpn::IP::Addr::Version version, const bool
 }
 
 /**
+ * @brief Generates a well-formed AddrMaskPair of @p version: an address and a contiguous netmask.
+ *
+ * Only valid pairs are drawn, so AddrMaskPair::operator<< can render a counterexample; a pair
+ * with a mismatched or non-contiguous netmask would throw from to_string() on the failure path.
+ */
+inline auto genAddrMaskPair(const openvpn::IP::Addr::Version version) -> Gen<openvpn::IP::AddrMaskPair>
+{
+    return gen::apply(
+        [version](openvpn::IP::Addr addr, const unsigned int prefix_len)
+        {
+            return openvpn::IP::AddrMaskPair{.addr = std::move(addr),
+                                             .netmask = openvpn::IP::Addr::netmask_from_prefix_len(version, prefix_len)};
+        },
+        genIPAddr(version),
+        genPrefixLength(version));
+}
+
+/// @see genAddrMaskPair
+template <>
+struct Arbitrary<openvpn::IP::AddrMaskPair>
+{
+    static auto arbitrary() -> Gen<openvpn::IP::AddrMaskPair>
+    {
+        return gen::mapcat(gen::arbitrary<openvpn::IP::Addr::Version>(),
+                           [](const auto version)
+                           { return genAddrMaskPair(version); });
+    }
+};
+
+/**
  * @brief Generates a netmask of @p version rendered as an address string.
  *
  * @p valid selects a contiguous mask, which @c openvpn::IP::Addr::prefix_len() converts back

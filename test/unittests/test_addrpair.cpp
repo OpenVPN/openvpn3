@@ -203,3 +203,11 @@ TEST(AddrMaskPair, FromStringRejectsEmptyStringPair)
 {
     EXPECT_THROW(openvpn::IP::AddrMaskPair::from_string(openvpn::IP::AddrMaskPair::StringPair()), openvpn::IP::AddrMaskPair::addr_pair_mask_parse_error);
 }
+
+/// PROPERTY: for any pair whose members share a version, version() reports that version.
+RC_GTEST_PROP(AddrMaskPair, VersionReportsSharedMemberVersion, (const openvpn::IP::Addr::Version version))
+{
+    const auto pair = *rc::genAddrMaskPair(version).as("pair");
+
+    RC_ASSERT(pair.version() == version);
+}
