@@ -119,3 +119,14 @@ RC_GTEST_PROP(AddrMaskPair, FromStringYieldsPairOfInputVersion, (const openvpn::
 
     RC_ASSERT(parsed.version() == version);
 }
+
+/// PROPERTY: for any well-formed input, the parsed netmask is exactly the netmask of its own prefix length — the round-trip identity of two ip.hpp primitives that from_string_impl calls only one half of.
+RC_GTEST_PROP(AddrMaskPair, FromStringYieldsContiguousNetmask, (const openvpn::IP::Addr::Version version))
+{
+    const auto input = *rc::genAddrMaskPairString(version).as("well-formed input");
+
+    const auto parsed = openvpn::IP::AddrMaskPair::from_string(input);
+
+    const auto prefix_len = parsed.netmask.prefix_len();
+    RC_ASSERT(parsed.netmask == openvpn::IP::Addr::netmask_from_prefix_len(version, prefix_len));
+}
