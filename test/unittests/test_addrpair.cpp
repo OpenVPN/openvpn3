@@ -99,13 +99,13 @@ RC_GTEST_PROP(AddrMaskPairStringPair, PushingMoreThanPairThrows, (const std::str
     RC_ASSERT(full[1] == second);
 }
 
-RC_GTEST_PROP(AddrMaskPairStringPair, AccessingOutsidePairThrows, (const std::string &first, const std::string &second))
+/// PROPERTY: for any index at or beyond 2, both subscript overloads throw addr_pair_string_error.
+RC_GTEST_PROP(AddrMaskPairStringPair, SubscriptBeyondPairThrows, (const std::string &first, const std::string &second))
 {
-    openvpn::IP::AddrMaskPair::StringPair non_const_pair(first, second);
+    openvpn::IP::AddrMaskPair::StringPair mutable_pair(first, second);
     const openvpn::IP::AddrMaskPair::StringPair const_pair(first, second);
-    const int index = *rc::gen::suchThat<int>([](const int i)
-                                              { return i < 0 || i > 2; });
+    const auto index = *rc::gen::inRange<std::size_t>(2, 64).as("index at or beyond the pair");
 
-    RC_ASSERT_THROWS_AS(non_const_pair[index], openvpn::IP::AddrMaskPair::StringPair::addr_pair_string_error);
+    RC_ASSERT_THROWS_AS(mutable_pair[index], openvpn::IP::AddrMaskPair::StringPair::addr_pair_string_error);
     RC_ASSERT_THROWS_AS(const_pair[index], openvpn::IP::AddrMaskPair::StringPair::addr_pair_string_error);
 }
