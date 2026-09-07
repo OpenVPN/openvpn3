@@ -141,3 +141,11 @@ RC_GTEST_PROP(AddrMaskPair, BareAddressYieldsAllOnesNetmask, (const openvpn::IP:
     RC_ASSERT(parsed.addr == openvpn::IP::Addr::from_string(address));
     RC_ASSERT(parsed.netmask.prefix_len() == openvpn::IP::Addr::version_size(version));
 }
+
+/// PROPERTY: for any malformed input, from_string throws addr_pair_mask_parse_error and nothing else.
+RC_GTEST_PROP(AddrMaskPair, FromStringRejectsMalformedInput, (const openvpn::IP::Addr::Version version))
+{
+    const auto input = *rc::genAddrMaskPairString(version, false).as("malformed input");
+
+    RC_ASSERT_THROWS_AS(openvpn::IP::AddrMaskPair::from_string(input), openvpn::IP::AddrMaskPair::addr_pair_mask_parse_error);
+}
