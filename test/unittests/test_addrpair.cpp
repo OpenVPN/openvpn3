@@ -222,3 +222,12 @@ RC_GTEST_PROP(AddrMaskPair, VersionReportsUnspecForMismatchedMembers, (const ope
 
     RC_ASSERT(mismatched.version() == openvpn::IP::Addr::UNSPEC);
 }
+
+/// PROPERTY: for any valid pair, parsing its prefix-length rendering restores both members.
+RC_GTEST_PROP(AddrMaskPair, ParsingPrefixRenderingRestoresBothMembers, (const openvpn::IP::AddrMaskPair &original))
+{
+    const auto restored = openvpn::IP::AddrMaskPair::from_string(original.to_string(false));
+
+    RC_ASSERT(restored.addr == original.addr);
+    RC_ASSERT(restored.netmask == original.netmask);
+}
