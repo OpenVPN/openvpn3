@@ -12,6 +12,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <limits>
+#include <optional>
 #include <utility>
 #include <string>
 #include <tuple>
@@ -22,6 +23,7 @@
 #include <vector>
 
 #include "openvpn/addr/ip.hpp"
+#include "openvpn/addr/addrpair.hpp"
 #include "openvpn/tun/builder/capture.hpp"
 
 namespace rc {
@@ -763,6 +765,40 @@ inline auto singleBit(const openvpn::IP::Addr::Version version, const unsigned i
 inline auto nonContiguousNetmask(const openvpn::IP::Addr::Version version, const unsigned int cleared_bit) -> openvpn::IP::Addr
 {
     return ~singleBit(version, cleared_bit);
+}
+
+/// The diagnostic AddrMaskPair::from_string throws when @p parse calls it, or nullopt when it accepts.
+template <typename Parse>
+std::optional<std::string> rejectionMessageOf(Parse &&parse)
+{
+    try
+    {
+        parse();
+    }
+    catch (const openvpn::IP::AddrMaskPair::addr_pair_mask_parse_error &e)
+    {
+        return e.what();
+    }
+    return std::nullopt;
+}
+
+inline std::optional<std::string> rejectionMessage(const std::string &input, const char *title = nullptr)
+{
+    return rejectionMessageOf([&]
+                              { openvpn::IP::AddrMaskPair::from_string(input, title); });
+}
+
+/// Named apart from rejectionMessage: a literal "" second argument would otherwise bind to the title parameter.
+inline std::optional<std::string> rejectionMessageForTerms(const std::string &address, const std::string &mask)
+{
+    return rejectionMessageOf([&]
+                              { openvpn::IP::AddrMaskPair::from_string(address, mask); });
+}
+
+inline std::optional<std::string> rejectionMessage(const openvpn::IP::AddrMaskPair::StringPair &pair)
+{
+    return rejectionMessageOf([&]
+                              { openvpn::IP::AddrMaskPair::from_string(pair); });
 }
 
 } // namespace helpers

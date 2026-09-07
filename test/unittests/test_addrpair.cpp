@@ -149,3 +149,15 @@ RC_GTEST_PROP(AddrMaskPair, FromStringRejectsMalformedInput, (const openvpn::IP:
 
     RC_ASSERT_THROWS_AS(openvpn::IP::AddrMaskPair::from_string(input), openvpn::IP::AddrMaskPair::addr_pair_mask_parse_error);
 }
+
+/// PROPERTY: for any non-empty malformed input, the rejection diagnostic quotes the input verbatim.
+RC_GTEST_PROP(AddrMaskPair, RejectionQuotesInput, (const openvpn::IP::Addr::Version version))
+{
+    // one malformed shape in seven is the empty string, which has nothing to quote
+    const auto input = *rc::gen::nonEmpty(rc::genAddrMaskPairString(version, false)).as("non-empty malformed input");
+
+    const auto rejection = rc::helpers::rejectionMessage(input);
+
+    RC_ASSERT(rejection.has_value());
+    RC_ASSERT(rejection->find(input) != std::string::npos); // NOLINT(bugprone-unchecked-optional-access) -- guarded by the RC_ASSERT above
+}
