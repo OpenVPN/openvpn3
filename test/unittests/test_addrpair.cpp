@@ -293,3 +293,12 @@ RC_GTEST_PROP(AddrMaskPair, BareAddressAgreesWithEmptyMaskTerm, (const openvpn::
     RC_ASSERT(from_bare_address.addr == from_empty_mask_term.addr);
     RC_ASSERT(from_bare_address.netmask == from_empty_mask_term.netmask);
 }
+
+/// PROPERTY: for any valid address and rejected mask term, the two-string overload throws addr_pair_mask_parse_error — the catch block tunprop.hpp relies on with get_optional.
+RC_GTEST_PROP(AddrMaskPair, TwoStringOverloadRejectsMalformedMaskTerm, (const openvpn::IP::Addr::Version version))
+{
+    const auto address = *rc::genIPAddressString(version).as("address");
+    const auto mask = *rc::genMaskToken(version, false).as("rejected mask term");
+
+    RC_ASSERT_THROWS_AS(openvpn::IP::AddrMaskPair::from_string(address, mask), openvpn::IP::AddrMaskPair::addr_pair_mask_parse_error);
+}
