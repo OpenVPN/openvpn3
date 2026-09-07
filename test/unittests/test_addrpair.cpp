@@ -240,3 +240,16 @@ RC_GTEST_PROP(AddrMaskPair, ParsingNetmaskRenderingRestoresBothMembers, (const o
     RC_ASSERT(restored.addr == original.addr);
     RC_ASSERT(restored.netmask == original.netmask);
 }
+
+/// PROPERTY: for any valid address and accepted mask term, the two-string overload yields the same members as the joined-string form.
+RC_GTEST_PROP(AddrMaskPair, TwoStringOverloadAgreesWithJoinedForm, (const openvpn::IP::Addr::Version version))
+{
+    const auto address = *rc::genIPAddressString(version).as("address");
+    const auto mask = *rc::genMaskToken(version).as("accepted mask term");
+
+    const auto from_joined = openvpn::IP::AddrMaskPair::from_string(address + "/" + mask);
+    const auto from_two_strings = openvpn::IP::AddrMaskPair::from_string(address, mask);
+
+    RC_ASSERT(from_two_strings.addr == from_joined.addr);
+    RC_ASSERT(from_two_strings.netmask == from_joined.netmask);
+}
