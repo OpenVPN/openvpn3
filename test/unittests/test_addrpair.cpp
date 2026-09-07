@@ -197,3 +197,9 @@ RC_GTEST_PROP(AddrMaskPair, StringPairOverloadRejectionQuotesBothTerms, (const o
     RC_ASSERT(rejection.has_value());
     RC_ASSERT(rejection->find(address + "/" + mask) != std::string::npos); // NOLINT(bugprone-unchecked-optional-access) -- guarded by the RC_ASSERT above
 }
+
+/// A size-0 StringPair is the one shape reachable only through the StringPair overload; there is nothing to draw, so this is an example rather than a property.
+TEST(AddrMaskPair, FromStringRejectsEmptyStringPair)
+{
+    EXPECT_THROW(openvpn::IP::AddrMaskPair::from_string(openvpn::IP::AddrMaskPair::StringPair()), openvpn::IP::AddrMaskPair::addr_pair_mask_parse_error);
+}
