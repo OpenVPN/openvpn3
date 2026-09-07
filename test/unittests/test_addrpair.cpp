@@ -130,3 +130,14 @@ RC_GTEST_PROP(AddrMaskPair, FromStringYieldsContiguousNetmask, (const openvpn::I
     const auto prefix_len = parsed.netmask.prefix_len();
     RC_ASSERT(parsed.netmask == openvpn::IP::Addr::netmask_from_prefix_len(version, prefix_len));
 }
+
+/// PROPERTY: for any valid address, the bare form parses to that address with an all-ones netmask.
+RC_GTEST_PROP(AddrMaskPair, BareAddressYieldsAllOnesNetmask, (const openvpn::IP::Addr::Version version))
+{
+    const auto address = *rc::genIPAddressString(version).as("address");
+
+    const auto parsed = openvpn::IP::AddrMaskPair::from_string(address);
+
+    RC_ASSERT(parsed.addr == openvpn::IP::Addr::from_string(address));
+    RC_ASSERT(parsed.netmask.prefix_len() == openvpn::IP::Addr::version_size(version));
+}
