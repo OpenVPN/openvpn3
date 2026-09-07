@@ -37,14 +37,15 @@ RC_GTEST_PROP(AddrMaskPairStringPair, OneStringConstructorHoldsIt, (const std::s
     RC_ASSERT(one[1].empty());
 }
 
-RC_GTEST_PROP(AddrMaskPairStringPair, SupportsSize, (const std::string &first, const std::string &second))
+/// PROPERTY: for any two strings, the two-string constructor yields size 2, renders them slash-joined and exposes them in order.
+RC_GTEST_PROP(AddrMaskPairStringPair, TwoStringConstructorHoldsBoth, (const std::string &first, const std::string &second))
 {
-    const openvpn::IP::AddrMaskPair::StringPair empty;
-    RC_ASSERT(empty.size() == 0U);
-    const openvpn::IP::AddrMaskPair::StringPair one(first);
-    RC_ASSERT(one.size() == 1U);
     const openvpn::IP::AddrMaskPair::StringPair two(first, second);
+
     RC_ASSERT(two.size() == 2U);
+    RC_ASSERT(two.render() == first + "/" + second);
+    RC_ASSERT(two[0] == first);
+    RC_ASSERT(two[1] == second);
 }
 
 RC_GTEST_PROP(AddrMaskPairStringPair, SupportsPush, (const std::string &first, const std::string &second))
@@ -58,33 +59,6 @@ RC_GTEST_PROP(AddrMaskPairStringPair, SupportsPush, (const std::string &first, c
     openvpn::IP::AddrMaskPair::StringPair one(first);
     one.push_back(*rc::gen::string<std::string>());
     RC_ASSERT(one.size() == 2U);
-}
-
-RC_GTEST_PROP(AddrMaskPairStringPair, SupportsRendering, (const std::string &first, const std::string &second))
-{
-    const openvpn::IP::AddrMaskPair::StringPair empty;
-    RC_ASSERT(empty.render() == "");
-
-    const openvpn::IP::AddrMaskPair::StringPair one(first);
-    RC_ASSERT(one.render() == first);
-
-    const openvpn::IP::AddrMaskPair::StringPair two(first, second);
-    RC_ASSERT(two.render() == first + "/" + second);
-}
-
-RC_GTEST_PROP(AddrMaskPairStringPair, SupportsSubscriptAccessOperator, (const std::string &first, const std::string &second))
-{
-    openvpn::IP::AddrMaskPair::StringPair empty;
-    RC_ASSERT(empty[0] == "");
-    RC_ASSERT(empty[1] == "");
-
-    openvpn::IP::AddrMaskPair::StringPair one(first);
-    RC_ASSERT(one[0] == first);
-    RC_ASSERT(one[1] == "");
-
-    openvpn::IP::AddrMaskPair::StringPair two(first, second);
-    RC_ASSERT(two[0] == first);
-    RC_ASSERT(two[1] == second);
 }
 
 RC_GTEST_PROP(AddrMaskPairStringPair, PushingMoreThanPairThrows, (const std::string &first, const std::string &second))
