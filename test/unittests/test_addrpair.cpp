@@ -345,3 +345,17 @@ RC_GTEST_PROP(AddrMaskPair, DefectOverlongPrefixLengthIsRejected, (const openvpn
 
     RC_ASSERT_THROWS_AS(openvpn::IP::AddrMaskPair::from_string(address + "/" + wrapped), openvpn::IP::AddrMaskPair::addr_pair_mask_parse_error);
 }
+
+/// PROPERTY: for any valid address and legal prefix length, the numeric and dotted-netmask spellings of that mask parse to the same pair — from_string_impl reaches them through disjoint branches that nothing else compares.
+RC_GTEST_PROP(AddrMaskPair, PrefixAndNetmaskSpellingsAgree, (const openvpn::IP::Addr::Version version))
+{
+    const auto address = *rc::genIPAddressString(version).as("address");
+    const auto prefix_len = *rc::genPrefixLength(version).as("prefix length");
+    const auto dotted = openvpn::IP::Addr::netmask_from_prefix_len(version, prefix_len).to_string();
+
+    const auto from_prefix = openvpn::IP::AddrMaskPair::from_string(address + "/" + std::to_string(prefix_len));
+    const auto from_netmask = openvpn::IP::AddrMaskPair::from_string(address + "/" + dotted);
+
+    RC_ASSERT(from_netmask.addr == from_prefix.addr);
+    RC_ASSERT(from_netmask.netmask == from_prefix.netmask);
+}
