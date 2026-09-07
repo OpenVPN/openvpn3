@@ -211,3 +211,14 @@ RC_GTEST_PROP(AddrMaskPair, VersionReportsSharedMemberVersion, (const openvpn::I
 
     RC_ASSERT(pair.version() == version);
 }
+
+/// PROPERTY: for any pair assembled member by member from different versions, as tun/mac/gw.hpp does, version() reports UNSPEC.
+RC_GTEST_PROP(AddrMaskPair, VersionReportsUnspecForMismatchedMembers, (const openvpn::IP::Addr::Version address_version))
+{
+    const auto netmask_version = rc::helpers::otherVersion(address_version);
+    const openvpn::IP::AddrMaskPair mismatched{
+        .addr = *rc::genIPAddr(address_version).as("address"),
+        .netmask = openvpn::IP::Addr::netmask_from_prefix_len(netmask_version, *rc::genPrefixLength(netmask_version).as("prefix length of the other version"))};
+
+    RC_ASSERT(mismatched.version() == openvpn::IP::Addr::UNSPEC);
+}
