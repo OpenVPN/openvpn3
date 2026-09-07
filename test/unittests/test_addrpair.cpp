@@ -359,3 +359,14 @@ RC_GTEST_PROP(AddrMaskPair, PrefixAndNetmaskSpellingsAgree, (const openvpn::IP::
     RC_ASSERT(from_netmask.addr == from_prefix.addr);
     RC_ASSERT(from_netmask.netmask == from_prefix.netmask);
 }
+
+/// PROPERTY: for any valid pair, to_string(true) spells the mask term as the netmask address.
+RC_GTEST_PROP(AddrMaskPair, NetmaskFormRendersDottedNetmask, (const openvpn::IP::AddrMaskPair &pair))
+{
+    const auto rendered = pair.to_string(true);
+    const auto separator = rendered.find_last_of('/');
+    const auto mask_term = rendered.substr(separator + 1);
+
+    RC_ASSERT(rendered.substr(0, separator) == pair.addr.to_string());
+    RC_ASSERT(openvpn::IP::Addr::from_string(mask_term) == pair.netmask);
+}
