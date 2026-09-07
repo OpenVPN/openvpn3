@@ -48,6 +48,18 @@ RC_GTEST_PROP(AddrMaskPairStringPair, TwoStringConstructorHoldsBoth, (const std:
     RC_ASSERT(two[1] == second);
 }
 
+/// PROPERTY: for any two strings, constructing with the first and pushing the second equals constructing with both.
+RC_GTEST_PROP(AddrMaskPairStringPair, PushAfterOneEqualsConstructingWithBoth, (const std::string &first, const std::string &second))
+{
+    openvpn::IP::AddrMaskPair::StringPair pushed(first);
+    pushed.push_back(second);
+
+    const openvpn::IP::AddrMaskPair::StringPair constructed(first, second);
+    RC_ASSERT(pushed.size() == constructed.size());
+    RC_ASSERT(pushed[0] == constructed[0]);
+    RC_ASSERT(pushed[1] == constructed[1]);
+}
+
 RC_GTEST_PROP(AddrMaskPairStringPair, SupportsPush, (const std::string &first, const std::string &second))
 {
     openvpn::IP::AddrMaskPair::StringPair empty;
