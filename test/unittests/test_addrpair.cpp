@@ -88,12 +88,15 @@ RC_GTEST_PROP(AddrMaskPairStringPair, SubscriptAssignmentRenders, (const std::st
     RC_ASSERT(two.render() == expected[0] + "/" + expected[1]);
 }
 
-RC_GTEST_PROP(AddrMaskPairStringPair, PushingMoreThanPairThrows, (const std::string &first, const std::string &second))
+/// PROPERTY: for any full pair and third string, push_back throws addr_pair_string_error and leaves the pair unchanged.
+RC_GTEST_PROP(AddrMaskPairStringPair, PushingMoreThanPairThrows, (const std::string &first, const std::string &second, const std::string &third))
 {
-    openvpn::IP::AddrMaskPair::StringPair pushed;
-    pushed.push_back(first);
-    pushed.push_back(second);
-    RC_ASSERT_THROWS_AS(pushed.push_back(*rc::gen::string<std::string>()), openvpn::IP::AddrMaskPair::StringPair::addr_pair_string_error);
+    openvpn::IP::AddrMaskPair::StringPair full(first, second);
+
+    RC_ASSERT_THROWS_AS(full.push_back(third), openvpn::IP::AddrMaskPair::StringPair::addr_pair_string_error);
+    RC_ASSERT(full.size() == 2U);
+    RC_ASSERT(full[0] == first);
+    RC_ASSERT(full[1] == second);
 }
 
 RC_GTEST_PROP(AddrMaskPairStringPair, AccessingOutsidePairThrows, (const std::string &first, const std::string &second))
