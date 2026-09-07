@@ -109,3 +109,13 @@ RC_GTEST_PROP(AddrMaskPairStringPair, SubscriptBeyondPairThrows, (const std::str
     RC_ASSERT_THROWS_AS(mutable_pair[index], openvpn::IP::AddrMaskPair::StringPair::addr_pair_string_error);
     RC_ASSERT_THROWS_AS(const_pair[index], openvpn::IP::AddrMaskPair::StringPair::addr_pair_string_error);
 }
+
+/// PROPERTY: for any well-formed input, from_string yields a pair whose two members carry the version the address was drawn for.
+RC_GTEST_PROP(AddrMaskPair, FromStringYieldsPairOfInputVersion, (const openvpn::IP::Addr::Version version))
+{
+    const auto input = *rc::genAddrMaskPairString(version).as("well-formed input");
+
+    const auto parsed = openvpn::IP::AddrMaskPair::from_string(input);
+
+    RC_ASSERT(parsed.version() == version);
+}

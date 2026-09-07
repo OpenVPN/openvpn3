@@ -10,6 +10,8 @@
 #endif
 
 #include <algorithm>
+#include <cstdint>
+#include <limits>
 #include <utility>
 #include <string>
 #include <tuple>
@@ -738,6 +740,31 @@ inline auto genDnsServerTransport() -> Gen<openvpn::DnsServer::Transport>
         openvpn::DnsServer::Transport::TLS);
 }
 
+/// The address version that is not @p version; UNSPEC maps to V4.
+constexpr auto otherVersion(const openvpn::IP::Addr::Version version) -> openvpn::IP::Addr::Version
+{
+    return version == openvpn::IP::Addr::V4 ? openvpn::IP::Addr::V6 : openvpn::IP::Addr::V4;
+}
+
+/// The address of @p version with only @p bit set; bit 0 is the least significant.
+inline auto singleBit(const openvpn::IP::Addr::Version version, const unsigned int bit) -> openvpn::IP::Addr
+{
+    using openvpn::IP::Addr;
+    const auto size = Addr::version_size(version);
+    return Addr::netmask_from_prefix_len(version, size - bit) & ~Addr::netmask_from_prefix_len(version, size - bit - 1);
+}
+
+/**
+ * @brief A mask of @p version with every bit set except @p cleared_bit.
+ *
+ * Bit 0 is the least significant address bit, so @p cleared_bit must be at least 1 for the
+ * result to be non-contiguous — the shape @c openvpn::IP::Addr::prefix_len() rejects.
+ */
+inline auto nonContiguousNetmask(const openvpn::IP::Addr::Version version, const unsigned int cleared_bit) -> openvpn::IP::Addr
+{
+    return ~singleBit(version, cleared_bit);
+}
+
 } // namespace helpers
 
 /**
@@ -917,13 +944,151 @@ inline auto genDNSOptions() -> Gen<openvpn::DnsOptions>
         gen::set(&openvpn::DnsOptions::servers, generateDnsServerMap()));
 }
 
+/**
+ * @brief V4 or V6, the versions an address string can carry.
+ *
+ * UNSPEC is the no-address sentinel; a test that needs it draws it with gen::just.
+ */
+template <>
+struct Arbitrary<openvpn::IP::Addr::Version>
+{
+    static auto arbitrary() -> Gen<openvpn::IP::Addr::Version>
+    {
+        return gen::element(openvpn::IP::Addr::V4, openvpn::IP::Addr::V6);
+    }
+};
+
+/// @brief Generates an address string of @p version; @p valid is IPv4Address()/IPv6Address()'s.
+inline auto genIPAddressString(const openvpn::IP::Addr::Version version, const bool valid = true) -> Gen<std::string>
+{
+    if (version == openvpn::IP::Addr::V4)
+    {
+        return IPv4Address(valid);
+    }
+    return IPv6Address(valid);
+}
+
+inline auto genIPAddr(const openvpn::IP::Addr::Version version) -> Gen<openvpn::IP::Addr>
+{
+    return gen::map(genIPAddressString(version),
+                    [](const std::string &address)
+                    { return openvpn::IP::Addr::from_string(address); });
+}
+
 inline auto genIPAddr() -> Gen<openvpn::IP::Addr>
 {
-    return gen::map(gen::oneOf(IPv4Address(), IPv6Address()),
-                    [](const std::string &ip)
-                    {
-                        return openvpn::IP::Addr::from_string(ip);
-                    });
+    return gen::mapcat(gen::arbitrary<openvpn::IP::Addr::Version>(),
+                       [](const auto version)
+                       { return genIPAddr(version); });
+}
+
+/**
+ * @brief Generates a prefix length for an address of @p version.
+ *
+ * @p valid selects [0, address size], the range @c openvpn::IP::Addr::netmask_from_prefix_len
+ * accepts, over values above it, with the bounds over-represented in the valid form. The
+ * invalid range stops below 2^32: above that @c openvpn::parse_number wraps the value modulo
+ * its destination type before any range guard sees it and @c AddrMaskPair::from_string accepts
+ * the input, so a wider bound admits "invalid" prefix lengths that parse.
+ */
+inline auto genPrefixLength(const openvpn::IP::Addr::Version version, const bool valid = true) -> Gen<unsigned int>
+{
+    const auto address_size = openvpn::IP::Addr::version_size(version);
+
+    if (valid)
+    {
+        static constexpr int bound_weight = 1;
+        static constexpr int interior_weight = 6;
+        return gen::weightedOneOf<unsigned int>({{bound_weight, gen::just(0U)},
+                                                 {bound_weight, gen::just(address_size)},
+                                                 {interior_weight, gen::inRange(0U, address_size + 1U)}});
+    }
+    static constexpr unsigned int illegal_prefix_upper_bound = std::numeric_limits<unsigned int>::max();
+    return gen::inRange(address_size + 1U, illegal_prefix_upper_bound);
+}
+
+/**
+ * @brief Generates a netmask of @p version rendered as an address string.
+ *
+ * @p valid selects a contiguous mask, which @c openvpn::IP::Addr::prefix_len() converts back
+ * to a prefix length, over a mask with one interior zero bit, which it rejects as malformed.
+ */
+inline auto genNetmaskString(const openvpn::IP::Addr::Version version, const bool valid = true) -> Gen<std::string>
+{
+    if (valid)
+    {
+        return gen::map(genPrefixLength(version),
+                        [version](const unsigned int prefix_len)
+                        { return openvpn::IP::Addr::netmask_from_prefix_len(version, prefix_len).to_string(); });
+    }
+    return gen::map(gen::inRange(1U, openvpn::IP::Addr::version_size(version)),
+                    [version](const unsigned int cleared_bit)
+                    { return helpers::nonContiguousNetmask(version, cleared_bit).to_string(); });
+}
+
+/**
+ * @brief Generates the netmask term of an AddrMaskPair input for an address of @p version.
+ *
+ * The valid set is a legal prefix length, a contiguous netmask of @p version, and the empty
+ * token, which AddrMaskPair::from_string reads as an all-ones netmask. With @p valid @c false
+ * the token is one from_string rejects for an address of @p version: a prefix length above the
+ * address size, a non-contiguous netmask, or a netmask of the other version.
+ */
+inline auto genMaskToken(const openvpn::IP::Addr::Version version, const bool valid = true) -> Gen<std::string>
+{
+    const auto asToken = [](Gen<unsigned int> prefix_length)
+    {
+        return gen::map(std::move(prefix_length),
+                        [](const unsigned int prefix_len)
+                        { return std::to_string(prefix_len); });
+    };
+
+    if (valid)
+    {
+        return gen::oneOf(asToken(genPrefixLength(version)),
+                          genNetmaskString(version),
+                          gen::just(std::string{}));
+    }
+    return gen::oneOf(asToken(genPrefixLength(version, false)),
+                      genNetmaskString(version, false),
+                      genNetmaskString(helpers::otherVersion(version)));
+}
+
+/**
+ * @brief Generates an AddrMaskPair::from_string input for an address of @p version.
+ *
+ * @p valid @c true selects a bare address or an address with an accepted mask term. @p valid
+ * @c false selects a malformed address, an address with a rejected mask term, three terms,
+ * the empty string or an alphabetic token.
+ */
+inline auto genAddrMaskPairString(const openvpn::IP::Addr::Version version, const bool valid = true) -> Gen<std::string>
+{
+    static constexpr int bare_address_weight = 1;
+    static constexpr int mask_term_weight = 3;
+    static constexpr int shape_weight = 1;
+
+    const auto joined = [](const std::string &address, const std::string &mask)
+    { return address + "/" + mask; };
+
+    if (valid)
+    {
+        return gen::weightedOneOf<std::string>({{bare_address_weight, genIPAddressString(version)},
+                                                {mask_term_weight, gen::apply(joined, genIPAddressString(version), genMaskToken(version))}});
+    }
+
+    const auto three_terms = [](const std::string &address, const unsigned int first, const unsigned int second)
+    { return address + "/" + std::to_string(first) + "/" + std::to_string(second); };
+
+    // Addr::from_string accepts both families, so a string malformed as one is filtered against the other too
+    const auto malformed_address = gen::suchThat(genIPAddressString(version, false),
+                                                 [](const std::string &address)
+                                                 { return !openvpn::IP::Addr::is_valid(address); });
+
+    return gen::weightedOneOf<std::string>({{shape_weight, malformed_address},
+                                            {mask_term_weight, gen::apply(joined, genIPAddressString(version), genMaskToken(version, false))},
+                                            {shape_weight, gen::apply(three_terms, genIPAddressString(version), genPrefixLength(version), genPrefixLength(version))},
+                                            {shape_weight, gen::just(std::string{})},
+                                            {shape_weight, gen::nonEmpty(string_from_allowed_chars(ALPHA_CHARACTERS))}});
 }
 } // namespace rc
 #endif // TEST_GENERATORS_HPP
