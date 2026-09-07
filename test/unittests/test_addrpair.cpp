@@ -231,3 +231,12 @@ RC_GTEST_PROP(AddrMaskPair, ParsingPrefixRenderingRestoresBothMembers, (const op
     RC_ASSERT(restored.addr == original.addr);
     RC_ASSERT(restored.netmask == original.netmask);
 }
+
+/// PROPERTY: for any valid pair, parsing its netmask rendering restores both members.
+RC_GTEST_PROP(AddrMaskPair, ParsingNetmaskRenderingRestoresBothMembers, (const openvpn::IP::AddrMaskPair &original))
+{
+    const auto restored = openvpn::IP::AddrMaskPair::from_string(original.to_string(true));
+
+    RC_ASSERT(restored.addr == original.addr);
+    RC_ASSERT(restored.netmask == original.netmask);
+}
