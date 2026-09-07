@@ -14,6 +14,8 @@
 
 #include <openvpn/addr/addrpair.hpp>
 
+#include <string>
+
 TEST(AddrMaskPairStringPair, DefaultConstructedIsEmpty)
 {
     const openvpn::IP::AddrMaskPair::StringPair empty;
@@ -22,6 +24,17 @@ TEST(AddrMaskPairStringPair, DefaultConstructedIsEmpty)
     EXPECT_TRUE(empty.render().empty());
     EXPECT_TRUE(empty[0].empty());
     EXPECT_TRUE(empty[1].empty());
+}
+
+/// PROPERTY: for any string, the one-string constructor yields size 1, renders the string bare and exposes it at index 0 with an empty second slot.
+RC_GTEST_PROP(AddrMaskPairStringPair, OneStringConstructorHoldsIt, (const std::string &first))
+{
+    const openvpn::IP::AddrMaskPair::StringPair one(first);
+
+    RC_ASSERT(one.size() == 1U);
+    RC_ASSERT(one.render() == first);
+    RC_ASSERT(one[0] == first);
+    RC_ASSERT(one[1].empty());
 }
 
 RC_GTEST_PROP(AddrMaskPairStringPair, SupportsSize, (const std::string &first, const std::string &second))
