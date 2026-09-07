@@ -302,3 +302,12 @@ RC_GTEST_PROP(AddrMaskPair, TwoStringOverloadRejectsMalformedMaskTerm, (const op
 
     RC_ASSERT_THROWS_AS(openvpn::IP::AddrMaskPair::from_string(address, mask), openvpn::IP::AddrMaskPair::addr_pair_mask_parse_error);
 }
+
+/// PROPERTY: for any valid address and rejected mask term, the StringPair overload throws addr_pair_mask_parse_error.
+RC_GTEST_PROP(AddrMaskPair, StringPairOverloadRejectsMalformedMaskTerm, (const openvpn::IP::Addr::Version version))
+{
+    const auto address = *rc::genIPAddressString(version).as("address");
+    const auto mask = *rc::genMaskToken(version, false).as("rejected mask term");
+
+    RC_ASSERT_THROWS_AS(openvpn::IP::AddrMaskPair::from_string(openvpn::IP::AddrMaskPair::StringPair(address, mask)), openvpn::IP::AddrMaskPair::addr_pair_mask_parse_error);
+}
