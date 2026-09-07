@@ -16,6 +16,8 @@
 
 #include <array>
 #include <cstddef>
+#include <cstdint>
+#include <limits>
 #include <string>
 
 TEST(AddrMaskPairStringPair, DefaultConstructedIsEmpty)
@@ -326,4 +328,20 @@ RC_GTEST_PROP(AddrMaskPair, AddressWithHostBitIsNotCanonical, (const openvpn::IP
     const auto pair = *rc::genNonCanonicalAddrMaskPair(version).as("pair with a host bit set");
 
     RC_ASSERT_FALSE(pair.is_canonical());
+}
+
+/// PROPERTY: for any valid address and legal prefix length, the same prefix length written with 2^32 added is rejected.
+/// @warning Expected to FAIL against current production: parse_number accumulates digits without an overflow
+///          check, so a prefix length at or above 2^32 wraps modulo 2^32 before netmask_from_prefix_len's range guard sees it.
+RC_GTEST_PROP(AddrMaskPair, DefectOverlongPrefixLengthIsRejected, (const openvpn::IP::Addr::Version version))
+{
+    const auto address = *rc::genIPAddressString(version).as("address");
+    const auto legal = *rc::genPrefixLength(version).as("legal prefix length");
+    const auto unsigned_int_modulus = static_cast<std::uint64_t>(std::numeric_limits<unsigned int>::max()) + 1;
+    const auto wrapped = std::to_string(legal + unsigned_int_modulus);
+
+    // control: the same address and prefix parse, so a failure below is the wrap and not the setup
+    openvpn::IP::AddrMaskPair::from_string(address + "/" + std::to_string(legal));
+
+    RC_ASSERT_THROWS_AS(openvpn::IP::AddrMaskPair::from_string(address + "/" + wrapped), openvpn::IP::AddrMaskPair::addr_pair_mask_parse_error);
 }
