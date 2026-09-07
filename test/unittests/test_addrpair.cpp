@@ -311,3 +311,11 @@ RC_GTEST_PROP(AddrMaskPair, StringPairOverloadRejectsMalformedMaskTerm, (const o
 
     RC_ASSERT_THROWS_AS(openvpn::IP::AddrMaskPair::from_string(openvpn::IP::AddrMaskPair::StringPair(address, mask)), openvpn::IP::AddrMaskPair::addr_pair_mask_parse_error);
 }
+
+/// PROPERTY: for any pair, clearing the host bits of its address yields a canonical pair.
+RC_GTEST_PROP(AddrMaskPair, MaskedAddressIsCanonical, (const openvpn::IP::AddrMaskPair &pair))
+{
+    const openvpn::IP::AddrMaskPair masked{.addr = pair.addr & pair.netmask, .netmask = pair.netmask};
+
+    RC_ASSERT(masked.is_canonical());
+}
