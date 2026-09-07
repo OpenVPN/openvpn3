@@ -60,17 +60,17 @@ RC_GTEST_PROP(AddrMaskPairStringPair, PushAfterOneEqualsConstructingWithBoth, (c
     RC_ASSERT(pushed[1] == constructed[1]);
 }
 
-RC_GTEST_PROP(AddrMaskPairStringPair, SupportsPush, (const std::string &first, const std::string &second))
+/// PROPERTY: for any two strings, pushing both onto an empty pair equals constructing with both.
+RC_GTEST_PROP(AddrMaskPairStringPair, TwoPushesEqualConstructingWithBoth, (const std::string &first, const std::string &second))
 {
-    openvpn::IP::AddrMaskPair::StringPair empty;
-    empty.push_back(*rc::gen::string<std::string>());
-    RC_ASSERT(empty.size() == 1U);
-    empty.push_back(*rc::gen::string<std::string>());
-    RC_ASSERT(empty.size() == 2U);
+    openvpn::IP::AddrMaskPair::StringPair pushed;
+    pushed.push_back(first);
+    pushed.push_back(second);
 
-    openvpn::IP::AddrMaskPair::StringPair one(first);
-    one.push_back(*rc::gen::string<std::string>());
-    RC_ASSERT(one.size() == 2U);
+    const openvpn::IP::AddrMaskPair::StringPair constructed(first, second);
+    RC_ASSERT(pushed.size() == constructed.size());
+    RC_ASSERT(pushed[0] == constructed[0]);
+    RC_ASSERT(pushed[1] == constructed[1]);
 }
 
 RC_GTEST_PROP(AddrMaskPairStringPair, PushingMoreThanPairThrows, (const std::string &first, const std::string &second))
