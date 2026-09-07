@@ -14,6 +14,8 @@
 
 #include <openvpn/addr/addrpair.hpp>
 
+#include <array>
+#include <cstddef>
 #include <string>
 
 TEST(AddrMaskPairStringPair, DefaultConstructedIsEmpty)
@@ -71,6 +73,19 @@ RC_GTEST_PROP(AddrMaskPairStringPair, TwoPushesEqualConstructingWithBoth, (const
     RC_ASSERT(pushed.size() == constructed.size());
     RC_ASSERT(pushed[0] == constructed[0]);
     RC_ASSERT(pushed[1] == constructed[1]);
+}
+
+/// PROPERTY: for any two-string pair, slot and replacement, assigning through the subscript is visible in render().
+RC_GTEST_PROP(AddrMaskPairStringPair, SubscriptAssignmentRenders, (const std::string &first, const std::string &second, const std::string &replacement))
+{
+    openvpn::IP::AddrMaskPair::StringPair two(first, second);
+    std::array<std::string, 2> expected{first, second};
+    const auto slot = *rc::gen::inRange<std::size_t>(0, 2).as("slot");
+
+    two[slot] = replacement;
+    expected[slot] = replacement;
+
+    RC_ASSERT(two.render() == expected[0] + "/" + expected[1]);
 }
 
 RC_GTEST_PROP(AddrMaskPairStringPair, PushingMoreThanPairThrows, (const std::string &first, const std::string &second))
