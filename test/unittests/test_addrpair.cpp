@@ -281,3 +281,15 @@ RC_GTEST_PROP(AddrMaskPair, StringPairOverloadAgreesWithJoinedForm, (const openv
     RC_ASSERT(from_string_pair.addr == from_joined.addr);
     RC_ASSERT(from_string_pair.netmask == from_joined.netmask);
 }
+
+/// PROPERTY: for any valid address, the bare address yields the same members as the address with an empty mask term.
+RC_GTEST_PROP(AddrMaskPair, BareAddressAgreesWithEmptyMaskTerm, (const openvpn::IP::Addr::Version version))
+{
+    const auto address = *rc::genIPAddressString(version).as("address");
+
+    const auto from_bare_address = openvpn::IP::AddrMaskPair::from_string(address);
+    const auto from_empty_mask_term = openvpn::IP::AddrMaskPair::from_string(address + "/");
+
+    RC_ASSERT(from_bare_address.addr == from_empty_mask_term.addr);
+    RC_ASSERT(from_bare_address.netmask == from_empty_mask_term.netmask);
+}
