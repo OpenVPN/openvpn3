@@ -1074,6 +1074,29 @@ struct Arbitrary<openvpn::IP::AddrMaskPair>
 };
 
 /**
+ * @brief Generates a pair of @p version whose address has a host bit set, so is_canonical() is false.
+ *
+ * The prefix length stays below the address size so that a host bit exists to set.
+ */
+inline auto genNonCanonicalAddrMaskPair(const openvpn::IP::Addr::Version version) -> Gen<openvpn::IP::AddrMaskPair>
+{
+    using openvpn::IP::Addr;
+    const auto size = Addr::version_size(version);
+    return gen::mapcat(gen::inRange(0U, size),
+                       [version, size](const unsigned int prefix_len)
+                       {
+                           return gen::apply(
+                               [version, prefix_len](const Addr &addr, const unsigned int host_bit)
+                               {
+                                   return openvpn::IP::AddrMaskPair{.addr = addr | helpers::singleBit(version, host_bit),
+                                                                    .netmask = Addr::netmask_from_prefix_len(version, prefix_len)};
+                               },
+                               genIPAddr(version),
+                               gen::inRange(0U, size - prefix_len));
+                       });
+}
+
+/**
  * @brief Generates a netmask of @p version rendered as an address string.
  *
  * @p valid selects a contiguous mask, which @c openvpn::IP::Addr::prefix_len() converts back

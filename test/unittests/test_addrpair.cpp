@@ -319,3 +319,11 @@ RC_GTEST_PROP(AddrMaskPair, MaskedAddressIsCanonical, (const openvpn::IP::AddrMa
 
     RC_ASSERT(masked.is_canonical());
 }
+
+/// PROPERTY: for any pair whose address has a host bit set, is_canonical() is false.
+RC_GTEST_PROP(AddrMaskPair, AddressWithHostBitIsNotCanonical, (const openvpn::IP::Addr::Version version))
+{
+    const auto pair = *rc::genNonCanonicalAddrMaskPair(version).as("pair with a host bit set");
+
+    RC_ASSERT_FALSE(pair.is_canonical());
+}
