@@ -161,3 +161,15 @@ RC_GTEST_PROP(AddrMaskPair, RejectionQuotesInput, (const openvpn::IP::Addr::Vers
     RC_ASSERT(rejection.has_value());
     RC_ASSERT(rejection->find(input) != std::string::npos); // NOLINT(bugprone-unchecked-optional-access) -- guarded by the RC_ASSERT above
 }
+
+/// PROPERTY: for any malformed input and any title, the rejection diagnostic quotes the title.
+RC_GTEST_PROP(AddrMaskPair, RejectionQuotesTitle, (const openvpn::IP::Addr::Version version))
+{
+    const auto input = *rc::genAddrMaskPairString(version, false).as("malformed input");
+    const auto title = *rc::gen::nonEmpty(rc::string_from_allowed_chars(rc::ALPHA_CHARACTERS)).as("title");
+
+    const auto rejection = rc::helpers::rejectionMessage(input, title.c_str());
+
+    RC_ASSERT(rejection.has_value());
+    RC_ASSERT(rejection->find(title) != std::string::npos); // NOLINT(bugprone-unchecked-optional-access) -- guarded by the RC_ASSERT above
+}
