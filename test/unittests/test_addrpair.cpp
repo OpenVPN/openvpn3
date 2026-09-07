@@ -185,3 +185,15 @@ RC_GTEST_PROP(AddrMaskPair, TwoStringOverloadRejectionQuotesBothTerms, (const op
     RC_ASSERT(rejection.has_value());
     RC_ASSERT(rejection->find(address + "/" + mask) != std::string::npos); // NOLINT(bugprone-unchecked-optional-access) -- guarded by the RC_ASSERT above
 }
+
+/// PROPERTY: for any valid address and rejected mask term, the StringPair overload's diagnostic quotes both terms slash-joined.
+RC_GTEST_PROP(AddrMaskPair, StringPairOverloadRejectionQuotesBothTerms, (const openvpn::IP::Addr::Version version))
+{
+    const auto address = *rc::genIPAddressString(version).as("address");
+    const auto mask = *rc::genMaskToken(version, false).as("rejected mask term");
+
+    const auto rejection = rc::helpers::rejectionMessage(openvpn::IP::AddrMaskPair::StringPair(address, mask));
+
+    RC_ASSERT(rejection.has_value());
+    RC_ASSERT(rejection->find(address + "/" + mask) != std::string::npos); // NOLINT(bugprone-unchecked-optional-access) -- guarded by the RC_ASSERT above
+}
