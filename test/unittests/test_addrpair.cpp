@@ -14,11 +14,14 @@
 
 #include <openvpn/addr/addrpair.hpp>
 
-RC_GTEST_PROP(AddrMaskPairStringPair, SupportsConstruction, (const std::string &first, const std::string &second))
+TEST(AddrMaskPairStringPair, DefaultConstructedIsEmpty)
 {
     const openvpn::IP::AddrMaskPair::StringPair empty;
-    const openvpn::IP::AddrMaskPair::StringPair one(first);
-    const openvpn::IP::AddrMaskPair::StringPair two(first, second);
+
+    EXPECT_EQ(empty.size(), 0U);
+    EXPECT_TRUE(empty.render().empty());
+    EXPECT_TRUE(empty[0].empty());
+    EXPECT_TRUE(empty[1].empty());
 }
 
 RC_GTEST_PROP(AddrMaskPairStringPair, SupportsSize, (const std::string &first, const std::string &second))
