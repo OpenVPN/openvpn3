@@ -18,6 +18,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <limits>
+#include <sstream>
 #include <string>
 
 TEST(AddrMaskPairStringPair, DefaultConstructedIsEmpty)
@@ -369,4 +370,19 @@ RC_GTEST_PROP(AddrMaskPair, NetmaskFormRendersDottedNetmask, (const openvpn::IP:
 
     RC_ASSERT(rendered.substr(0, separator) == pair.addr.to_string());
     RC_ASSERT(openvpn::IP::Addr::from_string(mask_term) == pair.netmask);
+}
+
+/// PROPERTY: for any valid pair, the default rendering spells the mask term as the decimal prefix length, and streaming the pair emits that same rendering.
+RC_GTEST_PROP(AddrMaskPair, PrefixFormRendersDecimalPrefixLength, (const openvpn::IP::AddrMaskPair &pair))
+{
+    const auto rendered = pair.to_string(false);
+    const auto separator = rendered.find_last_of('/');
+    const auto mask_term = rendered.substr(separator + 1);
+
+    RC_ASSERT(rendered.substr(0, separator) == pair.addr.to_string());
+    RC_ASSERT(mask_term == std::to_string(pair.netmask.prefix_len()));
+
+    std::ostringstream streamed;
+    streamed << pair;
+    RC_ASSERT(streamed.str() == rendered);
 }
