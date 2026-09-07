@@ -253,3 +253,18 @@ RC_GTEST_PROP(AddrMaskPair, TwoStringOverloadAgreesWithJoinedForm, (const openvp
     RC_ASSERT(from_two_strings.addr == from_joined.addr);
     RC_ASSERT(from_two_strings.netmask == from_joined.netmask);
 }
+
+/// PROPERTY: for any well-formed joined input, the two-string overload with an empty second string yields the same members as the single-string overload.
+RC_GTEST_PROP(AddrMaskPair, EmptySecondStringDefersToJoinedForm, (const openvpn::IP::Addr::Version version))
+{
+    const auto input = *rc::genAddrMaskPairString(version).as("well-formed input");
+
+    // a literal "" would bind to the title parameter of the single-string overload
+    const std::string no_mask;
+
+    const auto from_joined = openvpn::IP::AddrMaskPair::from_string(input);
+    const auto from_two_strings = openvpn::IP::AddrMaskPair::from_string(input, no_mask);
+
+    RC_ASSERT(from_two_strings.addr == from_joined.addr);
+    RC_ASSERT(from_two_strings.netmask == from_joined.netmask);
+}
