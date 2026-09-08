@@ -332,9 +332,7 @@ RC_GTEST_PROP(AddrMaskPair, AddressWithHostBitIsNotCanonical, (const openvpn::IP
 }
 
 /// PROPERTY: for any valid address and legal prefix length, the same prefix length written with 2^32 added is rejected.
-/// @warning Expected to FAIL against current production: parse_number accumulates digits without an overflow
-///          check, so a prefix length at or above 2^32 wraps modulo 2^32 before netmask_from_prefix_len's range guard sees it.
-RC_GTEST_PROP(AddrMaskPair, DefectOverlongPrefixLengthIsRejected, (const openvpn::IP::Addr::Version version))
+RC_GTEST_PROP(AddrMaskPair, OverlongPrefixLengthIsRejected, (const openvpn::IP::Addr::Version version))
 {
     const auto address = *rc::genIPAddressString(version).as("address");
     const auto legal = *rc::genPrefixLength(version).as("legal prefix length");

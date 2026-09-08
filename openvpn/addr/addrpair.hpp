@@ -12,7 +12,10 @@
 #ifndef OPENVPN_ADDR_ADDRPAIR_H
 #define OPENVPN_ADDR_ADDRPAIR_H
 
+#include <charconv>
 #include <sstream>
+#include <string_view>
+#include <system_error>
 
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/number.hpp>
@@ -171,6 +174,28 @@ struct AddrMaskPair
         OPENVPN_THROW(addr_pair_mask_parse_error, "AddrMaskPair parse error '" << title << "': " << s << " : " << e.what());
     }
 
+    /**
+     * @brief Parses an %IP prefix length from a string view.
+     * @param s String view containing the prefix length to parse.
+     * @return Parsed prefix length as an unsigned integer.
+     * @throws number_parse_exception If parsing fails, overflows, or exceeds @c Addr::V6_SIZE.
+     */
+    static unsigned int parse_prefix_len_throw(std::string_view s)
+    {
+        unsigned int val = 0;
+        const auto [ptr, ec] = std::from_chars(s.data(), s.data() + s.size(), val);
+
+        // ec catches overflow (result_out_of_range) and invalid format (invalid_argument);
+        // ptr check ensures complete string consumption. The widest-address bound keeps the
+        // parse away from the overflow that defeats netmask_from_prefix_len's own range guard,
+        // which still applies the per-version bound.
+        if (ec != std::errc{} || ptr != s.data() + s.size() || val > Addr::V6_SIZE)
+        {
+            throw number_parse_exception("prefix length");
+        }
+        return val;
+    }
+
     static AddrMaskPair from_string_impl(const StringPair &pair, const char *title = nullptr)
     {
         AddrMaskPair ret;
@@ -181,7 +206,7 @@ struct AddrMaskPair
             {
                 if (is_number(pair[1].c_str()))
                     ret.netmask = Addr::netmask_from_prefix_len(ret.addr.version(),
-                                                                parse_number_throw<unsigned int>(pair[1], "prefix length"));
+                                                                parse_prefix_len_throw(pair[1]));
                 else
                     ret.netmask = Addr::from_string(pair[1]);
                 ret.netmask.prefix_len(); // verify that netmask is ok
