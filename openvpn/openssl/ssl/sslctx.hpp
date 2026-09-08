@@ -804,7 +804,8 @@ class OpenSSLContext : public SSLFactoryAPI
                 else
                 {
                     mark_no_cache();
-                    OPENVPN_THROW(OpenSSLException, "OpenSSLContext::SSL::write_cleartext: BIO_write failed, size=" << size << " status=" << status);
+                    throw_ssl_error("OpenSSLContext::SSL::write_cleartext: BIO_write failed, size="
+                                    + std::to_string(size) + " status=" + std::to_string(status));
                 }
             }
             else
@@ -823,7 +824,8 @@ class OpenSSLContext : public SSLFactoryAPI
                     else
                     {
                         mark_no_cache();
-                        OPENVPN_THROW(OpenSSLException, "OpenSSLContext::SSL::read_cleartext: BIO_read failed, cap=" << capacity << " status=" << status);
+                        throw_ssl_error("OpenSSLContext::SSL::read_cleartext: BIO_read failed, cap="
+                                        + std::to_string(capacity) + " status=" + std::to_string(status));
                     }
                 }
                 else
@@ -1034,6 +1036,61 @@ class OpenSSLContext : public SSLFactoryAPI
             }
         }
 
+        /**
+          @brief Maps an X509 chain verification error to the OpenVPN code for it
+          @param x509_err an X509_V_ERR_* value, as SSL_get_verify_result() reports it
+          @return the matching Error::Type, or Error::UNDEF where there is none
+        */
+        static Error::Type cert_verify_error_code(const long x509_err)
+        {
+            switch (x509_err)
+            {
+            case X509_V_ERR_CA_MD_TOO_WEAK:
+                return Error::SSL_CA_MD_TOO_WEAK;
+            case X509_V_ERR_CA_KEY_TOO_SMALL:
+                return Error::SSL_CA_KEY_TOO_SMALL;
+            default:
+                return Error::UNDEF;
+            }
+        }
+
+        /**
+          @brief Throws an OpenSSLException for a failed BIO operation
+          @param error_text what failed, prefixed to the OpenSSL error stack
+
+          Chain verification reports no more than SSL_R_CERTIFICATE_VERIFY_FAILED, and
+          it is the only check OpenSSL runs on a peer's chain: SSL_R_CA_MD_TOO_WEAK and
+          SSL_R_CA_KEY_TOO_SMALL are raised about our own chain, when it is loaded or
+          sent, and openssl/openssl#31271 drops the digest check even there, leaving the
+          peer as the only party to catch a weak signature. So go by the store context's
+          verdict rather than keeping a second opinion in step with it. peer-fingerprint
+          is the one check that replaces that verdict,
+          since it judges the leaf instead of the chain; the others leave it alone, so a
+          policy rejection still reports whatever the chain itself said.
+        */
+        [[noreturn]] void throw_ssl_error(const std::string &error_text) const
+        {
+            OpenSSLException exc{error_text};
+
+            // SSL_get_verify_result() outlives the verification it describes: a handshake
+            // that tolerated a bad chain, as SSLConst::NO_VERIFY_PEER does, leaves it set
+            // on a working session. Only the queue says this failure is that one.
+            if (const long cert_verify_error = SSL_get_verify_result(ssl);
+                exc.code() == Error::CERT_VERIFY_FAIL && cert_verify_error != X509_V_OK)
+            {
+                // Say which certificate and why whatever the reason was. Only a few of
+                // them have an Error::Type of their own, and the rest are worth naming
+                // too: a weak leaf key reports X509_V_ERR_EE_KEY_TOO_SMALL, an expired
+                // one X509_V_ERR_CERT_HAS_EXPIRED, neither of which has a code here.
+                exc.add_context(std::string(X509_verify_cert_error_string(cert_verify_error))
+                                + " at depth " + std::to_string(cert_verify_depth));
+
+                if (const Error::Type code = cert_verify_error_code(cert_verify_error); code != Error::UNDEF)
+                    exc.set_code(code, true);
+            }
+            throw exc;
+        }
+
         // Indicate no data available for our custom SSLv23 method
         static int ssl_pending_override(const ::SSL *)
         {
@@ -1126,6 +1183,7 @@ class OpenSSLContext : public SSLFactoryAPI
             overflow = false;
             called_did_full_handshake = false;
             sess_cache_key.reset();
+            cert_verify_depth = 0;
         }
 
         void ssl_erase()
@@ -1157,6 +1215,11 @@ class OpenSSLContext : public SSLFactoryAPI
             bmq_stream::memq_from_bio(bio)->set_frame(frame);
             return bio;
         }
+
+        // The depth SSL_get_verify_result()'s error was reported at, which the SSL object
+        // does not keep. Read only alongside that result, so it is no more stale than the
+        // result itself, which throw_ssl_error() is careful about.
+        int cert_verify_depth = 0;
 
         ::SSL *ssl;   // OpenSSL SSL object
         BIO *ssl_bio; // read/write cleartext from here
@@ -1915,6 +1978,10 @@ class OpenSSLContext : public SSLFactoryAPI
         // Add warnings if Cert parameters are wrong
         self_ssl->tls_warnings |= self->check_cert_warnings(current_cert);
 
+        // The store context keeps the reason; remember only the depth it applies to
+        if (!preverify_ok)
+            self_ssl->cert_verify_depth = depth;
+
         // If a verification error occured in the certificate chain, we
         // never override the result of the verification.
         if (depth != 0)
@@ -1928,9 +1995,17 @@ class OpenSSLContext : public SSLFactoryAPI
             // since we only care about the fingerprint and not the
             // certificate chain.
             preverify_ok = self->config->peer_fingerprints.match(fp);
-            if (!preverify_ok)
+
+            // The chain's verdict was just discarded either way, so replace its reason
+            // too: a fingerprint mismatch is not whatever the chain tripped on.
+            if (preverify_ok)
+            {
+                X509_STORE_CTX_set_error(ctx, X509_V_OK);
+            }
+            else
             {
                 OVPN_LOG_INFO("VERIFY FAIL -- bad peer-fingerprint in leaf certificate");
+                X509_STORE_CTX_set_error(ctx, X509_V_ERR_UNABLE_TO_VERIFY_LEAF_SIGNATURE); // alert code: SSL_R_TLSV1_ALERT_UNKNOWN_CA
             }
         }
 
@@ -2022,6 +2097,10 @@ class OpenSSLContext : public SSLFactoryAPI
                 OVPN_LOG_INFO(cert_status_line(preverify_ok, depth, err, sign_alg, subject));
             }
         }
+
+        // throw_ssl_error() reports this depth for either role
+        if (!preverify_ok)
+            self_ssl->cert_verify_depth = depth;
 
         // record cert error in authcert
         if (!preverify_ok && self_ssl->authcert)

@@ -65,10 +65,11 @@ class ExceptionCode : public std::exception
         return code_ != 0;
     }
 
-    //! Some errors may justify letting the underlying SSL library send out TLS alerts.
-    bool is_tls_alert() const
+    //! Whether the ciphertext the SSL library left queued, typically an alert, should
+    //! still be sent to the peer after this failure
+    bool flush_pending_ciphertext() const
     {
-        return code() >= Error::TLS_VERSION_MIN && code() <= Error::TLS_ALERT_MISC;
+        return Error::flush_pending_ciphertext(code());
     }
 
     virtual ~ExceptionCode() noexcept = default;

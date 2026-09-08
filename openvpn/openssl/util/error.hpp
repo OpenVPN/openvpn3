@@ -84,6 +84,18 @@ class OpenSSLException : public ExceptionCode
         return ssl_err;
     }
 
+    /**
+      @brief Appends detail the OpenSSL error stack does not carry
+      @param text the detail to append, such as an X509 verification reason
+      @note Invalidates any pointer previously returned by what().
+    */
+    void add_context(const std::string &text)
+    {
+        errtxt += " [";
+        errtxt += text;
+        errtxt += "]";
+    }
+
     virtual ~OpenSSLException() noexcept = default;
 
     static const char *ssl_error_text(const int ssl_error, bool *unknown = nullptr)
@@ -224,8 +236,8 @@ class OpenSSLException : public ExceptionCode
         }
     }
 
-    size_t n_err;
-    unsigned long errstack[MAX_ERRORS];
+    size_t n_err = 0;
+    unsigned long errstack[MAX_ERRORS]{};
     std::string errtxt;
     int ssl_err;
 };

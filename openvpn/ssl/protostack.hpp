@@ -488,7 +488,7 @@ class ProtoStackBase
                 }
                 catch (const ExceptionCode &ec)
                 {
-                    if (ec.is_tls_alert())
+                    if (ec.flush_pending_ciphertext())
                     {
                         // The SSL library may have generated a TLS alert in case of error: send it out now.
                         // Use the nothrow() version of the function, since this best-effort only, and we

@@ -51,8 +51,8 @@ enum Type
     UDP_CONNECT_ERROR,                    // client error on UDP connect
     SSL_ERROR,                            // errors resulting from read/write on SSL object
     SSL_PARTIAL_WRITE,                    // SSL object did not process all written cleartext
-    SSL_CA_MD_TOO_WEAK,                   // CA message digest is too weak
-    SSL_CA_KEY_TOO_SMALL,                 // CA key is too small
+    SSL_CA_MD_TOO_WEAK,                   // CA signature digest too weak: in the peer's chain as it is verified, or in our own as it is loaded or sent (OpenSSL predating openssl/openssl#31271)
+    SSL_CA_KEY_TOO_SMALL,                 // CA key too small: in the peer's chain as it is verified, or in our own as it is loaded or sent
     SSL_DH_KEY_TOO_SMALL,                 // DH key is too small
     ENCAPSULATION_ERROR,                  // exceptions thrown during packet encapsulation
     EPKI_CERT_ERROR,                      // error obtaining certificate from External PKI provider
@@ -207,6 +207,42 @@ inline const char *name(const size_t type)
         return names[type];
     else
         return "UNKNOWN_ERROR_TYPE";
+}
+
+/**
+  @brief Whether the ciphertext the SSL library left queued should still go out
+  @param type the failure that stopped the handshake
+  @return true to flush the pending ciphertext to the peer, false to drop it
+
+  A list of failures after which ProtoStackBase sends the queued output rather than
+  tearing the session down silently, so that an alert OpenSSL composed reaches the
+  peer. Which alert, if any, is OpenSSL's call: nothing here chooses or composes
+  one. The codes are listed rather than matched as a range so that a code never has
+  to be renumbered to be included, as CERT_VERIFY_FAIL was by 4fb9c1918: Error::Type
+  ordinals are positionally exposed through OpenVPNClient::stats_name().
+*/
+inline bool flush_pending_ciphertext(const Type type)
+{
+    switch (type)
+    {
+    case TLS_VERSION_MIN:
+    case CERT_VERIFY_FAIL:
+    case SSL_CA_MD_TOO_WEAK:
+    case SSL_CA_KEY_TOO_SMALL:
+    case TLS_SIGALG_DISALLOWED_OR_UNSUPPORTED:
+    case TLS_ALERT_PROTOCOL_VERSION:
+    case TLS_ALERT_UNKNOWN_CA:
+    case TLS_ALERT_HANDSHAKE_FAILURE:
+    case TLS_ALERT_CERTIFICATE_REQUIRED:
+    case TLS_ALERT_CERTIFICATE_EXPIRED:
+    case TLS_ALERT_CERTIFICATE_REVOKED:
+    case TLS_ALERT_BAD_CERTIFICATE:
+    case TLS_ALERT_UNSUPPORTED_CERTIFICATE:
+    case TLS_ALERT_MISC:
+        return true;
+    default:
+        return false;
+    }
 }
 } // namespace openvpn::Error
 

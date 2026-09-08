@@ -369,8 +369,8 @@ static inline auto MakeClient(Frame::Ptr frame,
     config->set_rng(rng);
 
     config->set_mode(Mode(Mode::CLIENT));
-    config->load_cert(cert_txt);
-    config->load_private_key(pvt_key_txt);
+    config->load_cert(cert);
+    config->load_private_key(pvt_key);
     config->set_frame(frame);
     if (ca.empty())
     {
@@ -389,7 +389,10 @@ static inline auto MakeClient(Frame::Ptr frame,
     return std::make_tuple(config, factory_client, client);
 }
 
-static inline auto MakeServer(Frame::Ptr frame, const std::string &pvt_key, const std::string &cert)
+static inline auto MakeServer(Frame::Ptr frame,
+                              const std::string &pvt_key,
+                              const std::string &cert,
+                              const std::string &ca = "")
 {
     SSLLib::SSLAPI::Config::Ptr config = new SSLLib::SSLAPI::Config;
     config->enable_legacy_algorithms(false);
@@ -401,7 +404,7 @@ static inline auto MakeServer(Frame::Ptr frame, const std::string &pvt_key, cons
     config->set_mode(Mode(Mode::SERVER));
     config->load_cert(cert);
     config->load_private_key(pvt_key);
-    config->load_ca(cert, false);
+    config->load_ca(ca.empty() ? cert : ca, false);
     config->set_frame(frame);
     config->load_dh(dhparam_txt);
 
@@ -517,3 +520,272 @@ TEST(sslctx_ut, clienthello)
     auto buf = server->read_ciphertext();
     ASSERT_TRUE(buf->length() > 1);
 }
+
+#ifdef USE_OPENSSL
+/*
+   Two MD5 chains, both backdated so that the digest is the only thing wrong with them.
+   md5_cert_txt is faulted at depth 0, for its own signature; a trust anchor's signature
+   is exempt from the check, so md5_ca_txt is not what fails. md5_inter_txt is faulted at
+   depth 1, which is the case Error::SSL_CA_MD_TOO_WEAK is named for and the only one
+   verify_callback_client cannot override.
+
+     openssl genrsa -out <name>.key 2048
+     openssl req -x509 -new -key md5ca.key -out md5ca.crt -subj "/CN=md5ca" -md5 \
+         -not_before 20240101000000Z -not_after 21240101000000Z \
+         -addext "basicConstraints=critical,CA:TRUE" \
+         -addext "keyUsage=critical,keyCertSign,cRLSign"
+     openssl req -new -key md5server.key -out md5server.csr -subj "/CN=md5server"
+     openssl x509 -req -in md5server.csr -CA md5ca.crt -CAkey md5ca.key -set_serial 2 \
+         -out md5server.crt -md5 -extfile leaf.cnf \
+         -not_before 20240101000000Z -not_after 21240101000000Z
+
+   and the same again for the three-certificate chain: a -sha256 root, an intermediate
+   signed by it with -md5 and CA:TRUE, then a -sha256 leaf signed by the intermediate.
+   leaf.cnf holds basicConstraints=critical,CA:FALSE, extendedKeyUsage=serverAuth and
+   keyUsage=digitalSignature,keyEncipherment.
+*/
+const std::string md5_ca_txt = R"(-----BEGIN CERTIFICATE-----
+MIIDEzCCAfugAwIBAgIUFdgjzMDakSh82fXObr9mHLTlLj4wDQYJKoZIhvcNAQEE
+BQAwEDEOMAwGA1UEAwwFbWQ1Y2EwIBcNMjQwMTAxMDAwMDAwWhgPMjEyNDAxMDEw
+MDAwMDBaMBAxDjAMBgNVBAMMBW1kNWNhMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8A
+MIIBCgKCAQEAqe2VN+KCieIX0O9Gx7eXw3L5Lronnz/LwApgUq+iSC/oXmanSQGx
+xNrk5nR+2dVHloLaA6ZovOsD6eef5j+MyFIbMJ4RaajENdaBBF8N6qbofQUfa4+d
+/MqGvJcpR+M2vtufHG2F9++Svwpmw6t/KagPH5uqa9vp9rGOf+P2ZSi1EzTCXA9/
+4QjabKfVqbGRtL3txQOQE1lZ/QtSeJ4RpJ6/Ny23IbUI5Pb+JiQOPAO2vOgNGv9G
+AistzB7N4a6/TmEnyx59o8zxMHz1D0OJaSZB4xiuaJ1D+Vq6PUS5JNadlHpbmj4e
+JyN2tIIrzDYHAz4VpveBDZOQcaD1sHhbvQIDAQABo2MwYTAdBgNVHQ4EFgQUlcIe
+yOykpnhe4W9sIP7t+uymZnEwHwYDVR0jBBgwFoAUlcIeyOykpnhe4W9sIP7t+uym
+ZnEwDwYDVR0TAQH/BAUwAwEB/zAOBgNVHQ8BAf8EBAMCAQYwDQYJKoZIhvcNAQEE
+BQADggEBAARuLan28teoCXURfRzCwqMTw1AsseHutopeQdYsCm9KW/+mmHzYEw/3
+xzTOlikvxaE71YalkTOBwyTuCC9tMZkeWzDpEPFkwSG2Mm/73od7J9T9ryNeFGxu
+xZRNaygdy6U/rMrvBuK5DP5UmqRv5UaH7Aa42E0wFW6qIq/a5Q3ixsrZDTJDXSKq
+ZlCBDJYDqmJ3HrNVHRPdG11+PKWuB4tq95BDP1TIGAPd9kcP7hNqNQ5I0K9uNMtJ
+Z6x/6R2h7Yl9ImK6baq2+rpA9mEvXrLb6ob/k5TpNnixrWNwiTe09n/4m+PT8F1X
+q9nmlYbt88kZe5rS5lciedfyp2ZWJ0s=
+-----END CERTIFICATE-----)";
+
+const std::string md5_cert_txt = R"(-----BEGIN CERTIFICATE-----
+MIIDEzCCAfugAwIBAgIBAjANBgkqhkiG9w0BAQQFADAQMQ4wDAYDVQQDDAVtZDVj
+YTAgFw0yNDAxMDEwMDAwMDBaGA8yMTI0MDEwMTAwMDAwMFowFDESMBAGA1UEAwwJ
+bWQ1c2VydmVyMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxHg1Myzy
+C6W2NfQzDNPcJuj/QMftmrW3InrgyScvE1ahpe1ugMuv9nbzQb4hzK6RXb9B7MJD
+tJ+7H0Gbc4tvWYMSSwRiVQrLOIxiYbQkSh+XIO/qgjoKZfZwsi+UH+sBfZl9VLmy
+Iadp072vRB37c0o/WnW9wccMrdmxACLACeAmpWsILgRXksGXJoKVCfvNnAxHburu
+6fas/syVyTVB2I7WKoiKFiISKPBJFA4iTZDRLf/8ZqJvwSc1FaHNZKH62A+vR9Ov
+0w5pmLYyWwk/lGneH0GjqkOtooC+zuPf2g8BCPrpMSBiuDoQtVc1w46PZPlN67OH
+m/RN9mo7ooCPlQIDAQABo3IwcDAMBgNVHRMBAf8EAjAAMBMGA1UdJQQMMAoGCCsG
+AQUFBwMBMAsGA1UdDwQEAwIFoDAdBgNVHQ4EFgQU812/OqWLqBHNE3zzj5FgxM/N
+5gUwHwYDVR0jBBgwFoAUlcIeyOykpnhe4W9sIP7t+uymZnEwDQYJKoZIhvcNAQEE
+BQADggEBAHFaytwwf1WChoiPZVagEDr6FjW0ZtHvZmz3sFjWVdRcDvFI2d2Nebgs
+HnYzzUFTkqKoPpC+r/KkmxZexVL+fqfY70tGYmAQaXsAknJ0GmTDZbSwtQGo4yeu
+yAIL9PL1SVBneJwz8sT6eOLFlq3mPoP5OiwxR5/MEcVxdhCgupPgHh+jSAxuWcvk
+jp9H0rW7hId5GRBAN5XD74wZDvjsubhqcqesXWCTzqZeaEARporE9Ofk7VhYBnIb
+yjfAUvjqxgIYDrUIi6WbYqSe59/J3r1rWRfll1JNstZTQfiYtm9yOVjO72Bvn4Ex
+n7lu7wb6vqHyoYYISX1y88KvXhkfvkQ=
+-----END CERTIFICATE-----)";
+
+const std::string md5_pvt_key_txt = R"(-----BEGIN PRIVATE KEY-----
+MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDEeDUzLPILpbY1
+9DMM09wm6P9Ax+2atbcieuDJJy8TVqGl7W6Ay6/2dvNBviHMrpFdv0HswkO0n7sf
+QZtzi29ZgxJLBGJVCss4jGJhtCRKH5cg7+qCOgpl9nCyL5Qf6wF9mX1UubIhp2nT
+va9EHftzSj9adb3Bxwyt2bEAIsAJ4CalawguBFeSwZcmgpUJ+82cDEdu6u7p9qz+
+zJXJNUHYjtYqiIoWIhIo8EkUDiJNkNEt//xmom/BJzUVoc1kofrYD69H06/TDmmY
+tjJbCT+Uad4fQaOqQ62igL7O49/aDwEI+ukxIGK4OhC1VzXDjo9k+U3rs4eb9E32
+ajuigI+VAgMBAAECggEAUHcPCtOYmk6XLsfB9Ln8S29Xw1dep+NOiu+aiqfirt/n
+OobgoB1MBvw2qrFNNIA2hxeiz23MvvhAcg+ztAHia92zq0ezYjMWgiV00aEuz7Da
+e6HnAMj2o0XoaAH2f5AHP0KSwxV+sCvZut/QHWzOJCy/f7QDMI7uUXF7/Zs93YzZ
+HV7f65XBULSgbFNlonPT05dZaATxBmboVx3xd0eZAueaRZACyTUg+eM8+h+YKdr9
+4/j3lExd6bs3G31G6aEVza9gbyTGzBKmczjVvYWqeB/LSK5uAdZDuhpOUSRJ/iZ8
+Z/xeZ3/o+GL7d5c3acH7J17HAMvFc8FpcDwZISvcLQKBgQDuOityfRMgJAl8ZB/q
+L5wp62jKAv40MwHe1M9ZAH1g7Vram1meDIvFu8U+JkyHeTpoF76gMqDZ6xdwP6Kp
+/Q6shjDQY/eJv3Xb6jUMm9DqouYZ9j9RxWbuTxoLVVkXfDYN6Ey7JYfqA47ePeCU
+y/BVXwpTtsbZs4C0J5Gg3JnFwwKBgQDTIIVg4um/36ofAQfIlVN+zc2W0Rs3Jip3
+co73lheCgqVABNsouTHxEK31LfBukgo1BXEZsdFcZkd18+6ANPCoA5fo0FWaCWVZ
+sXLq6lOK9QWlYx/rDnjzF7bZ+Vc/3n8IcwfUfPAgpr6FlPAP4+25SkpdEYrBAcQK
+G41jILqHxwKBgFSFZuzT23lHz+XGUFxyT+G/mAo0TaSPhFZfAsH9Hn7JN7bf70fY
+A69AE5cdV4GpTUOpSQTlcZRfiI1WxouxMQedBKyrCyRgPZys1+2FSvY0nZcQex6z
+/vUGM6NZwKZId5Uvmim8AyDP6lyHb6rbQIXJloxlCOAsg7lnYI/GNPipAoGANuJ0
+afxzQcMWSZsN9/IB06wSrwtLJOoSDh1E1044bGAkL2FTy+Fg/0cTwfIgV841QxVY
+EpLsVzXri9lO/htFGJhejFJkfnfE1i1QL4udDjmmLxl2ubd4b9GRYlb0fJENuxeU
+SIP2NLbEPpu6UJczPID4lfsyc/xOh0YkWkmu1A8CgYEAgWmgUIZI/E+zzhESQRsv
+a6G7WRSYgmca+isPeFEtpPNTasViv7wlY0k8/V07abWU0/osZn0EpZNwVh+IXfe3
+5VBQ/N0lzX6sD0e7uT04LlZ47zjtwSQ4XCGpyhHj0y+wMUE464t+P4m6f4gEBmQv
+hzlR1d2OIMVBBFr2PXFfRpg=
+-----END PRIVATE KEY-----)";
+
+const std::string sha_root_txt = R"(-----BEGIN CERTIFICATE-----
+MIIDHTCCAgWgAwIBAgIUN4M6TCeUnL+oFqFKjbYgkz6xFG8wDQYJKoZIhvcNAQEL
+BQAwFTETMBEGA1UEAwwKc2hhMjU2cm9vdDAgFw0yNDAxMDEwMDAwMDBaGA8yMTI0
+MDEwMTAwMDAwMFowFTETMBEGA1UEAwwKc2hhMjU2cm9vdDCCASIwDQYJKoZIhvcN
+AQEBBQADggEPADCCAQoCggEBAKTPADsYqSGpRrlpKI8Y5/aRufOh4jmKPva/w/Mf
+1Yi4DY2I6wZUkS0DsQtVMNSnMmi1I8bSA7KP99y0eAiiAZpqsgH8t8DA4jMXFP8n
+bvZjfVsvWD78nzUOCSt8cG6Ft/NrRXm1s+8/VLXUTTxIf3+tP4L/nHHZnkSYPv5j
+73JeUcMOTCzB4MNIGwjAKABqBdPmKAcwTyIzmQHl0VR+HqX4Ff/TEV82mv9N48rM
+KnuJCIipYECrY3xa+Xq0Jm2JfRggryfuufUxMWTP0JWbA+r5cPPEOoH/E45xqdSh
+DFyQEbIsBkN0GQK8ngjtYA/EhMLSRFUXdRryIvKg4atbWm8CAwEAAaNjMGEwHQYD
+VR0OBBYEFE28QA3Jc3TIH1nj2JvtSZYxfsFBMB8GA1UdIwQYMBaAFE28QA3Jc3TI
+H1nj2JvtSZYxfsFBMA8GA1UdEwEB/wQFMAMBAf8wDgYDVR0PAQH/BAQDAgEGMA0G
+CSqGSIb3DQEBCwUAA4IBAQCJ1CqNJsjtOb1oi6oN+mFGJNW9xJr3tSfBOrPm684F
+yPGFBF5YZHygz6BeGB+OJEURxu9i07YbAa31p31rBwTA4b1kgsmlJkOzc0Ss7rf8
+b3vQxgt7ICv9MW5E6BmRd//u94rfur48dvdMQwJYiFH5CuDi+dxQIbESyBPmPJNe
+3daVVu7GeuJ+Ia7+4dI//KV27/HTUy6GmpyO58UQdjUi8Uxy40gwb36iJynmmoID
+xLYlMSpVUf626bsdh4zLJrR/DpGKeewGftkNJZUsgdDoM7nQ0LZpjtpct/SdjS84
+C40U/jWjqusYt/y58RYgSZT/2ULvuUVxBacAIMofKOXu
+-----END CERTIFICATE-----)";
+
+const std::string md5_inter_txt = R"(-----BEGIN CERTIFICATE-----
+MIIDDzCCAfegAwIBAgIBAzANBgkqhkiG9w0BAQQFADAVMRMwEQYDVQQDDApzaGEy
+NTZyb290MCAXDTI0MDEwMTAwMDAwMFoYDzIxMjQwMTAxMDAwMDAwWjAaMRgwFgYD
+VQQDDA9tZDVpbnRlcm1lZGlhdGUwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEK
+AoIBAQDMd4KF+sIKDrXE3TFemrKNo5Ugla9LrG5BM59vLLLU2ICUJv23nc0UG99S
+8JWm5thxbXWsbqX/oT9As3Lvo32wP17RnmdVMyJYLffYJmMT7kC6sGh4wkhLJKvg
+3PwEjYV7zzpdcMOkq880oSwfwKomPSFc/9RcUipSfYSYPtXa2yWMeb3AuiMvuZC7
+6fH12o7+Kn9TV7oayqHRMSaUlGTLVNkiOziOO7l3nRLbhiKfSDNravhH1Nn2u18T
+MQW8IwW1WoW8CZQXhJw6lQEcsDIZrkHtAogFfBMmc7he5DXihqW9GbGMvqqFQdPD
+CqUElaiEq/CuiEqfJJ7Kfu1a2tWBAgMBAAGjYzBhMA8GA1UdEwEB/wQFMAMBAf8w
+DgYDVR0PAQH/BAQDAgEGMB0GA1UdDgQWBBTEeg4BdrQScuBoMq4kkJghQGd5rTAf
+BgNVHSMEGDAWgBRNvEANyXN0yB9Z49ib7UmWMX7BQTANBgkqhkiG9w0BAQQFAAOC
+AQEAMMHXpdFHQbXsoy5mfogxxXP8omNPTCmEtgkAY9KcXgEdRDxfV9LNaRMlWyWn
+nmAGFEiLmV5DLKaqXX6AbvE8iEVGiCUY8HIimW0m5miMW5DirLsbYyInwNwbDTQl
+QlHpz7At3Tzaoy6q8C7JEEqVho6dCit8/AwdyubdH/69o6m9qp2i4PDmnmyr6290
+MJNRj51X+fPvD26yaCFpGdVd+c/Yy15+RwNQbOpEjQ/lnnQQSjfnuLQ9Ydqf+Y86
+y7dLQNe6qtepmYuQ2nfplHageQOWAxnrmK0AejsjMl3M8Q/pp+wKQuVbFnu8NGcU
+38qBjYcVD8RYpGdqpikHlUEjlQ==
+-----END CERTIFICATE-----)";
+
+const std::string sha_leaf_txt = R"(-----BEGIN CERTIFICATE-----
+MIIDGzCCAgOgAwIBAgIBBDANBgkqhkiG9w0BAQsFADAaMRgwFgYDVQQDDA9tZDVp
+bnRlcm1lZGlhdGUwIBcNMjQwMTAxMDAwMDAwWhgPMjEyNDAxMDEwMDAwMDBaMBIx
+EDAOBgNVBAMMB3NoYWxlYWYwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIB
+AQDCaYfd0GCvy7Bw8Kaaiu+fHBvkHGvVbRokWFQ1Joygf2VVtmAD1zCgChbHDOgQ
+UAu5I0YNWdy0QJc7cwrS7Cp1NVyVikeP7tx9qqs9upLOK3kV5n9DmgfPbEdIymOt
+k01pN2iZ50ouS3bp/l/RtvSigG+ciC7wyIUHoO78C1BqqDfRZiO90Ps4zEd4+E5G
+n0K49U7kKDGBFSRkeNjGlONz8XjTWTJLdkmqgjzFqRulnYiuz2SPjJaIpgm4iIuD
+AuPlYhUwlSoy0dKm6e5Ok1CY/NZ8zmcEMJhh5w3bWes1TQVUngEYXi1x3kMKQEML
+ag0eZ9u1dgRDW3DMz4tg58N3AgMBAAGjcjBwMAwGA1UdEwEB/wQCMAAwEwYDVR0l
+BAwwCgYIKwYBBQUHAwEwCwYDVR0PBAQDAgWgMB0GA1UdDgQWBBSqJIuwADe2Ub2U
+zZWYdYoTQ4ZfdjAfBgNVHSMEGDAWgBTEeg4BdrQScuBoMq4kkJghQGd5rTANBgkq
+hkiG9w0BAQsFAAOCAQEAl9X+LYDZ5Y7XUzrDhPyld4S2fWGurIVRam/ZT1kjkc+w
+phlao7B/Iz80AuE2MYXez2tPfle4xE5pX19/s6lecnNZVwKf/yrwmOPkFNG+Wxkh
+3sQqFAM8wLM2xQfx/MxwRHC/Y5wuPMD0k6jxOiIo2qxCKRRhxod3gMBBs2lf4CSp
+Ap+iGKtu5MG/4jmY4dcY3uOKo00Z3mp/t+p5dWOgbgTpb1td1AhNmuQ9+/k5a3/E
+oSzXWpUus5sQ1Pl7zKOPVfsIgYVJOTHcPoFUHe5wW4DJ+T5z/JRcSr5aPcNnbnCT
+gWWDapjVtE1aQ+zPi4zuX7fbuCUp+/z12syW8Ga23w==
+-----END CERTIFICATE-----)";
+
+const std::string sha_leaf_pvt_key_txt = R"(-----BEGIN PRIVATE KEY-----
+MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDCaYfd0GCvy7Bw
+8Kaaiu+fHBvkHGvVbRokWFQ1Joygf2VVtmAD1zCgChbHDOgQUAu5I0YNWdy0QJc7
+cwrS7Cp1NVyVikeP7tx9qqs9upLOK3kV5n9DmgfPbEdIymOtk01pN2iZ50ouS3bp
+/l/RtvSigG+ciC7wyIUHoO78C1BqqDfRZiO90Ps4zEd4+E5Gn0K49U7kKDGBFSRk
+eNjGlONz8XjTWTJLdkmqgjzFqRulnYiuz2SPjJaIpgm4iIuDAuPlYhUwlSoy0dKm
+6e5Ok1CY/NZ8zmcEMJhh5w3bWes1TQVUngEYXi1x3kMKQEMLag0eZ9u1dgRDW3DM
+z4tg58N3AgMBAAECggEAIz0LonoNvG+YOLB2ElcSne1zZMJ+DT5sWaAlC0lEfib5
+UDLxbmDH8IpDnKrLOYG4zkMFhJAAQC/g+aadlKO4Amy8rmJVHFK4ZpLT3Sl/SJ16
+oiyYbsFxnvhKZ3g/3wtvIZ4oeJUCzidhk4JHDfUynG3ZTS8mCwDdlAdoqgjG973a
+/jf16lgrvEhtQtX/J1SJbgjmj+2D/jlejV6/Oxn6AReVRA7y6P6i7Y8UakLpkVQy
+BOYO7kUu/M8kPQbYG7ISvQSPG1P6UBdCDo7hh3nk+b7dY2zKm3toAcNz4/B2gq5Z
+4IDdWuR7TmZ5f/fdDcg060kmasn84yRYQc8TjaGOiQKBgQDqlb/atceyJM4SjMYi
+iVTzl7xz/gRTD5HlJb72WBQ09E8fdqqj2M/ul19pK1j2J8ICET/Bh7DAp0shlOlZ
+YYakoq9c+9pnZBFAaDSMP5iuHPsfthdQpPFzIc18vfV3Pf1VVBHoeGrbKAzRTIX0
+2Zqj6d7CpxVyuhuHGO+i1i2YYwKBgQDUKPHRPxMh46bDmo5+dxtE7IuTOasv440D
+qcL8ypWE0XMEIxKHz7yehibQYmdWr8CaAk8CmcaPN0ZTLXJ5sFcxNSLo057cUnUZ
+Bs65hlxFWa4StHq+srvIqkqfoame71cs05kjKxW7yAB4TfVVCKSTIdP+JAbhuSbX
+RgYcHm7S3QKBgQCQf3ezT//XUuaA9KfjhDaI6fGSfWjKhS+4N9z+P1kLGWZXmjAY
+Rygl7qY90Q62ad0OivN70Ypl0WbtI53tia53YSKmIxjwUOpzgvzDWzVAIufpK7AG
+4+M6qRq7eQNn1Q5kbimtyecAYhYrInjtTtD7oMavnl4O0ma8e/a4ljd1wwKBgClZ
+dY/nsC3ptaXn6J/DTQBI7gcatT+XJPOy0Xr9bNi/DaCfyUvI9CUdVlFE7Ikbpfke
+PBHwsJ9XEZDCic4nzUac6ZnhLNQaChJ/nijQhAlMKj4hCM9D/I9miTbFhk6grSfi
+cbVF/21i1Jyd7RPOpGy8qhmdIe46bNSGJEi0sbrNAoGAfij7gEWo/XBrHX9S3cIq
+HmLEWQtmrTcGPsYWCykTDgm6/86ySDyrf1C7busGhwkoaBLiN+7mD3tDrmL2bUFY
+edEkCHXeoRhlX1o2FrJIPrD8+lKmeF5aAEdLannMVvIoGT9mtQF1w5yk5aTdgPRm
+ZoBMXW/DMuCB88kWJPCz2xI=
+-----END PRIVATE KEY-----)";
+
+/**
+ * @brief Handshakes against a chain carrying a weak signature digest and expects it to
+ *        be rejected as Error::SSL_CA_MD_TOO_WEAK, naming the certificate at fault
+ * @param server_cert  the server's own certificate
+ * @param server_key   the private key for @p server_cert
+ * @param client_ca    the CA the client trusts
+ * @param depth        the depth the rejection is expected at
+ *
+ * The server is handed cert_txt as its own CA so that the client's certificate verifies
+ * and the weak digest is the only thing either peer can object to.
+ */
+static inline void ExpectWeakDigestRejected(const std::string &server_cert,
+                                            const std::string &server_key,
+                                            const std::string &client_ca,
+                                            const int depth)
+{
+    Frame::Ptr frame(new Frame(Frame::Context(128, 4096, 4096 - 128, 0, 16, 0)));
+
+    SSLLib::SSLAPI::Config::Ptr serverconfig, clientconfig;
+    SSLFactoryAPI::Ptr serverfactory, clientfactory;
+    SSLAPI::Ptr server, client;
+
+    try
+    {
+        std::tie(serverconfig, serverfactory, server) = MakeServer(frame, server_key, server_cert, cert_txt);
+        std::tie(clientconfig, clientfactory, client) = MakeClient(std::move(frame), pvt_key_txt, cert_txt, client_ca);
+    }
+    catch (const ExceptionCode &e)
+    {
+        // An OpenSSL predating openssl/openssl#31271 refuses the chain as it is loaded,
+        // which leaves everything below unexercised
+        EXPECT_EQ(e.code(), Error::SSL_CA_MD_TOO_WEAK) << e.what();
+        GTEST_SKIP() << "chain refused before the handshake: " << e.what();
+    }
+
+    try
+    {
+        client->start_handshake();
+
+        for (auto i = 0U; i < ITER; ++i)
+            xfer(*client, *server);
+    }
+    catch (const ExceptionCode &e)
+    {
+        EXPECT_EQ(e.code(), Error::SSL_CA_MD_TOO_WEAK) << e.what();
+        // The reason reaches the event through add_context(), except on an OpenSSL whose
+        // own error stack named the digest, where the code needed no refining
+        const std::string text = e.what();
+        if (text.find("ca md too weak") == std::string::npos)
+        {
+            // not an OpenSSL that names the digest itself, so add_context() must
+            EXPECT_NE(text.find("CA signature digest algorithm too weak at depth " + std::to_string(depth)),
+                      std::string::npos)
+                << e.what();
+        }
+        // OpenSSL has queued a bad_certificate alert, and ProtoStackBase only sends it
+        // out for a failure flush_pending_ciphertext() accepts
+        EXPECT_TRUE(e.flush_pending_ciphertext());
+        EXPECT_TRUE(client->read_ciphertext_ready()) << "the rejecting peer queued no alert";
+        return;
+    }
+    FAIL() << "MD5-signed certificate chain was accepted";
+}
+
+/** @brief A leaf signed with MD5 by its CA, faulted at depth 0 */
+TEST(sslctx_ut, WeakDigestLeafHandshakeFail)
+{
+    ExpectWeakDigestRejected(md5_cert_txt, md5_pvt_key_txt, md5_ca_txt, 0);
+}
+
+/**
+ * @brief An MD5-signed intermediate under a strong root, faulted at depth 1
+ *
+ * The client trusts the intermediate rather than the server sending it, so the server
+ * never handles a weak certificate: an OpenSSL that still checks the digest as a chain
+ * is sent rejects its own chain before the client can verify anything, which is how an
+ * earlier revision of this test failed on every CI distro.
+ *
+ * sha_root_txt has to stay in the bundle for that to work. It is what keeps the
+ * intermediate a mid-chain certificate at depth 1; on its own the intermediate would be
+ * the trust anchor, and an anchor's own signature is exempt from the check.
+ */
+TEST(sslctx_ut, WeakDigestIntermediateHandshakeFail)
+{
+    ExpectWeakDigestRejected(sha_leaf_txt, sha_leaf_pvt_key_txt, sha_root_txt + "\n" + md5_inter_txt, 1);
+}
+#endif

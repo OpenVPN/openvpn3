@@ -64,6 +64,8 @@ enum Type
     // start of errors, must be marked by FATAL_ERROR_START below
     AUTH_FAILED,
     CERT_VERIFY_FAIL,
+    SSL_CA_MD_TOO_WEAK,
+    SSL_CA_KEY_TOO_SMALL,
     TLS_VERSION_MIN,
     TLS_ALERT_PROTOCOL_VERSION,
     TLS_ALERT_UNKNOWN_CA,
@@ -137,6 +139,8 @@ inline const char *event_name(const Type type)
         // fatal errors
         "AUTH_FAILED",
         "CERT_VERIFY_FAIL",
+        "SSL_CA_MD_TOO_WEAK",
+        "SSL_CA_KEY_TOO_SMALL",
         "TLS_VERSION_MIN",
         "TLS_ALERT_PROTOCOL_VERSION",
         "TLS_ALERT_UNKNOWN_CA",
@@ -568,6 +572,41 @@ struct CertVerifyFail : public ReasonBase
 {
     CertVerifyFail(std::string reason)
         : ReasonBase(CERT_VERIFY_FAIL, std::move(reason))
+    {
+    }
+};
+
+/**
+ * @brief A CA signature digest is too weak for the security level
+ *
+ * Raised for the peer's chain, where it is what chain verification found, and for
+ * our own chain, which OpenSSL checks as it is loaded or sent.
+ */
+struct SSLCAMDTooWeak : public ReasonBase
+{
+    /**
+     * @brief Constructor
+     * @param reason the OpenSSL error text for the rejection
+     */
+    SSLCAMDTooWeak(std::string reason)
+        : ReasonBase(SSL_CA_MD_TOO_WEAK, std::move(reason))
+    {
+    }
+};
+
+/**
+ * @brief A CA key is too small for the security level
+ *
+ * Raised for the peer's chain and for our own, as SSLCAMDTooWeak is.
+ */
+struct SSLCAKeyTooSmall : public ReasonBase
+{
+    /**
+     * @brief Constructor
+     * @param reason the OpenSSL error text for the rejection
+     */
+    SSLCAKeyTooSmall(std::string reason)
+        : ReasonBase(SSL_CA_KEY_TOO_SMALL, std::move(reason))
     {
     }
 };
