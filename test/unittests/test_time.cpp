@@ -6,8 +6,20 @@
 #include <openvpn/time/skew.hpp>
 #include <openvpn/common/format.hpp>
 
+#include <cmath>
+#include <cstdint>
+
 using namespace openvpn;
 using namespace openvpn;
+
+//! Draws per Time.Timeskew run
+constexpr int SAMPLES = 10000;
+
+//! Standard errors of slack allowed around each expected mean
+constexpr double STD_ERRORS = 5.0;
+
+//! Arbitrary fixed PRNG seed, so that an unlucky stream cannot fail a statistical check
+constexpr std::uint64_t PRNG_SEED = 20250910;
 
 int my_abs(const int value)
 {
@@ -77,15 +89,27 @@ void test_skew(const Time::Duration &dur,
 
 TEST(Time, Timeskew)
 {
-    MTRand::Ptr prng(new MTRand());
+    // Seeded, because the checks below are statistical and a failure has to reproduce.
+    MTRand::Ptr prng(new MTRand(PRNG_SEED));
+    const Time::Duration dur = Time::Duration::seconds(10);
+
     MeanDev md;
-    for (int i = 0; i < 10000; ++i)
+    for (int i = 0; i < SAMPLES; ++i)
     {
-        test_skew(Time::Duration::seconds(10), TimeSkew::PCT_25, md, false, *prng);
+        test_skew(dur, TimeSkew::PCT_25, md, false, *prng);
     }
     // OPENVPN_LOG(md.to_string());
-    md.mean.check_mean_range("mean", 10100, 10300);
-    md.dev.check_mean_range("dev", 1250, 1350);
+
+    // skew() adds a flux uniform over [-bms/2, bms/2) with bms = dur >> factor, so
+    // over SAMPLES draws the mean converges on dur and the mean deviation on bms/4,
+    // with standard errors of bms/sqrt(12*SAMPLES) and bms/sqrt(48*SAMPLES).
+    const int dur_ms = static_cast<int>(dur.to_binary_ms());
+    const int bms = dur_ms >> TimeSkew::PCT_25;
+    const int mean_tol = static_cast<int>(STD_ERRORS * bms / std::sqrt(12.0 * SAMPLES));
+    const int dev_tol = static_cast<int>(STD_ERRORS * bms / std::sqrt(48.0 * SAMPLES));
+
+    md.mean.check_mean_range("mean", dur_ms - mean_tol, dur_ms + mean_tol);
+    md.dev.check_mean_range("dev", bms / 4 - dev_tol, bms / 4 + dev_tol);
 }
 
 TEST(Time, Test1)
