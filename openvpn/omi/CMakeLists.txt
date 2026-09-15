@@ -1,9 +1,16 @@
+option(CLI_OVPNDCOWIN "Build ovpncli with ovpn-dco-win driver support" OFF)
+if (APPLE)
+
+  add_executable(omicliagent_macos openvpn.cpp)
+  add_core_dependencies(omicliagent_macos)
+  add_json_library(omicliagent_macos)
+  target_compile_options(omicliagent_macos PRIVATE -Wno-deprecated-declarations)
+  target_compile_definitions(omicliagent_macos PRIVATE -DOPENVPN_COMMAND_AGENT)
+  return()
+endif()
 if (NOT WIN32)
   return()
 endif()
-
-option(CLI_OVPNDCOWIN "Build ovpncli with ovpn-dco-win driver support" OFF)
-
 add_executable(omicliagent openvpn.cpp)
 add_core_dependencies(omicliagent)
 add_json_library(omicliagent)
