@@ -28,14 +28,18 @@
     "customManagers": [
         {
             "customType": "regex",
-            "fileMatch": ["\\.cmake$"],
+            "managerFilePatterns": [
+                "/\\.cmake$/"
+            ],
             "matchStrings": [
                 "datasource=(?<datasource>.*?) depName=(?<depName>.*?)( versioning=(?<versioning>.*?))?\\s*set\\(.*_VERSION\\s*(?<currentValue>.*?)\\)\\s"
             ]
         },
         {
             "customType": "regex",
-            "fileMatch": ["^\\.github/workflows/.+\\.yml$"],
+            "managerFilePatterns": [
+                "/^\\.github/workflows/.+\\.yml$/"
+            ],
             "matchStrings": ["VCPKG_GIT_COMMIT_ID:\\s*(?<currentDigest>.*?)\\n"],
             "currentValueTemplate": "master",
             "depNameTemplate": "vcpkg",
@@ -44,7 +48,9 @@
         },
         {
             "customType": "regex",
-            "fileMatch": ["^\\.github/workflows/.+\\.yml$"],
+            "managerFilePatterns": [
+                "/^\\.github/workflows/.+\\.yml$/"
+            ],
             "matchStrings": ["versioning=(?<versioning>.*?)\\n\\s*repository:\\s*(?<depName>.*?)\\n\\s*ref:\\s*(?<currentValue>.*?)\\n"],
             "datasourceTemplate": "github-tags"
         }
