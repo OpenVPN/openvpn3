@@ -17,9 +17,6 @@
 #define OPENVPN_MBEDTLS_UTIL_RAND_H
 
 #include <mbedtls/entropy.h>
-#if MBEDTLS_VERSION_NUMBER < 0x03000000
-#include <mbedtls/entropy_poll.h>
-#endif
 #include <mbedtls/ctr_drbg.h>
 
 #include <openvpn/random/randapi.hpp>

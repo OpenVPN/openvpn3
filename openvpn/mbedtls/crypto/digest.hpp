@@ -110,10 +110,6 @@ class DigestContext
     {
         switch (alg)
         {
-#if MBEDTLS_VERSION_NUMBER < 0x03000000
-        case CryptoAlgs::MD4:
-            return mbedtls_md_info_from_type(MBEDTLS_MD_MD4);
-#endif
         case CryptoAlgs::MD5:
             return mbedtls_md_info_from_type(MBEDTLS_MD_MD5);
         case CryptoAlgs::SHA1:

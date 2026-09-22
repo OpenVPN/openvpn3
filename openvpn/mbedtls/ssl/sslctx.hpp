@@ -59,77 +59,6 @@ namespace openvpn {
 namespace mbedtls_ctx_private {
 namespace {
 
-#if MBEDTLS_VERSION_NUMBER < 0x03000000
-/*
- * This is a modified list from mbed TLS ssl_ciphersuites.c.
- * We removed some SHA1 methods near the top of the list to
- * avoid Chrome warnings about "obsolete cryptography".
- * We also removed ECDSA, CCM, PSK, and CAMELLIA algs.
- *
- * With mbed TLS 3 or newer we trust the default list of
- * algorithms in mbed TLS
- */
-
-
-const int ciphersuites[] = // CONST GLOBAL
-    {
-        /* Selected AES-256 ephemeral suites */
-        MBEDTLS_TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-        MBEDTLS_TLS_DHE_RSA_WITH_AES_256_GCM_SHA384,
-        MBEDTLS_TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384,
-        MBEDTLS_TLS_DHE_RSA_WITH_AES_256_CBC_SHA256,
-
-        MBEDTLS_TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
-        MBEDTLS_TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA384,
-
-        /* Selected AES-128 ephemeral suites */
-        MBEDTLS_TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-        MBEDTLS_TLS_DHE_RSA_WITH_AES_128_GCM_SHA256,
-        MBEDTLS_TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256,
-        MBEDTLS_TLS_DHE_RSA_WITH_AES_128_CBC_SHA256,
-
-        MBEDTLS_TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-        MBEDTLS_TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256,
-
-        /* Selected remaining >= 128-bit ephemeral suites */
-        MBEDTLS_TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA,
-        MBEDTLS_TLS_DHE_RSA_WITH_3DES_EDE_CBC_SHA,
-
-        MBEDTLS_TLS_ECDHE_ECDSA_WITH_3DES_EDE_CBC_SHA,
-
-        /* Selected AES-256 suites */
-        MBEDTLS_TLS_RSA_WITH_AES_256_GCM_SHA384,
-        MBEDTLS_TLS_RSA_WITH_AES_256_CBC_SHA256,
-        MBEDTLS_TLS_RSA_WITH_AES_256_CBC_SHA,
-        MBEDTLS_TLS_ECDH_RSA_WITH_AES_256_GCM_SHA384,
-        MBEDTLS_TLS_ECDH_RSA_WITH_AES_256_CBC_SHA384,
-        MBEDTLS_TLS_ECDH_RSA_WITH_AES_256_CBC_SHA,
-
-        MBEDTLS_TLS_ECDH_ECDSA_WITH_AES_256_GCM_SHA384,
-        MBEDTLS_TLS_ECDH_ECDSA_WITH_AES_256_CBC_SHA384,
-        MBEDTLS_TLS_ECDH_ECDSA_WITH_AES_256_CBC_SHA,
-
-        /* Selected AES-128 suites */
-        MBEDTLS_TLS_RSA_WITH_AES_128_GCM_SHA256,
-        MBEDTLS_TLS_RSA_WITH_AES_128_CBC_SHA256,
-        MBEDTLS_TLS_RSA_WITH_AES_128_CBC_SHA,
-        MBEDTLS_TLS_ECDH_RSA_WITH_AES_128_GCM_SHA256,
-        MBEDTLS_TLS_ECDH_RSA_WITH_AES_128_CBC_SHA256,
-        MBEDTLS_TLS_ECDH_RSA_WITH_AES_128_CBC_SHA,
-
-        MBEDTLS_TLS_ECDH_ECDSA_WITH_AES_128_GCM_SHA256,
-        MBEDTLS_TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA256,
-        MBEDTLS_TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA,
-
-        /* Selected remaining >= 128-bit suites */
-        MBEDTLS_TLS_RSA_WITH_3DES_EDE_CBC_SHA,
-        MBEDTLS_TLS_ECDH_RSA_WITH_3DES_EDE_CBC_SHA,
-
-        MBEDTLS_TLS_ECDH_ECDSA_WITH_3DES_EDE_CBC_SHA,
-
-        0};
-#endif
-
 /*
  * X509 cert profiles.
  */
@@ -177,31 +106,6 @@ const mbedtls_x509_crt_profile crt_profile_preferred = // CONST GLOBAL
 };
 } // namespace
 } // namespace mbedtls_ctx_private
-
-// Handle different APIs regarding curves
-#if MBEDTLS_VERSION_NUMBER >= 0x03000000
-using mbedtls_compat_group_id = uint16_t;
-#else
-using mbedtls_compat_group_id = mbedtls_ecp_group_id;
-#endif
-
-static inline mbedtls_compat_group_id
-mbedtls_compat_get_group_id(const mbedtls_ecp_curve_info *curve_info)
-{
-#if MBEDTLS_VERSION_NUMBER >= 0x03000000
-    return curve_info->tls_id;
-#else
-    return curve_info->grp_id;
-#endif
-}
-
-#if MBEDTLS_VERSION_NUMBER < 0x03000000
-static inline void
-mbedtls_ssl_conf_groups(mbedtls_ssl_config *conf, mbedtls_compat_group_id *groups)
-{
-    mbedtls_ssl_conf_curves(conf, groups);
-}
-#endif
 
 // Represents an SSL configuration that can be used
 // to instantiate actual SSL sessions.
@@ -863,7 +767,6 @@ class MbedTLSContext : public SSLFactoryAPI
                 mbedtls_ssl_init(ssl);
 
                 // set minimum TLS version
-#if MBEDTLS_VERSION_NUMBER > 0x03000000
                 mbedtls_ssl_protocol_version version;
                 switch (c.tls_version_min)
                 {
@@ -877,39 +780,6 @@ class MbedTLSContext : public SSLFactoryAPI
                     break;
                 }
                 mbedtls_ssl_conf_min_tls_version(sslconf, version);
-#else
-                int major;
-                int minor;
-                switch (c.tls_version_min)
-                {
-#if defined(MBEDTLS_SSL_MAJOR_VERSION_3) && defined(MBEDTLS_SSL_MINOR_VERSION_1)
-                case TLSVersion::Type::V1_0:
-                    major = MBEDTLS_SSL_MAJOR_VERSION_3;
-                    minor = MBEDTLS_SSL_MINOR_VERSION_1;
-                    break;
-#endif
-#if defined(MBEDTLS_SSL_MAJOR_VERSION_3) && defined(MBEDTLS_SSL_MINOR_VERSION_2)
-                case TLSVersion::Type::V1_1:
-                    major = MBEDTLS_SSL_MAJOR_VERSION_3;
-                    minor = MBEDTLS_SSL_MINOR_VERSION_2;
-                    break;
-#endif
-#if defined(MBEDTLS_SSL_MAJOR_VERSION_3) && defined(MBEDTLS_SSL_MINOR_VERSION_3)
-                default:
-                case TLSVersion::Type::V1_2:
-                    major = MBEDTLS_SSL_MAJOR_VERSION_3;
-                    minor = MBEDTLS_SSL_MINOR_VERSION_3;
-                    break;
-#endif
-                }
-                mbedtls_ssl_conf_min_version(sslconf, major, minor);
-#if 0
-    /* force TLS 1.2 as maximum version (debugging only, disable in production) */
-    /* This is basically is the same as tls-version-max that OpenVPN 2.x has but hardcoded */
-	    mbedtls_ssl_conf_max_version(sslconf, MBEDTLS_SSL_MAJOR_VERSION_3, MBEDTLS_SSL_MINOR_VERSION_3);
-#endif
-#endif
-
 
                 {
                     // peer must present a valid certificate unless SSLConst::NO_VERIFY_PEER.
@@ -944,14 +814,6 @@ class MbedTLSContext : public SSLFactoryAPI
                 {
                     set_mbedtls_cipherlist(c.tls_cipher_list);
                 }
-                else
-                {
-#if MBEDTLS_VERSION_NUMBER < 0x03000000
-                    /* With newer versions we trust the default */
-                    mbedtls_ssl_conf_ciphersuites(sslconf, mbedtls_ctx_private::ciphersuites);
-#endif
-                }
-
                 if (!c.tls_groups.empty())
                 {
                     set_mbedtls_groups(c.tls_groups);
@@ -1050,10 +912,10 @@ class MbedTLSContext : public SSLFactoryAPI
             }
         }
 
-        mbedtls_ssl_config *sslconf;                       // SSL configuration parameters for SSL connection object
-        std::unique_ptr<int[]> allowed_ciphers;            //! Hold the array that is used for setting the allowed ciphers
-                                                           // must have the same lifetime as sslconf
-        std::unique_ptr<mbedtls_compat_group_id[]> groups; //! Hold the array that is used for setting the curves
+        mbedtls_ssl_config *sslconf;            // SSL configuration parameters for SSL connection object
+        std::unique_ptr<int[]> allowed_ciphers; //! Hold the array that is used for setting the allowed ciphers
+                                                // must have the same lifetime as sslconf
+        std::unique_ptr<uint16_t[]> groups;     //! Hold the array that is used for setting the curves
 
 
         MbedTLSContext *parent;
@@ -1105,7 +967,7 @@ class MbedTLSContext : public SSLFactoryAPI
             auto num_groups = std::count(tls_groups.begin(), tls_groups.end(), ':') + 1;
 
             /* add extra space for sentinel at the end */
-            groups.reset(new mbedtls_compat_group_id[num_groups + 1]);
+            groups.reset(new uint16_t[num_groups + 1]);
 
             std::stringstream groups_ss(tls_groups);
             std::string group;
@@ -1117,7 +979,7 @@ class MbedTLSContext : public SSLFactoryAPI
 
                 if (ci)
                 {
-                    groups[i] = mbedtls_compat_get_group_id(ci);
+                    groups[i] = ci->tls_id;
                     i++;
                 }
                 else
@@ -1127,7 +989,7 @@ class MbedTLSContext : public SSLFactoryAPI
                 }
             }
 
-            groups[i] = mbedtls_compat_group_id(0);
+            groups[i] = 0;
             mbedtls_ssl_conf_groups(sslconf, groups.get());
         }
 
@@ -1289,14 +1151,7 @@ class MbedTLSContext : public SSLFactoryAPI
 
     bool verify_ns_cert_type(const mbedtls_x509_crt *cert) const
     {
-#if MBEDTLS_VERSION_NUMBER < 0x03000000
-        if (config->ns_cert_type == NSCert::SERVER)
-            return bool(cert->ns_cert_type & MBEDTLS_X509_NS_CERT_TYPE_SSL_SERVER);
-        else if (config->ns_cert_type == NSCert::CLIENT)
-            return bool(cert->ns_cert_type & MBEDTLS_X509_NS_CERT_TYPE_SSL_CLIENT);
-        else
-#endif
-            return false;
+        return false;
     }
 
     // remote-cert-ku verification
@@ -1380,22 +1235,6 @@ class MbedTLSContext : public SSLFactoryAPI
         // log status
         if (self->config->flags & SSLConst::LOG_VERIFY_STATUS)
             OVPN_LOG_INFO(status_string(cert, depth, flags));
-
-        // notify if connection is happening with an insecurely signed cert.
-
-        // mbed TLS 3.0 does not allow the weaker signatures by default and also does not give a
-        // proper accessor to these fields anymore
-#if MBEDTLS_VERSION_NUMBER < 0x03000000
-        if (cert->sig_md == MBEDTLS_MD_MD5)
-        {
-            ssl->tls_warnings |= SSLAPI::TLS_WARN_SIG_MD5;
-        }
-
-        if (cert->sig_md == MBEDTLS_MD_SHA1)
-        {
-            ssl->tls_warnings |= SSLAPI::TLS_WARN_SIG_SHA1;
-        }
-#endif
 
         // leaf-cert verification
         if (depth == 0)
@@ -1543,9 +1382,6 @@ class MbedTLSContext : public SSLFactoryAPI
     }
 
     static int epki_decrypt(void *arg,
-#if MBEDTLS_VERSION_NUMBER < 0x03000000
-                            int mode,
-#endif
                             size_t *olen,
                             const unsigned char *input,
                             unsigned char *output,
@@ -1560,9 +1396,6 @@ class MbedTLSContext : public SSLFactoryAPI
     static int epki_sign(void *arg,
                          int (*f_rng)(void *, unsigned char *, size_t),
                          void *p_rng,
-#if MBEDTLS_VERSION_NUMBER < 0x03000000
-                         int mode,
-#endif
                          mbedtls_md_type_t md_alg,
                          unsigned int hashlen,
                          const unsigned char *hash,
@@ -1571,85 +1404,66 @@ class MbedTLSContext : public SSLFactoryAPI
         MbedTLSContext *self = (MbedTLSContext *)arg;
         try
         {
-#if MBEDTLS_VERSION_NUMBER < 0x03000000
-            if (mode == MBEDTLS_RSA_PRIVATE)
-#else
-            if (true)
-#endif
+            size_t digest_prefix_len = 0;
+            const unsigned char *digest_prefix = nullptr;
+
+            /* get signature type */
+            switch (md_alg)
             {
-                size_t digest_prefix_len = 0;
-                const unsigned char *digest_prefix = nullptr;
-
-                /* get signature type */
-                switch (md_alg)
-                {
-                case MBEDTLS_MD_NONE:
-                    break;
-                case MBEDTLS_MD_MD5:
-                    digest_prefix = PKCS1::DigestPrefix::MD5;
-                    digest_prefix_len = sizeof(PKCS1::DigestPrefix::MD5);
-                    break;
-                case MBEDTLS_MD_SHA1:
-                    digest_prefix = PKCS1::DigestPrefix::SHA1;
-                    digest_prefix_len = sizeof(PKCS1::DigestPrefix::SHA1);
-                    break;
-                case MBEDTLS_MD_SHA256:
-                    digest_prefix = PKCS1::DigestPrefix::SHA256;
-                    digest_prefix_len = sizeof(PKCS1::DigestPrefix::SHA256);
-                    break;
-                case MBEDTLS_MD_SHA384:
-                    digest_prefix = PKCS1::DigestPrefix::SHA384;
-                    digest_prefix_len = sizeof(PKCS1::DigestPrefix::SHA384);
-                    break;
-                case MBEDTLS_MD_SHA512:
-                    digest_prefix = PKCS1::DigestPrefix::SHA512;
-                    digest_prefix_len = sizeof(PKCS1::DigestPrefix::SHA512);
-                    break;
-                default:
-                    OVPN_LOG_INFO("MbedTLSContext::epki_sign unrecognized hash_id"
-#if MBEDTLS_VERSION_NUMBER < 0x03000000
-                                  << "mode=" << mode
-#endif
-                                  << " md_alg=" << md_alg << " hashlen=" << hashlen);
-                    return MBEDTLS_ERR_RSA_BAD_INPUT_DATA;
-                }
-
-                /* concatenate digest prefix with hash */
-                BufferAllocated from_buf(digest_prefix_len + hashlen);
-                if (digest_prefix_len)
-                    from_buf.write(digest_prefix, digest_prefix_len);
-                from_buf.write(hash, hashlen);
-
-                /* convert from_buf to base64 */
-                const std::string from_b64 = base64->encode(from_buf);
-
-                /* get signature */
-                std::string sig_b64;
-                const bool status = self->config->external_pki->sign(self->config->external_pki_alias, from_b64, sig_b64, "RSA_PKCS1_PADDING", "", "");
-                if (!status)
-                    throw ssl_external_pki("MbedTLS: could not obtain signature");
-
-                /* decode base64 signature to binary */
-                const size_t len = self->key_len();
-                Buffer sigbuf(sig, len, false);
-                base64->decode(sigbuf, sig_b64);
-
-                /* verify length */
-                if (sigbuf.size() != len)
-                    throw ssl_external_pki("mbed TLS: incorrect signature length");
-
-                /* success */
-                return 0;
-            }
-            else
-            {
-                OVPN_LOG_INFO("MbedTLSContext::epki_sign unrecognized parameters"
-#if MBEDTLS_VERSION_NUMBER < 0x03000000
-                              << "mode=" << mode
-#endif
+            case MBEDTLS_MD_NONE:
+                break;
+            case MBEDTLS_MD_MD5:
+                digest_prefix = PKCS1::DigestPrefix::MD5;
+                digest_prefix_len = sizeof(PKCS1::DigestPrefix::MD5);
+                break;
+            case MBEDTLS_MD_SHA1:
+                digest_prefix = PKCS1::DigestPrefix::SHA1;
+                digest_prefix_len = sizeof(PKCS1::DigestPrefix::SHA1);
+                break;
+            case MBEDTLS_MD_SHA256:
+                digest_prefix = PKCS1::DigestPrefix::SHA256;
+                digest_prefix_len = sizeof(PKCS1::DigestPrefix::SHA256);
+                break;
+            case MBEDTLS_MD_SHA384:
+                digest_prefix = PKCS1::DigestPrefix::SHA384;
+                digest_prefix_len = sizeof(PKCS1::DigestPrefix::SHA384);
+                break;
+            case MBEDTLS_MD_SHA512:
+                digest_prefix = PKCS1::DigestPrefix::SHA512;
+                digest_prefix_len = sizeof(PKCS1::DigestPrefix::SHA512);
+                break;
+            default:
+                OVPN_LOG_INFO("MbedTLSContext::epki_sign unrecognized hash_id"
                               << " md_alg=" << md_alg << " hashlen=" << hashlen);
                 return MBEDTLS_ERR_RSA_BAD_INPUT_DATA;
             }
+
+            /* concatenate digest prefix with hash */
+            BufferAllocated from_buf(digest_prefix_len + hashlen);
+            if (digest_prefix_len)
+                from_buf.write(digest_prefix, digest_prefix_len);
+            from_buf.write(hash, hashlen);
+
+            /* convert from_buf to base64 */
+            const std::string from_b64 = base64->encode(from_buf);
+
+            /* get signature */
+            std::string sig_b64;
+            const bool status = self->config->external_pki->sign(self->config->external_pki_alias, from_b64, sig_b64, "RSA_PKCS1_PADDING", "", "");
+            if (!status)
+                throw ssl_external_pki("MbedTLS: could not obtain signature");
+
+            /* decode base64 signature to binary */
+            const size_t len = self->key_len();
+            Buffer sigbuf(sig, len, false);
+            base64->decode(sigbuf, sig_b64);
+
+            /* verify length */
+            if (sigbuf.size() != len)
+                throw ssl_external_pki("mbed TLS: incorrect signature length");
+
+            /* success */
+            return 0;
         }
         catch (const std::exception &e)
         {
@@ -1679,21 +1493,8 @@ class MbedTLSContext : public SSLFactoryAPI
     {
         const int SHA_DIGEST_LEN = 20;
         static_assert(sizeof(AuthCert::issuer_fp) == SHA_DIGEST_LEN, "size inconsistency");
-#if MBEDTLS_VERSION_NUMBER < 0x02070000
-        // mbed TLS 2.7.0 and newer deprecates mbedtls_sha1()
-        // in favour of mbedtls_sha1_ret().
-
-        // We support for older mbed TLS versions
-        // to be able to build on Debian 9 and Ubuntu 16.
-        mbedtls_sha1(cert->raw.p, cert->raw.len, authcert->issuer_fp);
-#elif MBEDTLS_VERSION_NUMBER < 0x03000000
-        if (mbedtls_sha1_ret(cert->raw.p, cert->raw.len, authcert.issuer_fp))
-            return false;
-#else
-        // mbedtls_sha1_ret is renamed to mbedtls_sha1 in 3.0
         if (mbedtls_sha1(cert->raw.p, cert->raw.len, authcert.issuer_fp))
             return false;
-#endif
         return true;
     }
 };

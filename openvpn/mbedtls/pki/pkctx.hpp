@@ -91,13 +91,9 @@ class PKContext : public RC<thread_unsafe_refcount>
                                                 (const unsigned char *)key_txt.c_str(),
                                                 key_txt.length() + 1,
                                                 (const unsigned char *)priv_key_pwd.c_str(),
-                                                priv_key_pwd.length()
-#if MBEDTLS_VERSION_NUMBER > 0x03000000
-                                                    ,
+                                                priv_key_pwd.length(),
                                                 mbedtls_ctr_drbg_random,
-                                                rand.get_ctr_drbg_ctx()
-#endif
-        );
+                                                rand.get_ctr_drbg_ctx());
         if (status < 0)
             throw MbedTLSException("error parsing " + title + " private key", status);
     }

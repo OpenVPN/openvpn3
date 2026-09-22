@@ -709,9 +709,7 @@ class Client : public ClientBase
                                                    signdata.c_data(),
                                                    signdata.size(),
                                                    sig.data(),
-#if MBEDTLS_VERSION_NUMBER >= 0x03000000
                                                    sig.length(),
-#endif
                                                    &sig_size,
                                                    rng_callback,
                                                    this);

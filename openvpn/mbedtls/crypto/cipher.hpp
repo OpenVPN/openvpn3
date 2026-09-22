@@ -245,11 +245,6 @@ class CipherContext
             return mbedtls_cipher_info_from_type(MBEDTLS_CIPHER_DES_CBC);
         case CryptoAlgs::DES_EDE3_CBC:
             return mbedtls_cipher_info_from_type(MBEDTLS_CIPHER_DES_EDE3_CBC);
-#if MBEDTLS_VERSION_NUMBER < 0x03000000
-            /* no longer supported in newer mbed TLS versions */
-        case CryptoAlgs::BF_CBC:
-            return mbedtls_cipher_info_from_type(MBEDTLS_CIPHER_BLOWFISH_CBC);
-#endif
         default:
             return nullptr;
         }
