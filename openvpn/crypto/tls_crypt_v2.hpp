@@ -347,6 +347,20 @@ class TLSCryptMetadata : public RC<thread_unsafe_refcount>
     {
         return true;
     }
+
+    /**
+     * @brief Name for the server's SNI handler to select by instead of the ClientHello SNI
+     *
+     * Called only once verify() has accepted the metadata of a WKc the server key
+     * authenticated. An override should derive the name from that metadata, which the
+     * client, unlike the SNI, cannot choose. See SSLAPI::set_sni_hint().
+     *
+     * @return the name, or empty for none (the default)
+     */
+    virtual std::string sni_hint() const
+    {
+        return {};
+    }
 };
 
 // abstract class to be extended when creating other factories

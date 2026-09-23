@@ -2275,6 +2275,10 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
 
             // set must-negotiate-by time
             set_event(KEV_NONE, KEV_NEGOTIATE, construct_time + proto.config->handshake_window);
+
+            // no WKc comes with a renegotiation
+            if (proto.tls_crypt_metadata)
+                Base::set_sni_hint(proto.tls_crypt_metadata->sni_hint());
         }
 
         void set_protocol(const Protocol &p)
@@ -4152,7 +4156,12 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
             const TLSCryptMetadata::Ptr recorder = proto.config->tls_crypt_metadata_factory->new_obj();
 
             if (recorder->verify(metadata.type, metadata.payload))
+            {
+                // this key was constructed before its WKc arrived
+                Base::set_sni_hint(recorder->sni_hint());
+                proto.tls_crypt_metadata = recorder;
                 return true;
+            }
 
             proto.stats->error(Error::TLS_CRYPT_META_FAIL);
 
@@ -4747,6 +4756,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
         tls_crypt_recv.reset();
         tls_crypt_server.reset();
         tls_crypt_client_key.erase();
+        tls_crypt_metadata.reset();
         dynamic_tls_crypt_keyed = false;
 
         // start with key ID 0
@@ -5567,6 +5577,14 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
      * same key in at both ends.
      */
     OpenVPNStaticKey tls_crypt_client_key;
+
+    /**
+     * @brief The metadata hook that accepted this session's WKc, or null
+     *
+     * Kept for its sni_hint(): only the first key comes with a WKc, and every
+     * renegotiated one must select the same SNI context.
+     */
+    TLSCryptMetadata::Ptr tls_crypt_metadata;
 
     /**
      * @brief Whether set_dynamic_tls_crypt() has keyed this session already

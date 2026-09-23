@@ -17,6 +17,7 @@
 #include "test_common.hpp"
 
 #include <iostream>
+#include <set>
 #include <string>
 #include <sstream>
 #include <deque>
@@ -24,6 +25,7 @@
 #include <cstring>
 #include <limits>
 #include <thread>
+#include <vector>
 
 #include <gmock/gmock.h>
 #include <openvpn/common/platform.hpp>
@@ -172,6 +174,7 @@
 #include <openvpn/random/mtrandapi.hpp>
 #include <openvpn/frame/frame.hpp>
 #include <openvpn/ssl/proto.hpp>
+#include <openvpn/ssl/sni_handler.hpp>
 #include <openvpn/init/initprocess.hpp>
 
 #include <openvpn/crypto/cryptodcsel.hpp>
@@ -1005,6 +1008,82 @@ static auto create_client_proto_context(ClientSSLAPI::Config::Ptr cc,
     return cp;
 }
 
+/**
+ * @brief Server SNI handler that records every name it is asked about
+ *
+ * Answers with a fresh factory, as PG's does, so that the SSL_CTX swap runs.
+ */
+struct SniProbe : public SNI::HandlerBase
+{
+    /**
+     * @brief Records @p sni_name and answers it if it is in @c known
+     *
+     * @return a new factory from @p default_config, or null for an unknown name
+     */
+    SSLFactoryAPI::Ptr sni_hello(const std::string &sni_name,
+                                 SNI::Metadata::UPtr &sni_metadata,
+                                 SSLConfigAPI::Ptr default_config) const override
+    {
+        asked.push_back(sni_name);
+        if (known.count(sni_name) == 0)
+            return {};
+        return default_config->new_factory();
+    }
+
+    std::set<std::string> known;            ///< names it recognizes
+    mutable std::vector<std::string> asked; ///< in order
+};
+
+/**
+ * @brief Metadata hook that accepts every WKc and offers a fixed SNI hint
+ */
+struct HintingMetadata : public TLSCryptMetadata
+{
+    /**
+     * @brief Offers @p hint for every session
+     */
+    explicit HintingMetadata(std::string hint)
+        : hint_(std::move(hint))
+    {
+    }
+
+    /**
+     * @brief The fixed hint
+     */
+    std::string sni_hint() const override
+    {
+        return hint_;
+    }
+
+  private:
+    std::string hint_;
+};
+
+/**
+ * @brief Factory for HintingMetadata
+ */
+struct HintingMetadataFactory : public TLSCryptMetadataFactory
+{
+    /**
+     * @brief Makes hooks that offer @p hint
+     */
+    explicit HintingMetadataFactory(std::string hint)
+        : hint_(std::move(hint))
+    {
+    }
+
+    /**
+     * @brief A HintingMetadata for one session
+     */
+    TLSCryptMetadata::Ptr new_obj() override
+    {
+        return new HintingMetadata(hint_);
+    }
+
+  private:
+    std::string hint_;
+};
+
 // Configures one specific test run */
 struct proto_test
 {
@@ -1021,11 +1100,22 @@ struct proto_test
     bool use_dynamic_tls_crypt = false;
     size_t control_payload = 378;
     size_t mssfix_ctrl = 0;
+    //! When set, installed as the server's SNI handler.
+    SniProbe *sni_probe = nullptr;
+    //! What the server's tls-crypt-v2 metadata hook offers as SNI hint.
+    std::string sni_hint;
+    //! SNI the client puts in its ClientHello.
+    std::string client_sni;
+    //! Message loop length; one renegotiation takes about RENEG * 10 iterations.
+    int iterations = ITER;
 };
 
 // execute the unit test in one thread
 int test(const struct proto_test &t)
 {
+    if (t.sni_probe)
+        t.sni_probe->asked.clear();
+
     try
     {
         // frame
@@ -1057,6 +1147,8 @@ int test(const struct proto_test &t)
 
         // client config
         ClientSSLAPI::Config::Ptr cc = create_client_ssl_config(frame, prng_cli, t.tls_version_mismatch);
+        if (!t.client_sni.empty())
+            cc->set_sni_name(t.client_sni);
         MySessionStats::Ptr cli_stats(new MySessionStats);
 
         auto cp = create_client_proto_context(std::move(cc), frame, prng_cli, cli_stats, time, t.tls_crypt_v2_key_fn, t.client_tls_auth_only, t.use_dynamic_tls_crypt, t.tls_crypt_v2_dir);
@@ -1077,6 +1169,8 @@ int test(const struct proto_test &t)
         sc->load_private_key(server_key);
         sc->load_dh(dh_pem);
         sc->set_tls_version_min(t.tls_version_mismatch ? TLSVersion::Type::V1_3 : TLS_VER_MIN);
+        if (t.sni_probe)
+            sc->set_sni_handler(t.sni_probe);
 #ifdef VERBOSE
         sc->set_debug_level(1);
 #endif
@@ -1125,7 +1219,10 @@ int test(const struct proto_test &t)
         }
 
         sp->set_tls_crypt_algs();
-        sp->tls_crypt_metadata_factory.reset(new CryptoTLSCryptMetadataFactory());
+        if (t.sni_hint.empty())
+            sp->tls_crypt_metadata_factory.reset(new CryptoTLSCryptMetadataFactory());
+        else
+            sp->tls_crypt_metadata_factory.reset(new HintingMetadataFactory(t.sni_hint));
         sp->tls_crypt_ = ProtoContext::ProtoConfig::TLSCrypt::V2;
         sp->tls_crypt_v2_serverkey_id = !t.tls_crypt_v2_key_fn.empty();
         sp->tls_crypt_v2_serverkey_dir = t.tls_crypt_v2_dir;
@@ -1235,7 +1332,7 @@ int test(const struct proto_test &t)
                 }
 
                 // message loop
-                for (j = 0; j < ITER; ++j)
+                for (j = 0; j < t.iterations; ++j)
                 {
                     client_to_server.xfer(cli_proto, serv_proto);
                     server_to_client.xfer(serv_proto, cli_proto);
@@ -1588,6 +1685,57 @@ TEST_F(ProtoUnitTest, TlsCryptV2ControlPacketCapHonored)
     int ret = test_retry(N_RETRIES, {.tls_crypt_v2_key_fn = "tls-crypt-v2-client-with-serverkey.key", .force_resend_wkc = true, .mssfix_ctrl = 420});
     EXPECT_EQ(ret, 0);
 }
+
+#if defined(USE_TLS_CRYPT_V2) && defined(USE_OPENSSL_SERVER)
+// About five renegotiations: enough to see the hint on keys past the first,
+// at a twentieth of the full run's cost.
+static constexpr int SNI_HINT_ITER = 50000;
+
+// The hint reaches the SNI handler on every key, though only the first comes with a WKc.
+TEST_F(ProtoUnitTest, TlsCryptV2SniHintSelectsContextOnEveryKey)
+{
+    SniProbe probe;
+    probe.known = {"acme"};
+    int ret = test_retry(N_RETRIES, {.tls_crypt_v2_key_fn = "tls-crypt-v2-client-with-serverkey.key", .sni_probe = &probe, .sni_hint = "acme", .iterations = SNI_HINT_ITER});
+    EXPECT_EQ(ret, 0);
+    EXPECT_GE(probe.asked.size(), 2u);
+    EXPECT_THAT(probe.asked, testing::Each(testing::Eq("acme")));
+}
+
+// A recognized hint wins over a ClientHello SNI the handler would also recognize.
+TEST_F(ProtoUnitTest, TlsCryptV2SniHintOutranksClientSni)
+{
+    SniProbe probe;
+    probe.known = {"acme", "other"};
+    int ret = test_retry(N_RETRIES, {.tls_crypt_v2_key_fn = "tls-crypt-v2-client-with-serverkey.key", .sni_probe = &probe, .sni_hint = "acme", .client_sni = "other", .iterations = SNI_HINT_ITER});
+    EXPECT_EQ(ret, 0);
+    EXPECT_GE(probe.asked.size(), 2u);
+    EXPECT_THAT(probe.asked, testing::Each(testing::Eq("acme")));
+}
+
+// An unrecognized hint keeps the default context, even when the handler would
+// recognize the ClientHello SNI.
+TEST_F(ProtoUnitTest, TlsCryptV2UnknownSniHintIgnoresClientSni)
+{
+    SniProbe probe;
+    probe.known = {"acme"};
+    int ret = test_retry(N_RETRIES, {.tls_crypt_v2_key_fn = "tls-crypt-v2-client-with-serverkey.key", .sni_probe = &probe, .sni_hint = "nope", .client_sni = "acme", .iterations = SNI_HINT_ITER});
+    EXPECT_EQ(ret, 0);
+    EXPECT_GE(probe.asked.size(), 2u);
+    EXPECT_THAT(probe.asked, testing::Each(testing::Eq("nope")));
+}
+
+// Without a hint, the ClientHello SNI still selects.
+TEST_F(ProtoUnitTest, TlsCryptV2WithoutSniHintUsesClientSni)
+{
+    SniProbe probe;
+    probe.known = {"acme"};
+    int ret = test_retry(N_RETRIES, {.tls_crypt_v2_key_fn = "tls-crypt-v2-client-with-serverkey.key", .sni_probe = &probe, .client_sni = "acme", .iterations = SNI_HINT_ITER});
+    EXPECT_EQ(ret, 0);
+    EXPECT_GE(probe.asked.size(), 2u);
+    EXPECT_THAT(probe.asked, testing::Each(testing::Eq("acme")));
+}
+#endif
 
 // Security regression test: unwrap_tls_crypt_wkc() reads the 16-bit WKc length
 // (wkc_len) from the last two bytes of the received packet. For CONTROL_WKC_V1

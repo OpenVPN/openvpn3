@@ -261,6 +261,14 @@ class ProtoStackBase
         return ssl_->auth_cert();
     }
 
+    /**
+     * @brief See SSLAPI::set_sni_hint()
+     */
+    void set_sni_hint(std::string hint)
+    {
+        ssl_->set_sni_hint(std::move(hint));
+    }
+
   private:
     // Parent methods -- derived class must define these methods
 
