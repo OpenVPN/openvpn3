@@ -2332,17 +2332,7 @@ class OpenSSLContext : public SSLFactoryAPI
                     if (!fapi)
                         return sni_error("SNI name not found", SSL_AD_UNRECOGNIZED_NAME, self, self_ssl, al);
 
-                    // make sure that returned SSLFactoryAPI is an OpenSSLContext
-                    self_ssl->sni_ctx = fapi.dynamic_pointer_cast<OpenSSLContext>();
-                    if (!self_ssl->sni_ctx)
-                        throw Exception("sni_handler returned wrong kind of SSLFactoryAPI");
-
-                    // don't modify SSL CTX if the returned SSLFactoryAPI is ourself
-                    if (fapi.get() != self)
-                    {
-                        SSL_set_SSL_CTX(s, self_ssl->sni_ctx->ctx.get());
-                        self_ssl->set_parent(self_ssl->sni_ctx.get());
-                    }
+                    adopt_sni_factory(s, self, self_ssl, fapi);
                 }
             }
             return SSL_CLIENT_HELLO_SUCCESS;
@@ -2352,6 +2342,26 @@ class OpenSSLContext : public SSLFactoryAPI
             OPENVPN_LOG("SNI exception in OpenSSLContext, SNI=" << sni_name << " : " << e.what());
             *al = SSL_AD_INTERNAL_ERROR;
             return SSL_CLIENT_HELLO_ERROR;
+        }
+    }
+
+    /**
+     * @brief Move a session in its ClientHello callback to the context the SNI handler chose
+     *
+     * @throws Exception if @p fapi is not an OpenSSLContext
+     */
+    static void adopt_sni_factory(::SSL *s, OpenSSLContext *self, SSL *self_ssl, const SSLFactoryAPI::Ptr &fapi)
+    {
+        // make sure that returned SSLFactoryAPI is an OpenSSLContext
+        self_ssl->sni_ctx = fapi.dynamic_pointer_cast<OpenSSLContext>();
+        if (!self_ssl->sni_ctx)
+            throw Exception("sni_handler returned wrong kind of SSLFactoryAPI");
+
+        // don't modify SSL CTX if the returned SSLFactoryAPI is ourself
+        if (fapi.get() != self)
+        {
+            SSL_set_SSL_CTX(s, self_ssl->sni_ctx->ctx.get());
+            self_ssl->set_parent(self_ssl->sni_ctx.get());
         }
     }
 
