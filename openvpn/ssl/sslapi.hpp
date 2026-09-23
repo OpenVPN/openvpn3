@@ -70,6 +70,20 @@ class SSLAPI : public RC<thread_unsafe_refcount>
     virtual bool did_full_handshake() = 0;
     virtual const AuthCert::Ptr &auth_cert() const = 0;
     virtual void mark_no_cache() = 0; // prevent caching of client-side session (only meaningful when client_session_tickets is enabled)
+
+    /**
+     * @brief Have the server's SNI handler select by @p hint instead of the ClientHello SNI
+     *
+     * A hint the handler does not recognize keeps the default context; the SNI is
+     * ignored either way, so the client cannot pick a context the hint rules out.
+     * A no-op without SNI handler support.
+     *
+     * @param hint  the name, or empty for none
+     */
+    virtual void set_sni_hint(std::string hint)
+    {
+    }
+
     uint32_t get_tls_warnings() const
     {
         return tls_warnings;

@@ -895,6 +895,14 @@ class OpenSSLContext : public SSLFactoryAPI
             return authcert;
         }
 
+        /**
+         * @brief Stores @p hint for client_hello_callback(); see SSLAPI::set_sni_hint()
+         */
+        void set_sni_hint(std::string hint) override
+        {
+            sni_hint = std::move(hint);
+        }
+
         void mark_no_cache() override
         {
             sess_cache_key.reset();
@@ -1184,6 +1192,7 @@ class OpenSSLContext : public SSLFactoryAPI
         AuthCert::Ptr authcert;
         OpenSSLSessionCache::Key::UPtr sess_cache_key; // client-side only
         OpenSSLContext::Ptr sni_ctx;
+        std::string sni_hint; // server-side only
         bool ssl_bio_linkage;
         bool overflow;
         bool called_did_full_handshake;
@@ -2304,6 +2313,36 @@ class OpenSSLContext : public SSLFactoryAPI
         {
             // get the SNI from the client hello
             sni_name = client_hello_get_sni(s);
+
+            // A hint is final: letting the SNI decide when the hint is unrecognized would
+            // let the client pick a context the hint's source never authorized.
+            if (!self_ssl->sni_hint.empty() && self->config->sni_handler)
+            {
+                if (!sni_name.empty() && sni_name != self_ssl->sni_hint)
+                    OPENVPN_LOG("SNI " << sni_name << " ignored in favor of hint " << self_ssl->sni_hint);
+
+                SSLFactoryAPI::Ptr fapi;
+                SNI::Metadata::UPtr sm;
+                try
+                {
+                    fapi = self->config->sni_handler->sni_hello(self_ssl->sni_hint, sm, self->config);
+                }
+                catch (const std::exception &e)
+                {
+                    OPENVPN_LOG("SNI HANDLER ERROR (hint " << self_ssl->sni_hint << "): " << e.what());
+                    return sni_error(e.what(), SSL_AD_INTERNAL_ERROR, self, self_ssl, al);
+                }
+                if (fapi)
+                {
+                    if (self_ssl->authcert)
+                    {
+                        self_ssl->authcert->sni = self_ssl->sni_hint;
+                        self_ssl->authcert->sni_metadata = std::move(sm);
+                    }
+                    adopt_sni_factory(s, self, self_ssl, fapi);
+                }
+                return SSL_CLIENT_HELLO_SUCCESS;
+            }
 
             // process the SNI name, if provided
             if (!sni_name.empty())
