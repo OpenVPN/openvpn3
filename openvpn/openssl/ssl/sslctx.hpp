@@ -62,6 +62,7 @@
 #include <openvpn/ssl/sslapi.hpp>
 #include <openvpn/ssl/sni_handler.hpp>
 #include <openvpn/ssl/iana_ciphers.hpp>
+#include <openvpn/openssl/compat.hpp>
 #include <openvpn/openssl/util/error.hpp>
 #if ENABLE_EXTERNAL_PKI
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L
@@ -1105,7 +1106,7 @@ class OpenSSLContext : public SSLFactoryAPI
             const SSL_CIPHER *ciph = SSL_get_current_cipher(ssl);
             if (ciph)
             {
-                char *desc = SSL_CIPHER_description(ciph, nullptr, 0);
+                char *desc = const_cast<char *>(SSL_CIPHER_description(ciph, nullptr, 0));
                 if (!desc)
                 {
                     os << ", cipher: Error getting TLS cipher description from SSL_CIPHER_description";
@@ -1485,12 +1486,12 @@ class OpenSSLContext : public SSLFactoryAPI
                 auto certType = EVP_PKEY_id(X509_get0_pubkey(config->cert.obj()));
                 if (certType == EVP_PKEY_RSA)
                 {
-                    epki = std::make_shared<ExternalPKIImpl>(ExternalPKIRsaImpl(ctx.get(), config->cert.obj(), config->external_pki, config->external_pki_alias));
+                    epki = std::make_shared<ExternalPKIRsaImpl>(ctx.get(), config->cert.obj(), config->external_pki, config->external_pki_alias);
                 }
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(OPENSSL_NO_EC)
                 else if (certType == EVP_PKEY_EC)
                 {
-                    epki = std::make_shared<ExternalPKIImpl>(ExternalPKIECImpl(ctx.get(), config->cert.obj(), config->external_pki, config->external_pki_alias));
+                    epki = std::make_shared<ExternalPKIECImpl>(ctx.get(), config->cert.obj(), config->external_pki, config->external_pki_alias);
                 }
 #endif
                 else
