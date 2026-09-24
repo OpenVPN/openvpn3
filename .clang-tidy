@@ -1,0 +1,406 @@
+---
+CheckOptions:
+  # --- readability-identifier-naming ------------------------------------
+  # Measured over 28,579 unique identifiers in openvpn/, test/ and client/.
+  # snake_case for values and functions, CamelCase for types, UPPER_CASE for
+  # macros and enum constants. See naming-conventions-report.md.
+
+  # variables, parameters, functions
+  - key: readability-identifier-naming.ParameterCase
+    value: lower_case
+  - key: readability-identifier-naming.PointerParameterCase
+    value: lower_case
+  - key: readability-identifier-naming.ConstantParameterCase
+    value: lower_case
+  - key: readability-identifier-naming.ConstantPointerParameterCase
+    value: lower_case
+  - key: readability-identifier-naming.ParameterPackCase
+    value: lower_case
+  - key: readability-identifier-naming.LocalVariableCase
+    value: lower_case
+  - key: readability-identifier-naming.LocalPointerCase
+    value: lower_case
+  - key: readability-identifier-naming.LocalConstantCase
+    value: lower_case
+  - key: readability-identifier-naming.LocalConstantPointerCase
+    value: lower_case
+  - key: readability-identifier-naming.GlobalVariableCase
+    value: lower_case
+  - key: readability-identifier-naming.GlobalPointerCase
+    value: lower_case
+  - key: readability-identifier-naming.GlobalConstantCase
+    value: lower_case
+  - key: readability-identifier-naming.StaticConstantCase
+    value: lower_case
+  - key: readability-identifier-naming.FunctionCase
+    value: lower_case
+  - key: readability-identifier-naming.GlobalFunctionCase
+    value: lower_case
+
+  # methods
+  - key: readability-identifier-naming.PublicMethodCase
+    value: lower_case
+  - key: readability-identifier-naming.ProtectedMethodCase
+    value: lower_case
+  - key: readability-identifier-naming.ClassMethodCase
+    value: lower_case
+  - key: readability-identifier-naming.VirtualMethodCase
+    value: lower_case
+  - key: readability-identifier-naming.ConstexprMethodCase
+    value: lower_case
+  - key: readability-identifier-naming.PrivateMethodCase
+    value: lower_case
+  - key: readability-identifier-naming.PrivateMethodIgnoredRegexp
+    value: '^[a-z][a-z0-9_]*_$'
+
+  # members: a trailing underscore marks private state and is permitted
+  - key: readability-identifier-naming.PublicMemberCase
+    value: lower_case
+  - key: readability-identifier-naming.PublicMemberIgnoredRegexp
+    value: '^[a-z][a-z0-9_]*_$'
+  - key: readability-identifier-naming.ProtectedMemberCase
+    value: lower_case
+  - key: readability-identifier-naming.ProtectedMemberIgnoredRegexp
+    value: '^[a-z][a-z0-9_]*_$'
+  - key: readability-identifier-naming.PrivateMemberCase
+    value: lower_case
+  - key: readability-identifier-naming.PrivateMemberIgnoredRegexp
+    value: '^[a-z][a-z0-9_]*_$'
+  - key: readability-identifier-naming.ClassMemberCase
+    value: lower_case
+  - key: readability-identifier-naming.ClassMemberIgnoredRegexp
+    value: '^[a-z][a-z0-9_]*_$'
+  - key: readability-identifier-naming.ConstantMemberCase
+    value: lower_case
+  - key: readability-identifier-naming.ConstantMemberIgnoredRegexp
+    value: '^[a-z][a-z0-9_]*_$'
+
+  # types
+  - key: readability-identifier-naming.StructCase
+    value: CamelCase
+  - key: readability-identifier-naming.AbstractClassCase
+    value: CamelCase
+  - key: readability-identifier-naming.TypeTemplateParameterCase
+    value: CamelCase
+  - key: readability-identifier-naming.ConceptCase
+    value: CamelCase
+  - key: readability-identifier-naming.ClassCase
+    value: CamelCase
+  # exception types follow the STL convention; most come from OPENVPN_EXCEPTION
+  - key: readability-identifier-naming.ClassIgnoredRegexp
+    value: '^[a-z0-9_]*(error|err|exception|failed|expired|unavailable|uninitialized|exceeded|overflow)[a-z0-9_]*$|^(bad|no|not|too)_[a-z0-9_]+$'
+  - key: readability-identifier-naming.TypeAliasCase
+    value: CamelCase
+  - key: readability-identifier-naming.TypeAliasIgnoredRegexp
+    value: '^[A-Za-z0-9_]+_(t|ptr|type)$'
+
+  # constants
+  - key: readability-identifier-naming.MacroDefinitionCase
+    value: UPPER_CASE
+  - key: readability-identifier-naming.EnumConstantCase
+    value: UPPER_CASE
+
+Checks: >-
+  -*,
+  android-cloexec-accept,
+  android-cloexec-accept4,
+  android-cloexec-creat,
+  android-cloexec-dup,
+  android-cloexec-epoll-create,
+  android-cloexec-epoll-create1,
+  android-cloexec-fopen,
+  android-cloexec-inotify-init,
+  android-cloexec-inotify-init1,
+  android-cloexec-memfd-create,
+  android-cloexec-open,
+  android-cloexec-pipe,
+  android-cloexec-pipe2,
+  android-cloexec-socket,
+  android-comparison-in-temp-failure-retry,
+  bugprone-argument-comment,
+  bugprone-assert-side-effect,
+  bugprone-assignment-in-if-condition,
+  bugprone-bad-signal-to-kill-thread,
+  bugprone-bitwise-pointer-cast,
+  bugprone-bool-pointer-implicit-conversion,
+  bugprone-branch-clone,
+  bugprone-capturing-this-in-member-variable,
+  bugprone-casting-through-void,
+  bugprone-chained-comparison,
+  bugprone-command-processor,
+  bugprone-compare-pointer-to-member-virtual-function,
+  bugprone-copy-constructor-init,
+  bugprone-crtp-constructor-accessibility,
+  bugprone-dangling-handle,
+  bugprone-default-operator-new-on-overaligned-type,
+  bugprone-derived-method-shadowing-base-method,
+  bugprone-dynamic-static-initializers,
+  bugprone-empty-catch,
+  bugprone-exception-copy-constructor-throws,
+  bugprone-exception-escape,
+  bugprone-float-loop-counter,
+  bugprone-fold-init-type,
+  bugprone-forward-declaration-namespace,
+  bugprone-forwarding-reference-overload,
+  bugprone-implicit-widening-of-multiplication-result,
+  bugprone-inaccurate-erase,
+  bugprone-inc-dec-in-conditions,
+  bugprone-incorrect-enable-shared-from-this,
+  bugprone-incorrect-roundings,
+  bugprone-infinite-loop,
+  bugprone-integer-division,
+  bugprone-invalid-enum-default-initialization,
+  bugprone-lambda-function-name,
+  bugprone-macro-parentheses,
+  bugprone-macro-repeated-side-effects,
+  bugprone-misleading-setter-of-reference,
+  bugprone-misplaced-operator-in-strlen-in-alloc,
+  bugprone-misplaced-pointer-arithmetic-in-alloc,
+  bugprone-misplaced-widening-cast,
+  bugprone-move-forwarding-reference,
+  bugprone-multi-level-implicit-pointer-conversion,
+  bugprone-multiple-new-in-one-expression,
+  bugprone-multiple-statement-macro,
+  bugprone-narrowing-conversions,
+  bugprone-non-zero-enum-to-bool-conversion,
+  bugprone-nondeterministic-pointer-iteration-order,
+  bugprone-not-null-terminated-result,
+  bugprone-optional-value-conversion,
+  bugprone-parent-virtual-call,
+  bugprone-pointer-arithmetic-on-polymorphic-object,
+  bugprone-posix-return,
+  bugprone-raw-memory-call-on-non-trivial-type,
+  bugprone-redundant-branch-condition,
+  bugprone-reserved-identifier,
+  bugprone-return-const-ref-from-parameter,
+  bugprone-shared-ptr-array-mismatch,
+  bugprone-signed-char-misuse,
+  bugprone-sizeof-container,
+  bugprone-sizeof-expression,
+  bugprone-spuriously-wake-up-functions,
+  bugprone-standalone-empty,
+  bugprone-string-constructor,
+  bugprone-string-integer-assignment,
+  bugprone-string-literal-with-embedded-nul,
+  bugprone-stringview-nullptr,
+  bugprone-suspicious-enum-usage,
+  bugprone-suspicious-include,
+  bugprone-suspicious-memory-comparison,
+  bugprone-suspicious-memset-usage,
+  bugprone-suspicious-missing-comma,
+  bugprone-suspicious-realloc-usage,
+  bugprone-suspicious-semicolon,
+  bugprone-suspicious-string-compare,
+  bugprone-suspicious-stringview-data-usage,
+  bugprone-swapped-arguments,
+  bugprone-switch-missing-default-case,
+  bugprone-tagged-union-member-count,
+  bugprone-terminating-continue,
+  bugprone-throw-keyword-missing,
+  bugprone-throwing-static-initialization,
+  bugprone-too-small-loop-variable,
+  bugprone-unchecked-optional-access,
+  bugprone-unchecked-string-to-number-conversion,
+  bugprone-undefined-memory-manipulation,
+  bugprone-undelegated-constructor,
+  bugprone-unhandled-exception-at-new,
+  bugprone-unintended-char-ostream-output,
+  bugprone-unique-ptr-array-mismatch,
+  bugprone-unsafe-functions,
+  bugprone-unused-local-non-trivial-variable,
+  bugprone-unused-raii,
+  bugprone-unused-return-value,
+  bugprone-use-after-move,
+  bugprone-virtual-near-miss,
+  cert-dcl50-cpp,
+  cert-dcl58-cpp,
+  cert-err33-c,
+  cert-msc50-cpp,
+  cert-msc51-cpp,
+  cert-msc54-cpp,
+  cert-oop54-cpp,
+  cert-oop58-cpp,
+  cert-sig30-c,
+  concurrency-mt-unsafe,
+  concurrency-thread-canceltype-asynchronous,
+  cppcoreguidelines-avoid-c-arrays,
+  cppcoreguidelines-avoid-capturing-lambda-coroutines,
+  cppcoreguidelines-avoid-const-or-ref-data-members,
+  cppcoreguidelines-avoid-do-while,
+  cppcoreguidelines-avoid-goto,
+  cppcoreguidelines-avoid-magic-numbers,
+  cppcoreguidelines-avoid-non-const-global-variables,
+  cppcoreguidelines-avoid-reference-coroutine-parameters,
+  cppcoreguidelines-explicit-virtual-functions,
+  cppcoreguidelines-init-variables,
+  cppcoreguidelines-interfaces-global-init,
+  cppcoreguidelines-macro-to-enum,
+  cppcoreguidelines-macro-usage,
+  cppcoreguidelines-misleading-capture-default-by-value,
+  cppcoreguidelines-missing-std-forward,
+  cppcoreguidelines-no-malloc,
+  cppcoreguidelines-no-suspend-with-lock,
+  cppcoreguidelines-noexcept-move-operations,
+  cppcoreguidelines-noexcept-swap,
+  cppcoreguidelines-prefer-member-initializer,
+  cppcoreguidelines-pro-bounds-array-to-pointer-decay,
+  cppcoreguidelines-pro-bounds-avoid-unchecked-container-access,
+  cppcoreguidelines-pro-bounds-constant-array-index,
+  cppcoreguidelines-pro-bounds-pointer-arithmetic,
+  cppcoreguidelines-pro-type-const-cast,
+  cppcoreguidelines-pro-type-cstyle-cast,
+  cppcoreguidelines-pro-type-member-init,
+  cppcoreguidelines-pro-type-reinterpret-cast,
+  cppcoreguidelines-pro-type-static-cast-downcast,
+  cppcoreguidelines-pro-type-union-access,
+  cppcoreguidelines-pro-type-vararg,
+  cppcoreguidelines-rvalue-reference-param-not-moved,
+  cppcoreguidelines-slicing,
+  cppcoreguidelines-special-member-functions,
+  cppcoreguidelines-use-enum-class,
+  cppcoreguidelines-virtual-class-destructor,
+  google-build-using-namespace,
+  google-explicit-constructor,
+  google-global-names-in-headers,
+  google-readability-avoid-underscore-in-googletest-name,
+  google-readability-casting,
+  google-runtime-float,
+  google-runtime-int,
+  google-runtime-operator,
+  google-upgrade-googletest-case,
+  hicpp-multiway-paths-covered,
+  hicpp-new-delete-operators,
+  hicpp-no-assembler,
+  hicpp-signed-bitwise,
+  hicpp-static-assert,
+  hicpp-use-nullptr,
+  llvm-namespace-comment,
+  misc-anonymous-namespace-in-header,
+  misc-confusable-identifiers,
+  misc-const-correctness,
+  misc-coroutine-hostile-raii,
+  misc-definitions-in-headers,
+  misc-header-include-cycle,
+  misc-include-cleaner,
+  misc-misleading-bidirectional,
+  misc-misleading-identifier,
+  misc-misplaced-const,
+  misc-no-recursion,
+  misc-non-copyable-objects,
+  misc-override-with-different-visibility,
+  misc-redundant-expression,
+  misc-throw-by-value-catch-by-reference,
+  misc-unconventional-assign-operator,
+  misc-uniqueptr-reset-release,
+  misc-unused-alias-decls,
+  misc-unused-using-decls,
+  misc-use-anonymous-namespace,
+  modernize-avoid-bind,
+  modernize-avoid-setjmp-longjmp,
+  modernize-concat-nested-namespaces,
+  modernize-deprecated-headers,
+  modernize-deprecated-ios-base-aliases,
+  modernize-loop-convert,
+  modernize-make-shared,
+  modernize-make-unique,
+  modernize-min-max-use-initializer-list,
+  modernize-pass-by-value,
+  modernize-raw-string-literal,
+  modernize-redundant-void-arg,
+  modernize-replace-auto-ptr,
+  modernize-return-braced-init-list,
+  modernize-shrink-to-fit,
+  modernize-type-traits,
+  modernize-unary-static-assert,
+  modernize-use-auto,
+  modernize-use-bool-literals,
+  modernize-use-constraints,
+  modernize-use-default-member-init,
+  modernize-use-designated-initializers,
+  modernize-use-emplace,
+  modernize-use-equals-default,
+  modernize-use-equals-delete,
+  modernize-use-integer-sign-comparison,
+  modernize-use-noexcept,
+  modernize-use-ranges,
+  modernize-use-scoped-lock,
+  modernize-use-starts-ends-with,
+  modernize-use-std-format,
+  modernize-use-std-numbers,
+  modernize-use-transparent-functors,
+  modernize-use-using,
+  performance-avoid-endl,
+  performance-enum-size,
+  performance-faster-string-find,
+  performance-for-range-copy,
+  performance-implicit-conversion-in-loop,
+  performance-inefficient-algorithm,
+  performance-inefficient-string-concatenation,
+  performance-inefficient-vector-operation,
+  performance-move-const-arg,
+  performance-move-constructor-init,
+  performance-no-automatic-move,
+  performance-no-int-to-ptr,
+  performance-noexcept-destructor,
+  performance-trivially-destructible,
+  performance-type-promotion-in-math-fn,
+  performance-unnecessary-copy-initialization,
+  performance-unnecessary-value-param,
+  portability-avoid-pragma-once,
+  portability-std-allocator-const,
+  portability-template-virtual-member-function,
+  readability-ambiguous-smartptr-reset-call,
+  readability-avoid-const-params-in-decls,
+  readability-avoid-return-with-void-value,
+  readability-avoid-unconditional-preprocessor-if,
+  readability-braces-around-statements,
+  readability-const-return-type,
+  readability-container-contains,
+  readability-container-data-pointer,
+  readability-container-size-empty,
+  readability-convert-member-functions-to-static,
+  readability-delete-null-pointer,
+  readability-duplicate-include,
+  readability-else-after-return,
+  readability-enum-initial-value,
+  readability-function-cognitive-complexity,
+  readability-function-size,
+  readability-identifier-naming,
+  readability-inconsistent-declaration-parameter-name,
+  readability-isolate-declaration,
+  readability-make-member-function-const,
+  readability-math-missing-parentheses,
+  readability-misleading-indentation,
+  readability-misplaced-array-index,
+  readability-named-parameter,
+  readability-non-const-parameter,
+  readability-operators-representation,
+  readability-qualified-auto,
+  readability-redundant-access-specifiers,
+  readability-redundant-casting,
+  readability-redundant-control-flow,
+  readability-redundant-declaration,
+  readability-redundant-function-ptr-dereference,
+  readability-redundant-inline-specifier,
+  readability-redundant-parentheses,
+  readability-redundant-preprocessor,
+  readability-redundant-smartptr-get,
+  readability-redundant-string-cstr,
+  readability-redundant-string-init,
+  readability-reference-to-constructed-temporary,
+  readability-simplify-boolean-expr,
+  readability-simplify-subscript-expr,
+  readability-static-accessed-through-instance,
+  readability-static-definition-in-anonymous-namespace,
+  readability-string-compare,
+  readability-suspicious-call-argument,
+  readability-uniqueptr-delete-release,
+  readability-uppercase-literal-suffix,
+  readability-use-anyofallof,
+  readability-use-concise-preprocessor-directives
+  readability-identifier-naming,
+# Vendored third-party code with its own naming conventions:
+# openvpn/common/unicode-impl.hpp is Copyright 2001-2004 Unicode, Inc.
+ExcludeHeaderFilterRegex: 'openvpn/common/unicode-impl\.hpp'
+WarningsAsErrors: ''
+...

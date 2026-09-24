@@ -1,0 +1,10 @@
+# Public C++ API. Member names are mirrored by the Java, Python and C# bindings,
+# so they are camelBack here rather than the snake_case used in openvpn/.
+# Everything else is inherited from the root configuration.
+---
+InheritParentConfig: true
+CheckOptions:
+  - key: readability-identifier-naming.PublicMemberCase
+    value: camelBack
+  - key: readability-identifier-naming.PublicMemberIgnoredRegexp
+    value: ''
