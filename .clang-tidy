@@ -3,7 +3,7 @@ CheckOptions:
   # --- readability-identifier-naming ------------------------------------
   # Measured over 28,579 unique identifiers in openvpn/, test/ and client/.
   # snake_case for values and functions, CamelCase for types, UPPER_CASE for
-  # macros and enum constants. See naming-conventions-report.md.
+  # macros and enum constants.
 
   # variables, parameters, functions
   - key: readability-identifier-naming.ParameterCase
@@ -100,305 +100,115 @@ CheckOptions:
   - key: readability-identifier-naming.EnumConstantCase
     value: UPPER_CASE
 
-Checks: >-
-  -*,
-  android-cloexec-accept,
-  android-cloexec-accept4,
-  android-cloexec-creat,
-  android-cloexec-dup,
-  android-cloexec-epoll-create,
-  android-cloexec-epoll-create1,
-  android-cloexec-fopen,
-  android-cloexec-inotify-init,
-  android-cloexec-inotify-init1,
-  android-cloexec-memfd-create,
-  android-cloexec-open,
-  android-cloexec-pipe,
-  android-cloexec-pipe2,
-  android-cloexec-socket,
-  android-comparison-in-temp-failure-retry,
-  bugprone-argument-comment,
-  bugprone-assert-side-effect,
-  bugprone-assignment-in-if-condition,
-  bugprone-bad-signal-to-kill-thread,
-  bugprone-bitwise-pointer-cast,
-  bugprone-bool-pointer-implicit-conversion,
-  bugprone-branch-clone,
-  bugprone-capturing-this-in-member-variable,
-  bugprone-casting-through-void,
-  bugprone-chained-comparison,
-  bugprone-command-processor,
-  bugprone-compare-pointer-to-member-virtual-function,
-  bugprone-copy-constructor-init,
-  bugprone-crtp-constructor-accessibility,
-  bugprone-dangling-handle,
-  bugprone-default-operator-new-on-overaligned-type,
-  bugprone-derived-method-shadowing-base-method,
-  bugprone-dynamic-static-initializers,
-  bugprone-empty-catch,
-  bugprone-exception-copy-constructor-throws,
-  bugprone-exception-escape,
-  bugprone-float-loop-counter,
-  bugprone-fold-init-type,
-  bugprone-forward-declaration-namespace,
-  bugprone-forwarding-reference-overload,
-  bugprone-implicit-widening-of-multiplication-result,
-  bugprone-inaccurate-erase,
-  bugprone-inc-dec-in-conditions,
-  bugprone-incorrect-enable-shared-from-this,
-  bugprone-incorrect-roundings,
-  bugprone-infinite-loop,
-  bugprone-integer-division,
-  bugprone-invalid-enum-default-initialization,
-  bugprone-lambda-function-name,
-  bugprone-macro-parentheses,
-  bugprone-macro-repeated-side-effects,
-  bugprone-misleading-setter-of-reference,
-  bugprone-misplaced-operator-in-strlen-in-alloc,
-  bugprone-misplaced-pointer-arithmetic-in-alloc,
-  bugprone-misplaced-widening-cast,
-  bugprone-move-forwarding-reference,
-  bugprone-multi-level-implicit-pointer-conversion,
-  bugprone-multiple-new-in-one-expression,
-  bugprone-multiple-statement-macro,
-  bugprone-narrowing-conversions,
-  bugprone-non-zero-enum-to-bool-conversion,
-  bugprone-nondeterministic-pointer-iteration-order,
-  bugprone-not-null-terminated-result,
-  bugprone-optional-value-conversion,
-  bugprone-parent-virtual-call,
-  bugprone-pointer-arithmetic-on-polymorphic-object,
-  bugprone-posix-return,
-  bugprone-raw-memory-call-on-non-trivial-type,
-  bugprone-redundant-branch-condition,
-  bugprone-reserved-identifier,
-  bugprone-return-const-ref-from-parameter,
-  bugprone-shared-ptr-array-mismatch,
-  bugprone-signed-char-misuse,
-  bugprone-sizeof-container,
-  bugprone-sizeof-expression,
-  bugprone-spuriously-wake-up-functions,
-  bugprone-standalone-empty,
-  bugprone-string-constructor,
-  bugprone-string-integer-assignment,
-  bugprone-string-literal-with-embedded-nul,
-  bugprone-stringview-nullptr,
-  bugprone-suspicious-enum-usage,
-  bugprone-suspicious-include,
-  bugprone-suspicious-memory-comparison,
-  bugprone-suspicious-memset-usage,
-  bugprone-suspicious-missing-comma,
-  bugprone-suspicious-realloc-usage,
-  bugprone-suspicious-semicolon,
-  bugprone-suspicious-string-compare,
-  bugprone-suspicious-stringview-data-usage,
-  bugprone-swapped-arguments,
-  bugprone-switch-missing-default-case,
-  bugprone-tagged-union-member-count,
-  bugprone-terminating-continue,
-  bugprone-throw-keyword-missing,
-  bugprone-throwing-static-initialization,
-  bugprone-too-small-loop-variable,
-  bugprone-unchecked-optional-access,
-  bugprone-unchecked-string-to-number-conversion,
-  bugprone-undefined-memory-manipulation,
-  bugprone-undelegated-constructor,
-  bugprone-unhandled-exception-at-new,
-  bugprone-unintended-char-ostream-output,
-  bugprone-unique-ptr-array-mismatch,
-  bugprone-unsafe-functions,
-  bugprone-unused-local-non-trivial-variable,
-  bugprone-unused-raii,
-  bugprone-unused-return-value,
-  bugprone-use-after-move,
-  bugprone-virtual-near-miss,
-  cert-dcl50-cpp,
-  cert-dcl58-cpp,
-  cert-err33-c,
-  cert-msc50-cpp,
-  cert-msc51-cpp,
-  cert-msc54-cpp,
-  cert-oop54-cpp,
-  cert-oop58-cpp,
-  cert-sig30-c,
-  concurrency-mt-unsafe,
-  concurrency-thread-canceltype-asynchronous,
-  cppcoreguidelines-avoid-c-arrays,
-  cppcoreguidelines-avoid-capturing-lambda-coroutines,
-  cppcoreguidelines-avoid-const-or-ref-data-members,
-  cppcoreguidelines-avoid-do-while,
-  cppcoreguidelines-avoid-goto,
-  cppcoreguidelines-avoid-magic-numbers,
-  cppcoreguidelines-avoid-non-const-global-variables,
-  cppcoreguidelines-avoid-reference-coroutine-parameters,
-  cppcoreguidelines-explicit-virtual-functions,
-  cppcoreguidelines-init-variables,
-  cppcoreguidelines-interfaces-global-init,
-  cppcoreguidelines-macro-to-enum,
-  cppcoreguidelines-macro-usage,
-  cppcoreguidelines-misleading-capture-default-by-value,
-  cppcoreguidelines-missing-std-forward,
-  cppcoreguidelines-no-malloc,
-  cppcoreguidelines-no-suspend-with-lock,
-  cppcoreguidelines-noexcept-move-operations,
-  cppcoreguidelines-noexcept-swap,
-  cppcoreguidelines-prefer-member-initializer,
-  cppcoreguidelines-pro-bounds-array-to-pointer-decay,
-  cppcoreguidelines-pro-bounds-avoid-unchecked-container-access,
-  cppcoreguidelines-pro-bounds-constant-array-index,
-  cppcoreguidelines-pro-bounds-pointer-arithmetic,
-  cppcoreguidelines-pro-type-const-cast,
-  cppcoreguidelines-pro-type-cstyle-cast,
-  cppcoreguidelines-pro-type-member-init,
-  cppcoreguidelines-pro-type-reinterpret-cast,
-  cppcoreguidelines-pro-type-static-cast-downcast,
-  cppcoreguidelines-pro-type-union-access,
-  cppcoreguidelines-pro-type-vararg,
-  cppcoreguidelines-rvalue-reference-param-not-moved,
-  cppcoreguidelines-slicing,
-  cppcoreguidelines-special-member-functions,
-  cppcoreguidelines-use-enum-class,
-  cppcoreguidelines-virtual-class-destructor,
-  google-build-using-namespace,
-  google-explicit-constructor,
-  google-global-names-in-headers,
-  google-readability-avoid-underscore-in-googletest-name,
-  google-readability-casting,
-  google-runtime-float,
-  google-runtime-int,
-  google-runtime-operator,
-  google-upgrade-googletest-case,
-  hicpp-multiway-paths-covered,
-  hicpp-new-delete-operators,
-  hicpp-no-assembler,
-  hicpp-signed-bitwise,
-  hicpp-static-assert,
-  hicpp-use-nullptr,
-  llvm-namespace-comment,
-  misc-anonymous-namespace-in-header,
-  misc-confusable-identifiers,
-  misc-const-correctness,
-  misc-coroutine-hostile-raii,
-  misc-definitions-in-headers,
-  misc-header-include-cycle,
-  misc-include-cleaner,
-  misc-misleading-bidirectional,
-  misc-misleading-identifier,
-  misc-misplaced-const,
-  misc-no-recursion,
-  misc-non-copyable-objects,
-  misc-override-with-different-visibility,
-  misc-redundant-expression,
-  misc-throw-by-value-catch-by-reference,
-  misc-unconventional-assign-operator,
-  misc-uniqueptr-reset-release,
-  misc-unused-alias-decls,
-  misc-unused-using-decls,
-  misc-use-anonymous-namespace,
-  modernize-avoid-bind,
-  modernize-avoid-setjmp-longjmp,
-  modernize-concat-nested-namespaces,
-  modernize-deprecated-headers,
-  modernize-deprecated-ios-base-aliases,
-  modernize-loop-convert,
-  modernize-make-shared,
-  modernize-make-unique,
-  modernize-min-max-use-initializer-list,
-  modernize-pass-by-value,
-  modernize-raw-string-literal,
-  modernize-redundant-void-arg,
-  modernize-replace-auto-ptr,
-  modernize-return-braced-init-list,
-  modernize-shrink-to-fit,
-  modernize-type-traits,
-  modernize-unary-static-assert,
-  modernize-use-auto,
-  modernize-use-bool-literals,
-  modernize-use-constraints,
-  modernize-use-default-member-init,
-  modernize-use-designated-initializers,
-  modernize-use-emplace,
-  modernize-use-equals-default,
-  modernize-use-equals-delete,
-  modernize-use-integer-sign-comparison,
-  modernize-use-noexcept,
-  modernize-use-ranges,
-  modernize-use-scoped-lock,
-  modernize-use-starts-ends-with,
-  modernize-use-std-format,
-  modernize-use-std-numbers,
-  modernize-use-transparent-functors,
-  modernize-use-using,
-  performance-avoid-endl,
-  performance-enum-size,
-  performance-faster-string-find,
-  performance-for-range-copy,
-  performance-implicit-conversion-in-loop,
-  performance-inefficient-algorithm,
-  performance-inefficient-string-concatenation,
-  performance-inefficient-vector-operation,
-  performance-move-const-arg,
-  performance-move-constructor-init,
-  performance-no-automatic-move,
-  performance-no-int-to-ptr,
-  performance-noexcept-destructor,
-  performance-trivially-destructible,
-  performance-type-promotion-in-math-fn,
-  performance-unnecessary-copy-initialization,
-  performance-unnecessary-value-param,
-  portability-avoid-pragma-once,
-  portability-std-allocator-const,
-  portability-template-virtual-member-function,
-  readability-ambiguous-smartptr-reset-call,
-  readability-avoid-const-params-in-decls,
-  readability-avoid-return-with-void-value,
-  readability-avoid-unconditional-preprocessor-if,
-  readability-braces-around-statements,
-  readability-const-return-type,
-  readability-container-contains,
-  readability-container-data-pointer,
-  readability-container-size-empty,
-  readability-convert-member-functions-to-static,
-  readability-delete-null-pointer,
-  readability-duplicate-include,
-  readability-else-after-return,
-  readability-enum-initial-value,
-  readability-function-cognitive-complexity,
-  readability-function-size,
-  readability-identifier-naming,
-  readability-inconsistent-declaration-parameter-name,
-  readability-isolate-declaration,
-  readability-make-member-function-const,
-  readability-math-missing-parentheses,
-  readability-misleading-indentation,
-  readability-misplaced-array-index,
-  readability-named-parameter,
-  readability-non-const-parameter,
-  readability-operators-representation,
-  readability-qualified-auto,
-  readability-redundant-access-specifiers,
-  readability-redundant-casting,
-  readability-redundant-control-flow,
-  readability-redundant-declaration,
-  readability-redundant-function-ptr-dereference,
-  readability-redundant-inline-specifier,
-  readability-redundant-parentheses,
-  readability-redundant-preprocessor,
-  readability-redundant-smartptr-get,
-  readability-redundant-string-cstr,
-  readability-redundant-string-init,
-  readability-reference-to-constructed-temporary,
-  readability-simplify-boolean-expr,
-  readability-simplify-subscript-expr,
-  readability-static-accessed-through-instance,
-  readability-static-definition-in-anonymous-namespace,
-  readability-string-compare,
-  readability-suspicious-call-argument,
-  readability-uniqueptr-delete-release,
-  readability-uppercase-literal-suffix,
-  readability-use-anyofallof,
-  readability-use-concise-preprocessor-directives
-  readability-identifier-naming,
+Checks:
+  # Start from nothing: every check below was reviewed explicitly.
+  - '-*'
+  - 'android-cloexec-*'
+  - 'bugprone-*'
+  # Left off (@leo):
+  # for C++20 use modernize-use-constraints and modernize-type-traits instead
+  - '-bugprone-incorrect-enable-if'
+  # Left off (@leo):
+  # running `$ git grep "noescape" $(git rev-list --all)` returned no results; I believe we don't use `noescape` attribute
+  #
+  # Finds pointers with the noescape attribute that are captured by an asynchronously-executed block. The block arguments in dispatch_async() and dispatch_after() are guaranteed to escape, so it is an error if a pointer with the noescape attribute is captured by one of these blocks.
+  - '-bugprone-no-escape'
+  # Left off (@leo):
+  # The check is disabled on C++17 and later.
+  - '-bugprone-signal-handler'
+  - 'concurrency-*'
+  - 'cppcoreguidelines-*'
+  # Left off (@leo):
+  # Alias of misc-explicit-constructor and google-explicit-constructor, google-explicit-constructor is turned on
+  - '-cppcoreguidelines-explicit-constructor'
+  # Left off (@leo):
+  # bugprone-narrowing-conversions is the same checker with different option defaults; its name is more readable
+  - '-cppcoreguidelines-narrowing-conversions'
+  # Left off (@leo):
+  # alias for misc-non-private-member-variables-in-classes
+  - '-cppcoreguidelines-non-private-member-variables-in-classes'
+  # Left off (@leo):
+  # We don't use Guideline Support Library and gsl::owner<T*> AFAIK
+  - '-cppcoreguidelines-owning-memory'
+  - 'google-*'
+  # Left off (@leo):
+  # applies to G++ 4.6 in C++11
+  - '-google-build-explicit-make-pair'
+  # Left off (@leo):
+  # misc-anonymous-namespace-in-header is the same checker with different option defaults; picked for the readable name
+  - '-google-build-namespaces'
+  - '-google-objc-*'
+  - '-google-readability-*'
+  # Enabled (@leo):
+  # can be useful, If you violate the rule, there may not be immediate consequences, but your test may (just may) break with a new compiler (or a new version of the compiler you are using) or with a new version of GoogleTest. Therefore it’s best to follow the rule.
+  - google-readability-avoid-underscore-in-googletest-name
+  # Enabled (@leo):
+  # TODO: can be useful, new code only
+  - google-readability-todo
+  # Enabled (@leo):
+  # can be useful, same checker as google-readability-namespace-comments with different option defaults;
+  - llvm-namespace-comment
+  - 'misc-*'
+  # Left off (@leo):
+  # alias `google-explicit-constructor` is turned on
+  - '-misc-explicit-constructor'
+  # Left off (@leo):
+  # TODO: sadly, we declare almost all class members public, but maybe in future?
+  - '-misc-non-private-member-variables-in-classes'
+  # Left off (@leo):
+  # cppcoreguidelines-c-copy-assignment-signature is the same checker with different option defaults; its name is more readable
+  - '-misc-unconventional-assign-operator'
+  - 'modernize-*'
+  # Left off (@leo):
+  # cppcoreguidelines-avoid-c-arrays is the same checker with different option defaults; its name is more readable
+  - '-modernize-avoid-c-arrays'
+  # Left off (@leo):
+  # cppcoreguidelines-macro-to-enum is the same checker with different option defaults; its name is more readable
+  - '-modernize-macro-to-enum'
+  # Left off (@leo):
+  # We don't use DISALLOW_COPY_AND_ASSIGN macro
+  - '-modernize-replace-disallow-copy-and-assign-macro'
+  # Left off (@leo):
+  # removed in C++17;
+  #
+  # This check will find occurrences of std::random_shuffle and replace it with std::shuffle. In C++17 std::random_shuffle will no longer be available and thus we need to replace it.
+  - '-modernize-replace-random-shuffle'
+  # Left off (@leo):
+  # cppcoreguidelines-use-default-member-init is the same checker with different option defaults; its name is more readable
+  - '-modernize-use-default-member-init'
+  # Left off (@leo):
+  # TODO: we don't follow this convention yet, maybe in the future
+  - '-modernize-use-nodiscard'
+  # Left off (@leo):
+  # cppcoreguidelines-explicit-virtual-functions is the same checker with different option defaults; its name is more readable
+  - '-modernize-use-override'
+  # Left off (@leo):
+  # uses C++23’s std::print or std::println
+  - '-modernize-use-std-print'
+  # Left off (@leo):
+  # neither we use nor enforce auto f1() -> int; convention
+  - '-modernize-use-trailing-return-type'
+  # Left off (@leo):
+  # removed in C++20
+  #
+  # This check will warn on calls to std::uncaught_exception and replace them with calls to std::uncaught_exceptions, since std::uncaught_exception was deprecated in C++17.
+  - '-modernize-use-uncaught-exceptions'
+  - 'performance-*'
+  - '-performance-noexcept-*'
+  # Left off (@leo):
+  # alias `performance-faster-string-find` is turned on
+  - '-performance-prefer-single-char-overloads'
+  - 'portability-*'
+  # Left off (@leo):
+  # TODO: maybe in future
+  - '-portability-restrict-system-includes'
+  # Left off (@leo):
+  # SIMD specific, not applicable
+  - '-portability-simd-intrinsics'
+  - 'readability-*'
+  # Left off (@leo):
+  # cppcoreguidelines-avoid-magic-numbers is the same checker with different option defaults; its name is more readable
+  - '-readability-magic-numbers'
 # Vendored third-party code with its own naming conventions:
 # openvpn/common/unicode-impl.hpp is Copyright 2001-2004 Unicode, Inc.
 ExcludeHeaderFilterRegex: 'openvpn/common/unicode-impl\.hpp'
