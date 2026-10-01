@@ -556,9 +556,7 @@ class MbedTLSContext : public SSLFactoryAPI
             ns_cert_type = NSCert::ns_cert_type(opt, relay_prefix);
 
             // parse remote-cert-x options
-            KUParse::remote_cert_tls(opt, relay_prefix, ku, eku);
-            KUParse::remote_cert_ku(opt, relay_prefix, ku);
-            KUParse::remote_cert_eku(opt, relay_prefix, eku);
+            KUParse::remote_cert(opt, relay_prefix, ku, eku);
 
             // parse tls-remote
             tls_remote = opt.get_optional(relay_prefix + "tls-remote", 1, 256);

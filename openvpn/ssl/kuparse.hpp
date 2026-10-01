@@ -15,6 +15,7 @@
 #define OPENVPN_SSL_KUPARSE_H
 
 #include <cstdint>
+#include <utility>
 #include <vector>
 #include <string>
 
@@ -89,6 +90,14 @@ inline void remote_cert_tls(const std::string &ct,
     remote_cert_tls(remote_cert_type(ct), ku, eku);
 }
 
+// One directive each, correct only in the order remote_cert() calls them.
+namespace detail {
+
+/**
+ * @brief Sets both values from remote-cert-tls, or clears them if it is absent.
+ *
+ * @throws option_error if the argument is not "client" or "server"
+ */
 inline void remote_cert_tls(const OptionList &opt,
                             const std::string &relay_prefix,
                             std::vector<unsigned int> &ku,
@@ -101,47 +110,86 @@ inline void remote_cert_tls(const OptionList &opt,
         const std::string ct = o->get_optional(1, 16);
         wt = remote_cert_type(ct);
     }
-    remote_cert_tls(wt, ku, eku);
+    KUParse::remote_cert_tls(wt, ku, eku);
 }
 
+/**
+ * @brief Replaces the key usage values if remote-cert-ku is present. A bare
+ *        directive only requires the extension, as in OpenVPN 2.x.
+ *
+ * @throws option_error if a value is not hex, is 0 (which would match any
+ *         certificate), or has a bit outside KU_VALUE_BITS
+ */
 inline void remote_cert_ku(const OptionList &opt,
                            const std::string &relay_prefix,
                            std::vector<unsigned int> &ku)
 {
-    ku.clear();
-
     const Option *o = opt.get_ptr(relay_prefix + "remote-cert-ku");
-    if (o)
+    if (!o)
+        return;
+    if (o->size() >= 64)
+        throw option_error(ERR_INVALID_OPTION_CRYPTO, "remote-cert-ku: too many parameters");
+
+    std::vector<unsigned int> values;
+    for (size_t i = 1; i < o->size(); ++i)
     {
-        if (o->empty())
-            throw option_error(ERR_INVALID_OPTION_CRYPTO, "remote-cert-ku: no hex values specified");
-        else if (o->size() >= 64)
-            throw option_error(ERR_INVALID_OPTION_CRYPTO, "remote-cert-ku: too many parameters");
-        else
-        {
-            for (size_t i = 1; i < o->size(); ++i)
-            {
-                // at most 16 hex digits always fit, so a large value cannot wrap into range
-                std::uint64_t v;
-                if (!parse_hex_number(o->get(i, 16), v))
-                    throw option_error(ERR_INVALID_OPTION_CRYPTO, "remote-cert-ku: error parsing hex value list");
-                if (v == 0 || (v & ~std::uint64_t{KU_VALUE_BITS}) != 0)
-                    throw option_error(ERR_INVALID_OPTION_CRYPTO, "remote-cert-ku: values must be nonzero and use only the bits 80 to 02");
-                ku.push_back(static_cast<unsigned int>(v));
-            }
-        }
+        // at most 16 hex digits always fit, so a large value cannot wrap into range
+        std::uint64_t v;
+        if (!parse_hex_number(o->get(i, 16), v))
+            throw option_error(ERR_INVALID_OPTION_CRYPTO, "remote-cert-ku: error parsing hex value list");
+        if (v == 0 || (v & ~std::uint64_t{KU_VALUE_BITS}) != 0)
+            throw option_error(ERR_INVALID_OPTION_CRYPTO, "remote-cert-ku: values must be nonzero and use only the bits 80 to 02");
+        values.push_back(static_cast<unsigned int>(v));
     }
+
+    if (values.empty())
+        values.push_back(KU_REQUIRED);
+    ku = std::move(values);
 }
 
+/**
+ * @brief Replaces the extended key usage if remote-cert-eku is present.
+ *
+ * @throws option_error if the value is missing or empty, as an empty one
+ *         would turn the check off
+ */
 inline void remote_cert_eku(const OptionList &opt,
                             const std::string &relay_prefix,
                             std::string &eku)
 {
-    eku = "";
-
     const Option *o = opt.get_ptr(relay_prefix + "remote-cert-eku");
-    if (o)
-        eku = o->get(1, 256);
+    if (!o)
+        return;
+
+    std::string value = o->get(1, 256);
+    if (value.empty())
+        throw option_error(ERR_INVALID_OPTION_CRYPTO, "remote-cert-eku: empty value");
+    eku = std::move(value);
+}
+
+} // namespace detail
+
+/**
+ * @brief Parses remote-cert-tls, remote-cert-ku and remote-cert-eku.
+ *
+ * remote-cert-tls sets both values; an explicit remote-cert-ku or
+ * remote-cert-eku replaces its half wherever it appears in the profile.
+ *
+ * @param opt           the parsed profile
+ * @param relay_prefix  "relay-" to read the relay variants, else empty
+ * @param ku            receives the key usage values, empty for no check
+ * @param eku           receives the extended key usage, empty for no check
+ * @throws option_error on an invalid directive, leaving @p ku and @p eku
+ *         unspecified
+ */
+inline void remote_cert(const OptionList &opt,
+                        const std::string &relay_prefix,
+                        std::vector<unsigned int> &ku,
+                        std::string &eku)
+{
+    detail::remote_cert_tls(opt, relay_prefix, ku, eku);
+    detail::remote_cert_ku(opt, relay_prefix, ku);
+    detail::remote_cert_eku(opt, relay_prefix, eku);
 }
 } // namespace openvpn::KUParse
 
