@@ -21,10 +21,6 @@
 #define MBEDTLS_ERR_SSL_BAD_PROTOCOL_VERSION MBEDTLS_ERR_SSL_BAD_HS_PROTOCOL_VERSION
 #endif
 
-#if not defined(MBEDTLS_OID_X509_EXT_EXTENDED_KEY_USAGE)
-#define MBEDTLS_OID_X509_EXT_EXTENDED_KEY_USAGE MBEDTLS_X509_EXT_KEY_USAGE
-#endif
-
 #if MBEDTLS_VERSION_NUMBER < 0x03000000
 static inline const mbedtls_md_info_t *
 mbedtls_md_info_from_ctx(const mbedtls_md_context_t *ctx)

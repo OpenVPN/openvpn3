@@ -1645,6 +1645,24 @@ class OpenSSLContext : public SSLFactoryAPI
 
         authcert.defined_ = true;
     }
+
+    /**
+     * @brief verify_x509_cert_ku() on a PEM certificate.
+     */
+    static bool check_x509_cert_ku(const std::vector<unsigned int> &ku, const std::string &cert_txt)
+    {
+        const OpenSSLPKI::X509 cert(cert_txt, "OpenSSLContext::check_x509_cert_ku");
+        return verify_x509_cert_ku(ku, cert.obj());
+    }
+
+    /**
+     * @brief verify_x509_cert_eku() on a PEM certificate.
+     */
+    static bool check_x509_cert_eku(const std::string &eku, const std::string &cert_txt)
+    {
+        const OpenSSLPKI::X509 cert(cert_txt, "OpenSSLContext::check_x509_cert_eku");
+        return verify_x509_cert_eku(eku, cert.obj());
+    }
 #endif
 
   private:
@@ -1710,42 +1728,35 @@ class OpenSSLContext : public SSLFactoryAPI
         return config->ku.size() > 0;
     }
 
-    bool verify_x509_cert_ku(::X509 *cert) const
+    /**
+     * @brief Checks a peer certificate's key usage for remote-cert-ku.
+     *
+     * @return true if @p cert has a key usage extension and @p ku is
+     *         KUParse::KU_REQUIRED or holds a value whose bits it all has
+     */
+    static bool verify_x509_cert_ku(const std::vector<unsigned int> &ku, ::X509 *cert)
     {
-        bool found = false;
-        ASN1_BIT_STRING *ku = (ASN1_BIT_STRING *)X509_get_ext_d2i(cert, NID_key_usage, nullptr, nullptr);
+        ASN1_BIT_STRING *ku_ext = (ASN1_BIT_STRING *)X509_get_ext_d2i(cert, NID_key_usage, nullptr, nullptr);
+        if (!ku_ext)
+            return false;
 
-        if (ku)
+        unsigned int nku = 0;
+        for (int i = 0; i < 8; i++)
         {
-            // Extract key usage bits
-            unsigned int nku = 0;
-            {
-                for (int i = 0; i < 8; i++)
-                {
-                    if (ASN1_BIT_STRING_get_bit(ku, i))
-                        nku |= 1 << (7 - i);
-                }
-            }
-
-            // Fixup if no LSB bits
-            if ((nku & 0xff) == 0)
-                nku >>= 8;
-
-            // Validating certificate key usage
-            {
-                for (std::vector<unsigned int>::const_iterator i = config->ku.begin(); i != config->ku.end(); ++i)
-                {
-                    if (nku == *i)
-                    {
-                        found = true;
-                        break;
-                    }
-                }
-            }
-
-            ASN1_BIT_STRING_free(ku);
+            if (ASN1_BIT_STRING_get_bit(ku_ext, i))
+                nku |= 1 << (7 - i);
         }
-        return found;
+        ASN1_BIT_STRING_free(ku_ext);
+
+        if (!ku.empty() && ku.front() == KUParse::KU_REQUIRED)
+            return true;
+
+        for (const unsigned int v : ku)
+        {
+            if (v != 0 && (nku & v) == v)
+                return true;
+        }
+        return false;
     }
 
     // remote-cert-eku verification
@@ -1755,35 +1766,41 @@ class OpenSSLContext : public SSLFactoryAPI
         return !config->eku.empty();
     }
 
-    bool verify_x509_cert_eku(::X509 *cert) const
+    /**
+     * @brief Checks a peer certificate's extended key usage for remote-cert-eku.
+     *
+     * @param eku   the required usage, as its long name or dotted OID
+     * @param cert  the peer certificate
+     */
+    static bool verify_x509_cert_eku(const std::string &eku, ::X509 *cert)
     {
         bool found = false;
-        EXTENDED_KEY_USAGE *eku = (EXTENDED_KEY_USAGE *)X509_get_ext_d2i(cert, NID_ext_key_usage, nullptr, nullptr);
+        EXTENDED_KEY_USAGE *eku_ext = (EXTENDED_KEY_USAGE *)X509_get_ext_d2i(cert, NID_ext_key_usage, nullptr, nullptr);
 
-        if (eku)
+        if (eku_ext)
         {
             // Validating certificate extended key usage
-            for (int i = 0; !found && i < sk_ASN1_OBJECT_num(eku); i++)
+            for (int i = 0; !found && i < sk_ASN1_OBJECT_num(eku_ext); i++)
             {
-                ASN1_OBJECT *oid = sk_ASN1_OBJECT_value(eku, i);
+                ASN1_OBJECT *oid = sk_ASN1_OBJECT_value(eku_ext, i);
                 char oid_str[256];
 
                 if (!found && OBJ_obj2txt(oid_str, sizeof(oid_str), oid, 0) != -1)
                 {
                     // Compare EKU against string
-                    if (config->eku == oid_str)
+                    if (eku == oid_str)
                         found = true;
                 }
 
                 if (!found && OBJ_obj2txt(oid_str, sizeof(oid_str), oid, 1) != -1)
                 {
                     // Compare EKU against OID
-                    if (config->eku == oid_str)
+                    if (eku == oid_str)
                         found = true;
                 }
             }
 
-            sk_ASN1_OBJECT_pop_free(eku, ASN1_OBJECT_free);
+            sk_ASN1_OBJECT_pop_free(eku_ext, ASN1_OBJECT_free);
         }
         return found;
     }
@@ -2017,14 +2034,14 @@ class OpenSSLContext : public SSLFactoryAPI
         }
 
         // verify X509 key usage
-        if (self->x509_cert_ku_defined() && !self->verify_x509_cert_ku(current_cert))
+        if (self->x509_cert_ku_defined() && !verify_x509_cert_ku(self->config->ku, current_cert))
         {
             OVPN_LOG_INFO("VERIFY FAIL -- bad X509 key usage in leaf certificate");
             preverify_ok = false;
         }
 
         // verify X509 extended key usage
-        if (self->x509_cert_eku_defined() && !self->verify_x509_cert_eku(current_cert))
+        if (self->x509_cert_eku_defined() && !verify_x509_cert_eku(self->config->eku, current_cert))
         {
             OVPN_LOG_INFO("VERIFY FAIL -- bad X509 extended key usage in leaf certificate");
             preverify_ok = false;
@@ -2150,7 +2167,7 @@ class OpenSSLContext : public SSLFactoryAPI
             }
 
             // verify X509 key usage
-            if (self->x509_cert_ku_defined() && !self->verify_x509_cert_ku(current_cert))
+            if (self->x509_cert_ku_defined() && !verify_x509_cert_ku(self->config->ku, current_cert))
             {
                 OVPN_LOG_INFO("VERIFY FAIL -- bad X509 key usage in leaf certificate");
                 if (self_ssl->authcert)
@@ -2162,7 +2179,7 @@ class OpenSSLContext : public SSLFactoryAPI
             }
 
             // verify X509 extended key usage
-            if (self->x509_cert_eku_defined() && !self->verify_x509_cert_eku(current_cert))
+            if (self->x509_cert_eku_defined() && !verify_x509_cert_eku(self->config->eku, current_cert))
             {
                 OVPN_LOG_INFO("VERIFY FAIL -- bad X509 extended key usage in leaf certificate");
                 if (self_ssl->authcert)

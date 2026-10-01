@@ -14,6 +14,7 @@
 #ifndef OPENVPN_SSL_KUPARSE_H
 #define OPENVPN_SSL_KUPARSE_H
 
+#include <cstdint>
 #include <vector>
 #include <string>
 
@@ -30,6 +31,27 @@ enum TLSWebType
     TLS_WEB_CLIENT,
 };
 
+/**
+ * @brief Key usage list entry that only requires the peer certificate to have a
+ *        key usage extension, as OPENVPN_KU_REQUIRED does in OpenVPN 2.x.
+ *
+ * The bits are left to the TLS library. mbed TLS checks them against the key
+ * exchange. OpenSSL only requires a bit that some TLS key exchange could use,
+ * so it accepts a TLS 1.3 peer whose key usage lacks the digitalSignature its
+ * handshake needs; OpenVPN 2.x has the same gap.
+ */
+inline constexpr unsigned int KU_REQUIRED = 0xFFFF;
+
+/**
+ * @brief Key usage bits a remote-cert-ku value may use: digitalSignature (80)
+ *        to cRLSign (02).
+ *
+ * encipherOnly (01) and decipherOnly (8000) are left out: mbed TLS treats them
+ * as optional, so a value of only those would match any certificate, and the
+ * OpenSSL backend reads only the first byte.
+ */
+inline constexpr unsigned int KU_VALUE_BITS = 0xfe;
+
 inline void remote_cert_tls(const TLSWebType wt, std::vector<unsigned int> &ku, std::string &eku)
 {
     ku.clear();
@@ -40,16 +62,11 @@ inline void remote_cert_tls(const TLSWebType wt, std::vector<unsigned int> &ku, 
     case TLS_WEB_NONE:
         break;
     case TLS_WEB_SERVER:
-        ku.clear();
-        ku.push_back(0xa0);
-        ku.push_back(0x88);
+        ku.push_back(KU_REQUIRED);
         eku = "TLS Web Server Authentication";
         break;
     case TLS_WEB_CLIENT:
-        ku.clear();
-        ku.push_back(0x80);
-        ku.push_back(0x08);
-        ku.push_back(0x88);
+        ku.push_back(KU_REQUIRED);
         eku = "TLS Web Client Authentication";
         break;
     }
@@ -102,14 +119,15 @@ inline void remote_cert_ku(const OptionList &opt,
             throw option_error(ERR_INVALID_OPTION_CRYPTO, "remote-cert-ku: too many parameters");
         else
         {
-            try
+            for (size_t i = 1; i < o->size(); ++i)
             {
-                for (size_t i = 1; i < o->size(); ++i)
-                    ku.push_back(parse_hex_number<unsigned int>(o->get(i, 16)));
-            }
-            catch (parse_hex_error &)
-            {
-                throw option_error(ERR_INVALID_OPTION_CRYPTO, "remote-cert-ku: error parsing hex value list");
+                // at most 16 hex digits always fit, so a large value cannot wrap into range
+                std::uint64_t v;
+                if (!parse_hex_number(o->get(i, 16), v))
+                    throw option_error(ERR_INVALID_OPTION_CRYPTO, "remote-cert-ku: error parsing hex value list");
+                if (v == 0 || (v & ~std::uint64_t{KU_VALUE_BITS}) != 0)
+                    throw option_error(ERR_INVALID_OPTION_CRYPTO, "remote-cert-ku: values must be nonzero and use only the bits 80 to 02");
+                ku.push_back(static_cast<unsigned int>(v));
             }
         }
     }
