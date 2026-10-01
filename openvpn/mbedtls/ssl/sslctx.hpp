@@ -387,8 +387,20 @@ class MbedTLSContext : public SSLFactoryAPI
             flags = flags_arg;
         }
 
+        /**
+         * @brief Sets the ns-cert-type check. With mbed TLS 3 it refuses any
+         *        check, as OpenVPN 2.x does: that version has no public accessor
+         *        for the Netscape certificate type.
+         *
+         * @throws option_error with mbed TLS 3 unless @p ns_cert_type_arg is
+         *         NSCert::NONE
+         */
         void set_ns_cert_type(const NSCert::Type ns_cert_type_arg) override
         {
+#if MBEDTLS_VERSION_NUMBER >= 0x03000000
+            if (ns_cert_type_arg != NSCert::NONE)
+                throw option_error(ERR_INVALID_OPTION_CRYPTO, "ns-cert-type is not supported with mbed TLS 3, use remote-cert-tls");
+#endif
             ns_cert_type = ns_cert_type_arg;
         }
 
@@ -553,7 +565,7 @@ class MbedTLSContext : public SSLFactoryAPI
                 relay_prefix = "relay-";
 
             // parse ns-cert-type
-            ns_cert_type = NSCert::ns_cert_type(opt, relay_prefix);
+            set_ns_cert_type(NSCert::ns_cert_type(opt, relay_prefix));
 
             // parse remote-cert-x options
             KUParse::remote_cert(opt, relay_prefix, ku, eku);

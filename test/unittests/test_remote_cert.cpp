@@ -279,3 +279,9 @@ TEST(RemoteCert, ProfileRemoteCertTlsClientRejectsClientWithoutUsage)
     Endpoint client(profile("client\n", "client"));
     EXPECT_TRUE(rejected_for(client, server, bad_ku));
 }
+#if defined(USE_MBEDTLS) && MBEDTLS_VERSION_NUMBER >= 0x03000000
+TEST(RemoteCert, MbedTlsRejectsNsCertType)
+{
+    OVPN_EXPECT_THROW(Endpoint{profile("client\nns-cert-type server\n", "client")}, option_error, "ns-cert-type");
+}
+#endif
