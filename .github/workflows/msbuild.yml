@@ -18,7 +18,7 @@ jobs:
     env:
       VCPKG_ROOT: ${{ github.workspace }}/vcpkg
       VCPKG_DEFAULT_TRIPLET: ${{ matrix.arch }}-windows
-      VCPKG_GIT_COMMIT_ID: a51bb4d1434e6d0927ff79db8033bed8522b85df
+      VCPKG_GIT_COMMIT_ID: 3aea538b2bb21a586502c67b00eb474fdd2e3098
       BUILD_CONFIGURATION: Release
 
     runs-on: windows-2022
@@ -78,7 +78,7 @@ jobs:
 
     env:
       VCPKG_ROOT: ${{ github.workspace }}/vcpkg
-      VCPKG_GIT_COMMIT_ID: a51bb4d1434e6d0927ff79db8033bed8522b85df
+      VCPKG_GIT_COMMIT_ID: 3aea538b2bb21a586502c67b00eb474fdd2e3098
 
     runs-on: ubuntu-24.04
     steps:
