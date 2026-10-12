@@ -1030,8 +1030,17 @@ struct SniProbe : public SNI::HandlerBase
         return default_config->new_factory();
     }
 
+    /**
+     * @brief Returns @c by_sni
+     */
+    bool select_by_sni() const override
+    {
+        return by_sni;
+    }
+
     std::set<std::string> known;            ///< names it recognizes
     mutable std::vector<std::string> asked; ///< in order
+    bool by_sni = true;                     ///< whether the ClientHello SNI may select
 };
 
 /**
@@ -1731,6 +1740,51 @@ TEST_F(ProtoUnitTest, TlsCryptV2WithoutSniHintUsesClientSni)
     SniProbe probe;
     probe.known = {"acme"};
     int ret = test_retry(N_RETRIES, {.tls_crypt_v2_key_fn = "tls-crypt-v2-client-with-serverkey.key", .sni_probe = &probe, .client_sni = "acme", .iterations = SNI_HINT_ITER});
+    EXPECT_EQ(ret, 0);
+    EXPECT_GE(probe.asked.size(), 2u);
+    EXPECT_THAT(probe.asked, testing::Each(testing::Eq("acme")));
+}
+
+// A tls-auth client has no WKc to hint from, so its SNI selects.
+TEST_F(ProtoUnitTest, TlsAuthClientSniSelectsContext)
+{
+    SniProbe probe;
+    probe.known = {"acme"};
+    int ret = test_retry(N_RETRIES, {.tls_crypt_v2_key_fn = "tls-crypt-v2-client-with-serverkey.key", .use_tls_auth_with_tls_crypt_v2 = true, .client_tls_auth_only = true, .sni_probe = &probe, .client_sni = "acme", .iterations = SNI_HINT_ITER});
+    EXPECT_EQ(ret, 0);
+    EXPECT_GE(probe.asked.size(), 2u);
+    EXPECT_THAT(probe.asked, testing::Each(testing::Eq("acme")));
+}
+
+// Unless the handler refuses the SNI: the client cannot name its way into a context.
+TEST_F(ProtoUnitTest, TlsAuthClientSniIgnoredWithoutSelectBySni)
+{
+    SniProbe probe;
+    probe.known = {"acme"};
+    probe.by_sni = false;
+    int ret = test_retry(N_RETRIES, {.tls_crypt_v2_key_fn = "tls-crypt-v2-client-with-serverkey.key", .use_tls_auth_with_tls_crypt_v2 = true, .client_tls_auth_only = true, .sni_probe = &probe, .client_sni = "acme", .iterations = SNI_HINT_ITER});
+    EXPECT_EQ(ret, 0);
+    EXPECT_THAT(probe.asked, testing::IsEmpty());
+}
+
+// Nor can a tls-crypt-v2 client whose key offers no hint.
+TEST_F(ProtoUnitTest, TlsCryptV2WithoutSniHintIgnoresClientSniWithoutSelectBySni)
+{
+    SniProbe probe;
+    probe.known = {"acme"};
+    probe.by_sni = false;
+    int ret = test_retry(N_RETRIES, {.tls_crypt_v2_key_fn = "tls-crypt-v2-client-with-serverkey.key", .sni_probe = &probe, .client_sni = "acme", .iterations = SNI_HINT_ITER});
+    EXPECT_EQ(ret, 0);
+    EXPECT_THAT(probe.asked, testing::IsEmpty());
+}
+
+// Refusing the SNI leaves the hint selecting, on every key.
+TEST_F(ProtoUnitTest, TlsCryptV2SniHintSelectsWithoutSelectBySni)
+{
+    SniProbe probe;
+    probe.known = {"acme", "other"};
+    probe.by_sni = false;
+    int ret = test_retry(N_RETRIES, {.tls_crypt_v2_key_fn = "tls-crypt-v2-client-with-serverkey.key", .sni_probe = &probe, .sni_hint = "acme", .client_sni = "other", .iterations = SNI_HINT_ITER});
     EXPECT_EQ(ret, 0);
     EXPECT_GE(probe.asked.size(), 2u);
     EXPECT_THAT(probe.asked, testing::Each(testing::Eq("acme")));

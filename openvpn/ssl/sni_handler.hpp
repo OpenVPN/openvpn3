@@ -37,6 +37,18 @@ class HandlerBase
                                          SSLConfigAPI::Ptr default_factory) const = 0;
     // clang-format on
 
+    /**
+     * @brief Whether the ClientHello SNI may select a context
+     *
+     * The SNI is chosen by the client and sent in the clear. A handler that should
+     * only be reached through SSLAPI::set_sni_hint() returns false, and an SNI
+     * without a hint then keeps the default context.
+     */
+    virtual bool select_by_sni() const
+    {
+        return true;
+    }
+
     virtual ~HandlerBase() = default;
 };
 

@@ -2347,6 +2347,14 @@ class OpenSSLContext : public SSLFactoryAPI
             // process the SNI name, if provided
             if (!sni_name.empty())
             {
+                // Hints only: ignore the SNI, and keep it out of authcert, where it would
+                // read as the selected context.
+                if (self->config->sni_handler && !self->config->sni_handler->select_by_sni())
+                {
+                    OPENVPN_LOG("SNI " << sni_name << " ignored: selection is by hint only");
+                    return SSL_CLIENT_HELLO_SUCCESS;
+                }
+
                 // save the SNI name in authcert
                 if (self_ssl->authcert)
                     self_ssl->authcert->sni = sni_name;
