@@ -46,7 +46,6 @@ class ExternalPKIRsaImpl : public ExternalPKIImpl
         RSA_meth_set_priv_dec(rsa_meth, rsa_priv_dec);
         RSA_meth_set_init(rsa_meth, nullptr);
         RSA_meth_set_finish(rsa_meth, rsa_finish);
-        RSA_meth_set0_app_data(rsa_meth, this);
 
 
         /* get the public key */
@@ -75,6 +74,7 @@ class ExternalPKIRsaImpl : public ExternalPKIImpl
         /* only set e and n as d (private key) is outside our control */
         RSA_set0_key(rsa, BN_dup(RSA_get0_n(pub_rsa)), BN_dup(RSA_get0_e(pub_rsa)), nullptr);
         RSA_set_flags(rsa, RSA_FLAG_EXT_PKEY);
+        RSA_set_app_data(rsa, this);
 
         if (!RSA_set_method(rsa, rsa_meth))
         {
@@ -122,7 +122,7 @@ class ExternalPKIRsaImpl : public ExternalPKIImpl
     static int
     rsa_priv_enc(int flen, const unsigned char *from, unsigned char *to, RSA *rsa, int padding)
     {
-        ExternalPKIRsaImpl *self = (ExternalPKIRsaImpl *)(RSA_meth_get0_app_data(RSA_get_method(rsa)));
+        ExternalPKIRsaImpl *self = (ExternalPKIRsaImpl *)RSA_get_app_data(rsa);
 
         try
         {
@@ -173,7 +173,7 @@ class ExternalPKIRsaImpl : public ExternalPKIImpl
 
     static void not_implemented(RSA *rsa)
     {
-        ExternalPKIRsaImpl *self = (ExternalPKIRsaImpl *)(RSA_meth_get0_app_data(RSA_get_method(rsa)));
+        ExternalPKIRsaImpl *self = (ExternalPKIRsaImpl *)RSA_get_app_data(rsa);
         ++self->n_errors;
     }
 
