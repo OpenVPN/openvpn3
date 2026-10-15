@@ -76,6 +76,7 @@
 #include <string>
 #include <unordered_map>
 #include <utility>
+#include <vector>
 
 #include <openvpn/io/io.hpp>
 
@@ -479,7 +480,8 @@ class Server : public TransportServer
      * @details Notifies every connected client with a RESTART before halting,
      *  matching the UDP server's graceful-shutdown behaviour so a clean stop
      *  reads as an expected disconnect rather than a network failure the client
-     *  has to time out. Idempotent.
+     *  has to time out. A client whose send queue overflows on that notification
+     *  is dropped there; the rest are still notified. Idempotent.
      */
     void stop() override
     {
@@ -492,12 +494,25 @@ class Server : public TransportServer
         // have to reach the wire.
         const std::string reason("server shutdown");
         const std::string client_reason;
-        for (auto &[id, entry] : connections_)
+        // Over a snapshot, re-finding each id: a send here can report
+        // TCP_OVERFLOW synchronously, and that erases the entry being notified.
+        std::vector<std::uint64_t> conn_ids;
+        conn_ids.reserve(connections_.size());
+        for (const auto &[conn_id, entry] : connections_)
         {
-            if (entry.recv)
+            conn_ids.push_back(conn_id);
+        }
+        for (const std::uint64_t conn_id : conn_ids)
+        {
+            const auto found = connections_.find(conn_id);
+            if (found == connections_.end())
             {
-                entry.recv->set_disconnect_cause(DisconnectCause::SERVER_SHUTDOWN);
-                entry.recv->push_halt_restart_msg(HaltRestart::RESTART, reason, client_reason);
+                continue;
+            }
+            if (found->second.recv)
+            {
+                found->second.recv->set_disconnect_cause(DisconnectCause::SERVER_SHUTDOWN);
+                found->second.recv->push_halt_restart_msg(HaltRestart::RESTART, reason, client_reason);
             }
         }
 

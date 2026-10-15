@@ -162,10 +162,11 @@ endif ()
 # libnl-genl-3.0, none of which exist on macOS/Android (both UNIX).
 if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
     target_sources(coreUnitTests PRIVATE
-      # O3 server engine (openvpn/server/{nulltun,simpleman,udptransserv,peerroutes,realtun}.hpp)
+      # O3 server engine (openvpn/server/{nulltun,simpleman,udptransserv,tcptransserv,peerroutes,realtun}.hpp)
       test_tunsink.cpp
       test_simpleman.cpp
       test_udptransserv.cpp
+      test_tcptransserv.cpp
       test_peerroutes.cpp
       test_tunreal.cpp
       test_netpolicy.cpp

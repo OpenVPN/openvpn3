@@ -1,6 +1,22 @@
-#include "test_common.hpp"
+#include "test_common.hpp" // IWYU pragma: keep
+#include "test_transserv_fakes.hpp"
 
+#include <cstddef>
+#include <cstdint>
+#include <utility>
+
+#include <gtest/gtest.h>
+
+#include <openvpn/io/io.hpp>
+
+#include <asio/buffer.hpp>
+#include <asio/ip/address.hpp>
+#include <asio/ip/udp.hpp>
+
+#include <openvpn/frame/frame_init.hpp>
+#include <openvpn/log/sessionstats.hpp>
 #include <openvpn/server/udptransserv.hpp>
+#include <openvpn/ssl/proto.hpp>
 
 using namespace openvpn;
 using namespace openvpn::UDPTransportServer;
@@ -291,4 +307,102 @@ TEST(ClientAddrInfo, SurvivesConstructionFromATemporary)
     ASSERT_NE(recovered, nullptr);
     ASSERT_EQ(recovered->address().to_string(), "198.51.100.9");
     ASSERT_EQ(recovered->port(), 1194);
+}
+
+// --- server over loopback ------------------------------------------------
+
+namespace {
+
+/**
+ * @brief A started UDP server on 127.0.0.1 backed by @c test::FakeFactory.
+ */
+class UDPServerTest : public testing::Test
+{
+  protected:
+    /**
+     * @brief Bind the server to an ephemeral loopback port.
+     * @param max_clients Session and peer-id table size.
+     */
+    void start_server(const std::size_t max_clients)
+    {
+        Config::Ptr config(new Config());
+        config->bind_addr = "127.0.0.1";
+        config->port = 0;
+        config->frame = frame_init_simple(test::test_frame_payload);
+        config->stats.reset(new SessionStats());
+        config->max_clients = max_clients;
+        factory.reset(new test::FakeFactory(io_context, new ProtoContext::ProtoConfig()));
+        server.reset(new Server(io_context, std::move(config), factory));
+        server->start();
+    }
+
+    /**
+     * @brief Send a client hard reset to the server from a fresh source port.
+     * @details Each call opens a new socket, so each reset comes from a new
+     *  endpoint and is a new client to the server.
+     */
+    void send_reset_from_new_client()
+    {
+        openvpn_io::ip::udp::socket sock(client_io_context);
+        sock.open(openvpn_io::ip::udp::v4());
+        sock.send_to(openvpn_io::buffer(test::client_reset_packet),
+                     AsioEndpoint(openvpn_io::ip::make_address("127.0.0.1"),
+                                  test::port_of(server->local_endpoint_info())));
+    }
+
+    /** @brief Stop the server and drain its cancelled handlers. */
+    void TearDown() override
+    {
+        if (server)
+        {
+            server->stop();
+        }
+        io_context.restart();
+        io_context.run();
+    }
+
+    openvpn_io::io_context io_context{1};
+    openvpn_io::io_context client_io_context{1};
+    test::FakeFactory::Ptr factory;
+    Server::Ptr server;
+};
+
+} // namespace
+
+TEST_F(UDPServerTest, SessionEndingOnItsFirstPacketReleasesItsPeerId)
+{
+    // One peer id: if the first session's id leaks, the second client is
+    // refused with "no free peer id" and its session is never started.
+    start_server(1);
+    factory->die_on_first_recv = {true};
+
+    send_reset_from_new_client();
+    ASSERT_TRUE(test::pump_until(io_context, [&]
+                                 { return factory->sessions.size() == 1; }));
+    ASSERT_TRUE(factory->sessions.at(0)->started);
+    EXPECT_EQ(factory->sessions.at(0)->stop_calls, 1);
+    EXPECT_EQ(server->n_clients(), 0U);
+
+    send_reset_from_new_client();
+    ASSERT_TRUE(test::pump_until(io_context, [&]
+                                 { return factory->sessions.size() == 2; }));
+    EXPECT_TRUE(factory->sessions.at(1)->started);
+    EXPECT_EQ(factory->sessions.at(1)->peer_id, 0);
+    EXPECT_EQ(server->n_clients(), 1U);
+}
+
+TEST_F(UDPServerTest, SurvivingSessionKeepsItsPeerId)
+{
+    start_server(2);
+
+    send_reset_from_new_client();
+    ASSERT_TRUE(test::pump_until(io_context, [&]
+                                 { return server->n_clients() == 1; }));
+    EXPECT_EQ(factory->sessions.at(0)->peer_id, 0);
+    EXPECT_EQ(factory->sessions.at(0)->stop_calls, 0);
+
+    send_reset_from_new_client();
+    ASSERT_TRUE(test::pump_until(io_context, [&]
+                                 { return server->n_clients() == 2; }));
+    EXPECT_EQ(factory->sessions.at(1)->peer_id, 1);
 }

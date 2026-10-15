@@ -726,6 +726,8 @@ class Server : public TransportServer
 
     /**
      * @brief Create a session for a newly validated client and feed it the packet.
+     * @details If the session ends while handling that packet, it is removed
+     *  and its peer id released before returning.
      * @param from The client's source endpoint, which keys the session table.
      * @param cookie_psid Server session ID recovered from the cookie, or a
      *  default-constructed ID when the cookie gate was declined.
@@ -766,6 +768,9 @@ class Server : public TransportServer
             return;
         }
         const int peer_id = *peer_id_slot;
+        // Commit before running protocol code: the cleanup below releases what
+        // the stored entry holds, so an id kept only here would leak its slot.
+        res.first->second.peer_id = peer_id;
         entry.recv->start(entry.send, peer_addr, peer_id, cookie_psid);
         entry.send->count_in(bytes);
         entry.recv->transport_recv(buf);
@@ -777,8 +782,6 @@ class Server : public TransportServer
                 remove_session(it);
             return;
         }
-
-        res.first->second.peer_id = peer_id;
     }
 
     /**
