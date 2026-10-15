@@ -76,15 +76,11 @@ struct MyConfig
     {
         pipe_name = Agent::named_pipe_path();
         server_exe = Win::module_name_utf8();
-#ifdef OPENVPN_AGENT_START_PROCESS
-        omiclient_exe = Win::omiclient_path();
-#endif
         n_pipe_instances = 4;
     }
 
     std::string pipe_name;
     std::string server_exe;
-    std::string omiclient_exe;
     unsigned int n_pipe_instances;
 };
 
@@ -473,6 +469,10 @@ class MyListener : public WS::Server::Listener
                                const std::string &log,
                                const bool log_append)
     {
+        // Only needed by /start, so that the agent can run without it for
+        // clients which start their own process
+        const std::string omiclient_exe = Win::omiclient_path();
+
         // impersonate pipe client
         Win::NamedPipeImpersonate impersonate{client_pipe};
 
@@ -513,7 +513,7 @@ class MyListener : public WS::Server::Listener
             std::unique_ptr<char[]> buf(new char[cmd.length() + 1]);
             strcpy(buf.get(), cmd.c_str());
 
-            // OPENVPN_LOG("Launching omiclient: " << config.omiclient_exe.c_str() << " " << buf.get());
+            // OPENVPN_LOG("Launching omiclient: " << omiclient_exe.c_str() << " " << buf.get());
 
             STARTUPINFO startup_info = {0};
             startup_info.cb = sizeof(startup_info);
@@ -524,7 +524,7 @@ class MyListener : public WS::Server::Listener
             PROCESS_INFORMATION proc_info;
             ZeroMemory(&proc_info, sizeof(proc_info));
             res = CreateProcessAsUser(pri_token,
-                                      config.omiclient_exe.c_str(),
+                                      omiclient_exe.c_str(),
                                       buf.get(),
                                       NULL,
                                       NULL,
