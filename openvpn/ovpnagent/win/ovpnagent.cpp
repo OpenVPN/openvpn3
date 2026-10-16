@@ -137,6 +137,12 @@ class TunSession : public RC<thread_unsafe_refcount>
         return vpn_interface_index;
     }
 
+    // true if the tunnel is up and has taken over the default route
+    bool redirects_gateway() const
+    {
+        return redirects_gateway_;
+    }
+
     // the tunnel of another client came up or went down
     void add_other_vpn_interface(const DWORD itf_index, std::ostream &os)
     {
@@ -188,6 +194,7 @@ class TunSession : public RC<thread_unsafe_refcount>
         // store VPN interface index to be able to exclude it
         // when next time adding bypass route
         vpn_interface_index = tun->vpn_interface_index();
+        redirects_gateway_ = tbc.reroute_gw.ipv4 || tbc.reroute_gw.ipv6;
         return Win::ScopedHANDLE(th);
     }
 
@@ -256,6 +263,7 @@ class TunSession : public RC<thread_unsafe_refcount>
             os << "destroy_tun: exception in cleanup: " << e.what() << "\n";
         }
         vpn_interface_index = DWORD(-1);
+        redirects_gateway_ = false;
         return ret;
     }
 
@@ -419,6 +427,8 @@ class TunSession : public RC<thread_unsafe_refcount>
     // VPN interface when searching for best gateway when
     // adding bypass route for the next remote
     DWORD vpn_interface_index = DWORD(-1);
+
+    bool redirects_gateway_ = false;
 };
 
 class MyListener : public WS::Server::Listener
@@ -458,6 +468,15 @@ class MyListener : public WS::Server::Listener
             if (session_pid != pid && session->vpn_interface() != DWORD(-1))
                 ret.insert(session->vpn_interface());
         return ret;
+    }
+
+    // the session of another client whose tunnel redirects the default gateway
+    TunSession::Ptr gateway_owner(const DWORD pid) const
+    {
+        for (const auto &[session_pid, session] : sessions)
+            if (session_pid != pid && session->redirects_gateway())
+                return session;
+        return TunSession::Ptr();
     }
 
     TunSession::Ptr find_session(const DWORD pid) const
@@ -762,6 +781,15 @@ class MyClientInstance : public WS::Server::Listener::Client
                     // parse JSON data into a TunBuilderCapture object
                     TunBuilderCapture::Ptr tbc = TunBuilderCapture::from_json(json::get_dict(root, "tun", false));
                     tbc->validate();
+
+                    // Only one tunnel can be the default route. Pushed options are
+                    // only known here, so this is the place to refuse a second one.
+                    if (tbc->reroute_gw.ipv4 || tbc->reroute_gw.ipv6)
+                    {
+                        if (const TunSession::Ptr owner = parent()->gateway_owner(client_pid))
+                            throw Exception("redirect-gateway: the default gateway is already redirected by the tunnel of process "
+                                            + std::to_string(owner->pid()));
+                    }
 
                     const TunSession::Ptr session = parent()->get_session(client_pid);
 
