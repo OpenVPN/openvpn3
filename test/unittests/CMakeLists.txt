@@ -191,7 +191,7 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
 endif ()
 
 if (WIN32)
-    target_sources(coreUnitTests PRIVATE test_iphelper.cpp test_wstring.cpp)
+    target_sources(coreUnitTests PRIVATE test_iphelper.cpp test_wstring.cpp test_bestgateway.cpp)
 endif ()
 
 add_core_dependencies(coreUnitTests)

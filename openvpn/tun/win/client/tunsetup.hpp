@@ -21,6 +21,7 @@
 #include <utility>
 #include <thread>
 #include <algorithm>
+#include <set>
 
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/rc.hpp>
@@ -89,6 +90,53 @@ class Setup : public SetupBase
     void set_process_id(DWORD process_id)
     {
         process_id_ = process_id;
+    }
+
+    /**
+     * @brief Set the VPN interfaces of other tunnels that are up at the same time
+     *
+     * They are skipped, like our own interface, when looking for the gateway
+     * of the server bypass route, so that it goes through the physical network,
+     * and the WFP block filters (block-outside-dns, block-local) don't apply
+     * to them.
+     *
+     * @param interfaces    interface indexes of the other tunnels
+     * @param os            the log stream for diagnostics
+     */
+    void set_other_vpn_interfaces(std::set<DWORD> interfaces, std::ostream &os)
+    {
+#if _WIN32_WINNT >= 0x0600 // Vista+
+        wfp->set_other_interfaces(std::set<NET_IFINDEX>(interfaces.begin(), interfaces.end()), os);
+#endif
+        other_vpn_interfaces_ = std::move(interfaces);
+    }
+
+    /**
+     * @brief Another tunnel came up while this one is established
+     *
+     * @param itf_index     interface index of the other tunnel
+     * @param os            the log stream for diagnostics
+     */
+    void add_other_vpn_interface(DWORD itf_index, std::ostream &os)
+    {
+        other_vpn_interfaces_.insert(itf_index);
+#if _WIN32_WINNT >= 0x0600 // Vista+
+        wfp->permit_interface(itf_index, os);
+#endif
+    }
+
+    /**
+     * @brief Another tunnel went down while this one is established
+     *
+     * @param itf_index     interface index of the other tunnel
+     * @param os            the log stream for diagnostics
+     */
+    void remove_other_vpn_interface(DWORD itf_index, std::ostream &os)
+    {
+        other_vpn_interfaces_.erase(itf_index);
+#if _WIN32_WINNT >= 0x0600 // Vista+
+        wfp->revoke_interface(itf_index, os);
+#endif
     }
 
     HANDLE get_handle(std::ostream &os) override
@@ -620,7 +668,9 @@ class Setup : public SetupBase
         {
             // get default gateway
             ADDRESS_FAMILY af = pull.remote_address.ipv6 ? AF_INET6 : AF_INET;
-            const Util::BestGateway gw{af, pull.remote_address.address, tap.index};
+            std::set<DWORD> vpn_interfaces = other_vpn_interfaces_;
+            vpn_interfaces.insert(tap.index);
+            const Util::BestGateway gw{af, pull.remote_address.address, vpn_interfaces};
 
             if (!gw.local_route())
             {
@@ -967,5 +1017,6 @@ class Setup : public SetupBase
     Util::TapNameGuidPair tap_;
     bool allow_local_dns_resolvers = false;
     DWORD process_id_ = 0;
+    std::set<DWORD> other_vpn_interfaces_;
 };
 } // namespace openvpn::TunWin
