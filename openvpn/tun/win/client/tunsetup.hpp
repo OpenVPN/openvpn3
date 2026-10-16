@@ -112,6 +112,40 @@ class Setup : public SetupBase
     }
 
     /**
+     * @brief Add the routes that blackhole global IPv6 traffic for block-ipv6
+     *
+     * The routes are the same for every tunnel, so a caller that runs several
+     * tunnels can add them once and keep them until the last tunnel that
+     * needs them is gone, see set_block_ipv6_routes().
+     *
+     * @param create    gets the commands that add the routes
+     * @param destroy   gets the commands that remove them again
+     */
+    static void add_block_ipv6_routes(ActionList &create, ActionList &destroy)
+    {
+        static const char *const block_ipv6_net[] = {
+            "2000::/4",
+            "3000::/4",
+            "fc00::/7",
+        };
+        for (size_t i = 0; i < array_size(block_ipv6_net); ++i)
+        {
+            create.add(new WinCmd("netsh interface ipv6 add route " + std::string(block_ipv6_net[i]) + " interface=1 store=active"));
+            destroy.add(new WinCmd("netsh interface ipv6 delete route " + std::string(block_ipv6_net[i]) + " interface=1 store=active"));
+        }
+    }
+
+    /**
+     * @brief Whether establish() adds the block-ipv6 routes itself
+     *
+     * @param enabled   false if the caller manages them with add_block_ipv6_routes()
+     */
+    void set_block_ipv6_routes(bool enabled)
+    {
+        block_ipv6_routes_ = enabled;
+    }
+
+    /**
      * @brief Another tunnel came up while this one is established
      *
      * @param itf_index     interface index of the other tunnel
@@ -552,19 +586,8 @@ class Setup : public SetupBase
         }
 
         // Should we block IPv6?
-        if (pull.block_ipv6)
-        {
-            static const char *const block_ipv6_net[] = {
-                "2000::/4",
-                "3000::/4",
-                "fc00::/7",
-            };
-            for (size_t i = 0; i < array_size(block_ipv6_net); ++i)
-            {
-                create.add(new WinCmd("netsh interface ipv6 add route " + std::string(block_ipv6_net[i]) + " interface=1 store=active"));
-                destroy.add(new WinCmd("netsh interface ipv6 delete route " + std::string(block_ipv6_net[i]) + " interface=1 store=active"));
-            }
-        }
+        if (pull.block_ipv6 && block_ipv6_routes_)
+            add_block_ipv6_routes(create, destroy);
 
         // Set IPv6 Interface
         //
@@ -1018,5 +1041,6 @@ class Setup : public SetupBase
     bool allow_local_dns_resolvers = false;
     DWORD process_id_ = 0;
     std::set<DWORD> other_vpn_interfaces_;
+    bool block_ipv6_routes_ = true;
 };
 } // namespace openvpn::TunWin

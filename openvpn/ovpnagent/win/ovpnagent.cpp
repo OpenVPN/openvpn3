@@ -143,6 +143,12 @@ class TunSession : public RC<thread_unsafe_refcount>
         return redirects_gateway_;
     }
 
+    // true if the tunnel is up and needs the block-ipv6 routes
+    bool blocks_ipv6() const
+    {
+        return blocks_ipv6_;
+    }
+
     // the tunnel of another client came up or went down
     void add_other_vpn_interface(const DWORD itf_index, std::ostream &os)
     {
@@ -190,11 +196,14 @@ class TunSession : public RC<thread_unsafe_refcount>
 
         tun->set_process_id(pid_);
         tun->set_other_vpn_interfaces(std::move(other_vpn_interfaces), os);
+        // shared by all tunnels, managed by the listener
+        tun->set_block_ipv6_routes(false);
         auto th = tun->establish(tbc, openvpn_app_path, stop, os, ring_buffer);
         // store VPN interface index to be able to exclude it
         // when next time adding bypass route
         vpn_interface_index = tun->vpn_interface_index();
         redirects_gateway_ = tbc.reroute_gw.ipv4 || tbc.reroute_gw.ipv6;
+        blocks_ipv6_ = tbc.block_ipv6;
         return Win::ScopedHANDLE(th);
     }
 
@@ -264,6 +273,7 @@ class TunSession : public RC<thread_unsafe_refcount>
         }
         vpn_interface_index = DWORD(-1);
         redirects_gateway_ = false;
+        blocks_ipv6_ = false;
         return ret;
     }
 
@@ -429,6 +439,7 @@ class TunSession : public RC<thread_unsafe_refcount>
     DWORD vpn_interface_index = DWORD(-1);
 
     bool redirects_gateway_ = false;
+    bool blocks_ipv6_ = false;
 };
 
 class MyListener : public WS::Server::Listener
@@ -507,6 +518,39 @@ class MyListener : public WS::Server::Listener
                 session->remove_other_vpn_interface(itf_index, os);
     }
 
+    // The block-ipv6 routes are the same for all tunnels: add them for the
+    // first session that needs them and remove them with the last one.
+    void acquire_block_ipv6(std::ostream &os)
+    {
+        if (block_ipv6_users++ == 0)
+        {
+            ActionList add_cmds;
+            TunWin::Setup::add_block_ipv6_routes(add_cmds, remove_cmds_block_ipv6);
+            add_cmds.execute(os);
+        }
+    }
+
+    void release_block_ipv6(std::ostream &os)
+    {
+        if (block_ipv6_users > 0 && --block_ipv6_users == 0)
+        {
+            remove_cmds_block_ipv6.execute(os);
+            remove_cmds_block_ipv6.clear();
+        }
+    }
+
+    // undo the tun setup of a session, including what is shared with the others
+    bool destroy_session_tun(TunSession &session, std::ostream &os)
+    {
+        const DWORD itf_index = session.vpn_interface();
+        const bool blocked_ipv6 = session.blocks_ipv6();
+        const bool ret = session.destroy_tun(os);
+        withdraw_vpn_interface(session.pid(), itf_index, os);
+        if (blocked_ipv6)
+            release_block_ipv6(os);
+        return ret;
+    }
+
     // tear down everything the session has set up and forget it
     void close_session(TunSession &session, const char *reason)
     {
@@ -514,11 +558,9 @@ class MyListener : public WS::Server::Listener
         const TunSession::Ptr hold(&session);
 
         std::ostringstream os;
-        const DWORD itf_index = session.vpn_interface();
         session.remove_bypass_routes(os);
-        session.destroy_tun(os);
+        destroy_session_tun(session, os);
         session.close_client_process();
-        withdraw_vpn_interface(session.pid(), itf_index, os);
 
         const auto it = sessions.find(session.pid());
         if (it != sessions.end() && it->second == hold)
@@ -652,6 +694,10 @@ class MyListener : public WS::Server::Listener
 
     std::map<DWORD, TunSession::Ptr> sessions;
     openvpn_io::io_context &io_context_;
+
+    // sessions with block-ipv6 and how to remove its routes
+    unsigned int block_ipv6_users = 0;
+    ActionList remove_cmds_block_ipv6;
 };
 
 class MyClientInstance : public WS::Server::Listener::Client
@@ -714,7 +760,7 @@ class MyClientInstance : public WS::Server::Listener::Client
                     const TunSession::Ptr session = parent()->get_session(client_pid);
 
                     // destroy previous instance of this client
-                    if (session->destroy_tun(os))
+                    if (parent()->destroy_session_tun(*session, os))
                     {
                         os << "Destroyed previous TAP instance\n";
                         ::Sleep(1000);
@@ -794,7 +840,7 @@ class MyClientInstance : public WS::Server::Listener::Client
                     const TunSession::Ptr session = parent()->get_session(client_pid);
 
                     // destroy previous instance of this client
-                    if (tun_type != TunWin::OvpnDco && session->destroy_tun(os))
+                    if (tun_type != TunWin::OvpnDco && parent()->destroy_session_tun(*session, os))
                     {
                         os << "Destroyed previous TAP instance\n";
                         ::Sleep(1000);
@@ -851,6 +897,9 @@ class MyClientInstance : public WS::Server::Listener::Client
                     }
 
                     parent()->announce_vpn_interface(client_pid, session->vpn_interface(), os);
+                    if (session->blocks_ipv6())
+                        parent()->acquire_block_ipv6(os);
+
 
                     // build JSON return dictionary
                     const std::string log_txt = string::remove_blanks(os.str());
@@ -928,10 +977,8 @@ class MyClientInstance : public WS::Server::Listener::Client
             const TunSession::Ptr session = parent()->find_session(client_pid);
             if (session)
             {
-                const DWORD itf_index = session->vpn_interface();
-                if (session->destroy_tun(os))
+                if (parent()->destroy_session_tun(*session, os))
                     os << "Destroyed previous TAP instance due to exception\n";
-                parent()->withdraw_vpn_interface(client_pid, itf_index, os);
             }
 
             const std::string error_msg = string::remove_blanks(os.str() + e.what() + '\n');
