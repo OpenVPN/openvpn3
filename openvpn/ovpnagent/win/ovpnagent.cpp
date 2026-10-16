@@ -19,6 +19,7 @@
 #include <map>
 #include <functional>
 #include <set>
+#include <vector>
 
 #include <openvpn/io/io.hpp>
 
@@ -63,6 +64,7 @@
 #include <openvpn/win/npinfo.hpp>
 #include <openvpn/win/handlecomm.hpp>
 #include <openvpn/win/cancelable_handle.hpp>
+#include <openvpn/addr/route.hpp>
 
 void log_version()
 {
@@ -149,6 +151,12 @@ class TunSession : public RC<thread_unsafe_refcount>
         return blocks_ipv6_;
     }
 
+    // routes into the tunnel, empty if it is not up
+    const std::vector<IP::Route> &routes() const
+    {
+        return routes_;
+    }
+
     // the tunnel of another client came up or went down
     void add_other_vpn_interface(const DWORD itf_index, std::ostream &os)
     {
@@ -204,6 +212,9 @@ class TunSession : public RC<thread_unsafe_refcount>
         vpn_interface_index = tun->vpn_interface_index();
         redirects_gateway_ = tbc.reroute_gw.ipv4 || tbc.reroute_gw.ipv6;
         blocks_ipv6_ = tbc.block_ipv6;
+        routes_.clear();
+        for (const auto &r : tbc.add_routes)
+            routes_.emplace_back(IP::Addr::from_string(r.address), r.prefix_length);
         return Win::ScopedHANDLE(th);
     }
 
@@ -274,6 +285,7 @@ class TunSession : public RC<thread_unsafe_refcount>
         vpn_interface_index = DWORD(-1);
         redirects_gateway_ = false;
         blocks_ipv6_ = false;
+        routes_.clear();
         return ret;
     }
 
@@ -440,6 +452,7 @@ class TunSession : public RC<thread_unsafe_refcount>
 
     bool redirects_gateway_ = false;
     bool blocks_ipv6_ = false;
+    std::vector<IP::Route> routes_;
 };
 
 class MyListener : public WS::Server::Listener
@@ -549,6 +562,32 @@ class MyListener : public WS::Server::Listener
         if (blocked_ipv6)
             release_block_ipv6(os);
         return ret;
+    }
+
+    // Compare routes with those of the other tunnels. Identical routes are
+    // conflicts: destinations in them may go through either tunnel. Nested
+    // routes are just overlaps, the more specific route always wins.
+    void route_conflicts(const DWORD pid,
+                         const std::vector<IP::Route> &routes,
+                         std::vector<std::string> &conflicts,
+                         std::vector<std::string> &overlaps) const
+    {
+        for (const auto &[session_pid, session] : sessions)
+        {
+            if (session_pid == pid)
+                continue;
+            const std::string owner = " of the tunnel of process " + std::to_string(session_pid);
+            for (const IP::Route &r : routes)
+                for (const IP::Route &o : session->routes())
+                {
+                    if (r == o)
+                        conflicts.push_back(r.to_string() + " overlaps " + o.to_string() + owner);
+                    else if (r.contains(o))
+                        overlaps.push_back(r.to_string() + " contains " + o.to_string() + owner);
+                    else if (o.contains(r))
+                        overlaps.push_back(r.to_string() + " is inside " + o.to_string() + owner);
+                }
+        }
     }
 
     // tear down everything the session has set up and forget it
@@ -900,6 +939,19 @@ class MyClientInstance : public WS::Server::Listener::Client
                     if (session->blocks_ipv6())
                         parent()->acquire_block_ipv6(os);
 
+                    // The client shows conflicts to the user, see "ROUTE CONFLICT"
+                    // in the GUI; overlaps are only logged.
+                    std::vector<std::string> conflicts, overlaps;
+                    parent()->route_conflicts(client_pid, session->routes(), conflicts, overlaps);
+                    const size_t max_lines = 10;
+                    for (size_t i = 0; i < conflicts.size() && i < max_lines; ++i)
+                        os << "ROUTE CONFLICT: " << conflicts[i] << "\n";
+                    if (conflicts.size() > max_lines)
+                        os << "ROUTE CONFLICT: " << (conflicts.size() - max_lines) << " more\n";
+                    for (size_t i = 0; i < overlaps.size() && i < max_lines; ++i)
+                        os << "ROUTE OVERLAP: " << overlaps[i] << "\n";
+                    if (overlaps.size() > max_lines)
+                        os << "ROUTE OVERLAP: " << (overlaps.size() - max_lines) << " more\n";
 
                     // build JSON return dictionary
                     const std::string log_txt = string::remove_blanks(os.str());
