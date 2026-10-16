@@ -965,6 +965,13 @@ class MyService : public Win::Service
 
         MyConfig conf;
 
+        // Refuse to share the pipe with another agent, e.g. "ovpnagent run"
+        // while the service is running. Windows reports the process that
+        // created the pipe first as its server, so clients would validate
+        // against that one and fail once it is gone.
+        if (::WaitNamedPipeA(conf.pipe_name.c_str(), 0) || ::GetLastError() != ERROR_FILE_NOT_FOUND)
+            throw Exception("another agent is already serving " + conf.pipe_name);
+
         Win::NamedPipePeerInfo::allow_client_query();
         TunWin::NRPT::delete_rules(0); // remove stale NRPT rules
 
