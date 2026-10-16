@@ -16,6 +16,10 @@
 #include <vector>
 #include <memory>
 #include <utility>
+#include <map>
+#include <functional>
+#include <set>
+#include <vector>
 
 #include <openvpn/io/io.hpp>
 
@@ -60,6 +64,7 @@
 #include <openvpn/win/npinfo.hpp>
 #include <openvpn/win/handlecomm.hpp>
 #include <openvpn/win/cancelable_handle.hpp>
+#include <openvpn/addr/route.hpp>
 
 void log_version()
 {
@@ -74,15 +79,11 @@ struct MyConfig
     {
         pipe_name = Agent::named_pipe_path();
         server_exe = Win::module_name_utf8();
-#ifdef OPENVPN_AGENT_START_PROCESS
-        omiclient_exe = Win::omiclient_path();
-#endif
         n_pipe_instances = 4;
     }
 
     std::string pipe_name;
     std::string server_exe;
-    std::string omiclient_exe;
     unsigned int n_pipe_instances;
 };
 
@@ -104,23 +105,69 @@ class MySessionStats : public SessionStats
     }
 };
 
-class MyListener : public WS::Server::Listener
+// State of a single tunnel, owned by the client process that requested it.
+// Sessions are keyed by the client PID, so that several clients can keep
+// their tunnels up at the same time.
+class TunSession : public RC<thread_unsafe_refcount>
 {
   public:
-    typedef RCPtr<MyListener> Ptr;
+    typedef RCPtr<TunSession> Ptr;
 
-    MyListener(const MyConfig &config_arg,
-               openvpn_io::io_context &io_context,
-               const WS::Server::Config::Ptr &hconf,
-               const Listen::List &listen_list,
-               const WS::Server::Listener::Client::Factory::Ptr &client_factory)
-        : WS::Server::Listener(io_context, hconf, listen_list, client_factory),
-          config(config_arg),
-          client_process(io_context),
+    // called when the client process exits or signals the destroy event
+    typedef std::function<void(TunSession &, const char *reason)> CloseHandler;
+
+    TunSession(openvpn_io::io_context &io_context,
+               const DWORD pid,
+               CloseHandler close_handler)
+        : client_process(io_context),
           client_confirm_event(io_context),
           client_destroy_event(io_context),
-          io_context_(io_context)
+          io_context_(io_context),
+          pid_(pid),
+          close_handler_(std::move(close_handler))
     {
+    }
+
+    DWORD pid() const
+    {
+        return pid_;
+    }
+
+    // index of the VPN interface, DWORD(-1) if there is none yet
+    DWORD vpn_interface() const
+    {
+        return vpn_interface_index;
+    }
+
+    // true if the tunnel is up and has taken over the default route
+    bool redirects_gateway() const
+    {
+        return redirects_gateway_;
+    }
+
+    // true if the tunnel is up and needs the block-ipv6 routes
+    bool blocks_ipv6() const
+    {
+        return blocks_ipv6_;
+    }
+
+    // routes into the tunnel, empty if it is not up
+    const std::vector<IP::Route> &routes() const
+    {
+        return routes_;
+    }
+
+    // the tunnel of another client came up or went down
+    void add_other_vpn_interface(const DWORD itf_index, std::ostream &os)
+    {
+        if (tun)
+            tun->add_other_vpn_interface(itf_index, os);
+    }
+
+    void remove_other_vpn_interface(const DWORD itf_index, std::ostream &os)
+    {
+        if (tun)
+            tun->remove_other_vpn_interface(itf_index, os);
     }
 
     Win::ScopedHANDLE tun_get_handle(std::ostream &os,
@@ -129,7 +176,10 @@ class MyListener : public WS::Server::Listener
     {
         if (!tun)
             tun.reset(new TunWin::Setup(io_context_, tun_type, allow_local_dns_resolvers));
-        return Win::ScopedHANDLE(tun->get_handle(os));
+        Win::ScopedHANDLE th(tun->get_handle(os));
+        // the adapter is ours from now on, so other tunnels must skip it too
+        vpn_interface_index = tun->get_adapter_state().index;
+        return th;
     }
 
     TunWin::Util::TapNameGuidPair get_adapter_state()
@@ -139,12 +189,12 @@ class MyListener : public WS::Server::Listener
 
     Win::ScopedHANDLE establish_tun(const TunBuilderCapture &tbc,
                                     const std::wstring &openvpn_app_path,
-                                    DWORD client_process_id,
                                     Stop *stop,
                                     std::ostream &os,
                                     TunWin::Type tun_type,
                                     bool allow_local_dns_resolvers,
-                                    TunWin::Util::TapNameGuidPair tap)
+                                    TunWin::Util::TapNameGuidPair tap,
+                                    std::set<DWORD> other_vpn_interfaces)
     {
         if (!tun)
             tun.reset(new TunWin::Setup(io_context_, tun_type, allow_local_dns_resolvers));
@@ -152,15 +202,26 @@ class MyListener : public WS::Server::Listener
         if ((tun_type == TunWin::OvpnDco) && (tap.index != DWORD(-1)))
             tun->set_adapter_state(tap);
 
-        tun->set_process_id(client_process_id);
+        tun->set_process_id(pid_);
+        tun->set_other_vpn_interfaces(std::move(other_vpn_interfaces), os);
+        // shared by all tunnels, managed by the listener
+        tun->set_block_ipv6_routes(false);
         auto th = tun->establish(tbc, openvpn_app_path, stop, os, ring_buffer);
         // store VPN interface index to be able to exclude it
         // when next time adding bypass route
         vpn_interface_index = tun->vpn_interface_index();
+        redirects_gateway_ = tbc.reroute_gw.ipv4 || tbc.reroute_gw.ipv6;
+        blocks_ipv6_ = tbc.block_ipv6;
+        routes_.clear();
+        for (const auto &r : tbc.add_routes)
+            routes_.emplace_back(IP::Addr::from_string(r.address), r.prefix_length);
         return Win::ScopedHANDLE(th);
     }
 
-    // return true if we did any work
+    // Undo the tun setup. The client process handle and the bypass
+    // routes are kept, so that a tunnel can be set up again by the
+    // same client and the failsafe keeps watching the client.
+    // Return true if we did any work.
     bool destroy_tun(std::ostream &os)
     {
         bool ret = false;
@@ -214,7 +275,6 @@ class MyListener : public WS::Server::Listener
         {
             tun.reset();
             remote_tap_handle_hex.clear();
-            client_process.close();
             client_confirm_event.close();
             client_destroy_event.cancel_and_close();
         }
@@ -223,15 +283,21 @@ class MyListener : public WS::Server::Listener
             os << "destroy_tun: exception in cleanup: " << e.what() << "\n";
         }
         vpn_interface_index = DWORD(-1);
+        redirects_gateway_ = false;
+        blocks_ipv6_ = false;
+        routes_.clear();
         return ret;
     }
 
-    void destroy_tun_exit()
+    void remove_bypass_routes(std::ostream &os)
     {
-        std::ostringstream os;
-        destroy_tun(os);
-        OPENVPN_LOG_NTNL("TUN CLOSE (exit)\n"
-                         << os.str());
+        remove_cmds_bypass_hosts.execute(os);
+        remove_cmds_bypass_hosts.clear();
+    }
+
+    void close_client_process()
+    {
+        client_process.close();
     }
 
     void set_client_process(Win::ScopedHANDLE &&proc)
@@ -243,21 +309,7 @@ class MyListener : public WS::Server::Listener
         client_process.async_wait([self = Ptr(this)](const openvpn_io::error_code &error)
                                   {
 	if (!error)
-	  {
-	    {
-	      std::ostringstream os;
-	      self->remove_cmds_bypass_hosts.execute(os);
-	      self->remove_cmds_bypass_hosts.clear();
-	      OPENVPN_LOG_NTNL("remove bypass route (failsafe)\n" << os.str());
-	    }
-
-	    if (self->tun)
-	      {
-		std::ostringstream os;
-		self->destroy_tun(os);
-		OPENVPN_LOG_NTNL("TUN CLOSE (failsafe)\n" << os.str());
-	      }
-	  } });
+	  self->close_handler_(*self, "failsafe"); });
     }
 
     void set_client_confirm_event(const std::string &confirm_handle_hex)
@@ -305,7 +357,7 @@ class MyListener : public WS::Server::Listener
 	if (!error)
 	  {
 	    self->remote_tap_handle_hex.clear();
-	    OPENVPN_LOG_STRING("TUN CONFIRM\n");
+	    OPENVPN_LOG_STRING("TUN CONFIRM pid=" + std::to_string(self->pid_) + "\n");
 	  } });
     }
 
@@ -337,21 +389,7 @@ class MyListener : public WS::Server::Listener
         client_destroy_event.async_wait([self = Ptr(this)](const openvpn_io::error_code &error)
                                         {
 	if (!error)
-	  {
-	    {
-	      std::ostringstream os;
-	      self->remove_cmds_bypass_hosts.execute(os);
-	      self->remove_cmds_bypass_hosts.clear();
-	      OPENVPN_LOG_NTNL("remove bypass route (event)\n" << os.str());
-	    }
-
-	    if (self->tun)
-	      {
-		std::ostringstream os;
-		self->destroy_tun(os);
-		OPENVPN_LOG_NTNL("TUN CLOSE (event)\n" << os.str());
-	      }
-	  } });
+	  self->close_handler_(*self, "event"); });
     }
 
     HANDLE get_client_process()
@@ -376,21 +414,208 @@ class MyListener : public WS::Server::Listener
         ring_buffer.reset(ring_buffer_arg);
     }
 
-    void add_bypass_route(const std::string &host, bool ipv6)
+    void add_bypass_route(const std::string &host, bool ipv6, std::set<DWORD> vpn_interfaces)
     {
         std::ostringstream os;
-        remove_cmds_bypass_hosts.execute(os);
-        remove_cmds_bypass_hosts.clear();
+        remove_bypass_routes(os);
 
         ActionList add_cmds;
         // we might have broken VPN connection up, so we must
-        // exclude VPN interface whe searching for the best gateway
+        // exclude VPN interface whe searching for the best gateway,
+        // and so the interfaces of the other tunnels
+        if (vpn_interface_index != DWORD(-1))
+            vpn_interfaces.insert(vpn_interface_index);
         ADDRESS_FAMILY af = ipv6 ? AF_INET6 : AF_INET;
-        const TunWin::Util::BestGateway gw{af, host, vpn_interface_index};
+        const TunWin::Util::BestGateway gw{af, host, vpn_interfaces};
         TunWin::Setup::add_bypass_route(gw, host, ipv6, add_cmds, remove_cmds_bypass_hosts);
         add_cmds.execute(os);
 
         OPENVPN_LOG(os.str());
+    }
+
+  private:
+    TunWin::Setup::Ptr tun;
+    TunWin::RingBuffer::Ptr ring_buffer;
+    ActionList remove_cmds_bypass_hosts;
+    openvpn_io::windows::object_handle client_process;
+    openvpn_io::windows::object_handle client_confirm_event;
+    CancelableHandle client_destroy_event;
+    std::string remote_tap_handle_hex;
+    openvpn_io::io_context &io_context_;
+    const DWORD pid_;
+    CloseHandler close_handler_;
+
+    // with persist tunnel and redirect-gw we must exclude
+    // VPN interface when searching for best gateway when
+    // adding bypass route for the next remote
+    DWORD vpn_interface_index = DWORD(-1);
+
+    bool redirects_gateway_ = false;
+    bool blocks_ipv6_ = false;
+    std::vector<IP::Route> routes_;
+};
+
+class MyListener : public WS::Server::Listener
+{
+  public:
+    typedef RCPtr<MyListener> Ptr;
+
+    MyListener(const MyConfig &config_arg,
+               openvpn_io::io_context &io_context,
+               const WS::Server::Config::Ptr &hconf,
+               const Listen::List &listen_list,
+               const WS::Server::Listener::Client::Factory::Ptr &client_factory)
+        : WS::Server::Listener(io_context, hconf, listen_list, client_factory),
+          config(config_arg),
+          io_context_(io_context)
+    {
+    }
+
+    // return the session of the given client, create it if needed
+    TunSession::Ptr get_session(const DWORD pid)
+    {
+        TunSession::Ptr &session = sessions[pid];
+        if (!session)
+        {
+            session.reset(new TunSession(io_context_, pid, [this](TunSession &s, const char *reason)
+                                         { close_session(s, reason); }));
+            OPENVPN_LOG("new session pid=" << pid << ", sessions=" << sessions.size());
+        }
+        return session;
+    }
+
+    // VPN interfaces of all sessions but the given one
+    std::set<DWORD> other_vpn_interfaces(const DWORD pid) const
+    {
+        std::set<DWORD> ret;
+        for (const auto &[session_pid, session] : sessions)
+            if (session_pid != pid && session->vpn_interface() != DWORD(-1))
+                ret.insert(session->vpn_interface());
+        return ret;
+    }
+
+    // the session of another client whose tunnel redirects the default gateway
+    TunSession::Ptr gateway_owner(const DWORD pid) const
+    {
+        for (const auto &[session_pid, session] : sessions)
+            if (session_pid != pid && session->redirects_gateway())
+                return session;
+        return TunSession::Ptr();
+    }
+
+    TunSession::Ptr find_session(const DWORD pid) const
+    {
+        const auto it = sessions.find(pid);
+        if (it == sessions.end())
+            return TunSession::Ptr();
+        return it->second;
+    }
+
+    // Tell the other sessions about the VPN interface of a session, so that
+    // their WFP filters don't block it and their bypass routes avoid it.
+    void announce_vpn_interface(const DWORD pid, const DWORD itf_index, std::ostream &os)
+    {
+        if (itf_index == DWORD(-1))
+            return;
+        for (const auto &[session_pid, session] : sessions)
+            if (session_pid != pid)
+                session->add_other_vpn_interface(itf_index, os);
+    }
+
+    void withdraw_vpn_interface(const DWORD pid, const DWORD itf_index, std::ostream &os)
+    {
+        if (itf_index == DWORD(-1))
+            return;
+        for (const auto &[session_pid, session] : sessions)
+            if (session_pid != pid)
+                session->remove_other_vpn_interface(itf_index, os);
+    }
+
+    // The block-ipv6 routes are the same for all tunnels: add them for the
+    // first session that needs them and remove them with the last one.
+    void acquire_block_ipv6(std::ostream &os)
+    {
+        if (block_ipv6_users++ == 0)
+        {
+            ActionList add_cmds;
+            TunWin::Setup::add_block_ipv6_routes(add_cmds, remove_cmds_block_ipv6);
+            add_cmds.execute(os);
+        }
+    }
+
+    void release_block_ipv6(std::ostream &os)
+    {
+        if (block_ipv6_users > 0 && --block_ipv6_users == 0)
+        {
+            remove_cmds_block_ipv6.execute(os);
+            remove_cmds_block_ipv6.clear();
+        }
+    }
+
+    // undo the tun setup of a session, including what is shared with the others
+    bool destroy_session_tun(TunSession &session, std::ostream &os)
+    {
+        const DWORD itf_index = session.vpn_interface();
+        const bool blocked_ipv6 = session.blocks_ipv6();
+        const bool ret = session.destroy_tun(os);
+        withdraw_vpn_interface(session.pid(), itf_index, os);
+        if (blocked_ipv6)
+            release_block_ipv6(os);
+        return ret;
+    }
+
+    // Compare routes with those of the other tunnels. Identical routes are
+    // conflicts: destinations in them may go through either tunnel. Nested
+    // routes are just overlaps, the more specific route always wins.
+    void route_conflicts(const DWORD pid,
+                         const std::vector<IP::Route> &routes,
+                         std::vector<std::string> &conflicts,
+                         std::vector<std::string> &overlaps) const
+    {
+        for (const auto &[session_pid, session] : sessions)
+        {
+            if (session_pid == pid)
+                continue;
+            const std::string owner = " of the tunnel of process " + std::to_string(session_pid);
+            for (const IP::Route &r : routes)
+                for (const IP::Route &o : session->routes())
+                {
+                    if (r == o)
+                        conflicts.push_back(r.to_string() + " overlaps " + o.to_string() + owner);
+                    else if (r.contains(o))
+                        overlaps.push_back(r.to_string() + " contains " + o.to_string() + owner);
+                    else if (o.contains(r))
+                        overlaps.push_back(r.to_string() + " is inside " + o.to_string() + owner);
+                }
+        }
+    }
+
+    // tear down everything the session has set up and forget it
+    void close_session(TunSession &session, const char *reason)
+    {
+        // keep the session alive until we're done with it
+        const TunSession::Ptr hold(&session);
+
+        std::ostringstream os;
+        session.remove_bypass_routes(os);
+        destroy_session_tun(session, os);
+        session.close_client_process();
+
+        const auto it = sessions.find(session.pid());
+        if (it != sessions.end() && it->second == hold)
+            sessions.erase(it);
+
+        OPENVPN_LOG_NTNL("SESSION CLOSE (" << reason << ") pid=" << session.pid()
+                                           << ", sessions=" << sessions.size() << '\n'
+                                           << os.str());
+    }
+
+    void close_all_sessions(const char *reason)
+    {
+        // close_session() modifies the map, so iterate over a copy
+        const auto all = sessions;
+        for (const auto &e : all)
+            close_session(*e.second, reason);
     }
 
 #ifdef OPENVPN_AGENT_START_PROCESS
@@ -404,6 +629,10 @@ class MyListener : public WS::Server::Listener
                                const std::string &log,
                                const bool log_append)
     {
+        // Only needed by /start, so that the agent can run without it for
+        // clients which start their own process
+        const std::string omiclient_exe = Win::omiclient_path();
+
         // impersonate pipe client
         Win::NamedPipeImpersonate impersonate{client_pipe};
 
@@ -444,7 +673,7 @@ class MyListener : public WS::Server::Listener
             std::unique_ptr<char[]> buf(new char[cmd.length() + 1]);
             strcpy(buf.get(), cmd.c_str());
 
-            // OPENVPN_LOG("Launching omiclient: " << config.omiclient_exe.c_str() << " " << buf.get());
+            // OPENVPN_LOG("Launching omiclient: " << omiclient_exe.c_str() << " " << buf.get());
 
             STARTUPINFO startup_info = {0};
             startup_info.cb = sizeof(startup_info);
@@ -455,7 +684,7 @@ class MyListener : public WS::Server::Listener
             PROCESS_INFORMATION proc_info;
             ZeroMemory(&proc_info, sizeof(proc_info));
             res = CreateProcessAsUser(pri_token,
-                                      config.omiclient_exe.c_str(),
+                                      omiclient_exe.c_str(),
                                       buf.get(),
                                       NULL,
                                       NULL,
@@ -483,9 +712,6 @@ class MyListener : public WS::Server::Listener
 #endif
 
     const MyConfig &config;
-    ActionList remove_cmds_bypass_hosts;
-
-    TunWin::RingBuffer::Ptr ring_buffer;
 
   private:
     bool allow_client(AsioPolySock::Base &sock) override
@@ -505,17 +731,12 @@ class MyListener : public WS::Server::Listener
         return false;
     }
 
-    TunWin::Setup::Ptr tun;
-    openvpn_io::windows::object_handle client_process;
-    openvpn_io::windows::object_handle client_confirm_event;
-    CancelableHandle client_destroy_event;
-    std::string remote_tap_handle_hex;
+    std::map<DWORD, TunSession::Ptr> sessions;
     openvpn_io::io_context &io_context_;
 
-    // with persist tunnel and redirect-gw we must exclude
-    // VPN interface when searching for best gateway when
-    // adding bypass route for the next remote
-    DWORD vpn_interface_index = DWORD(-1);
+    // sessions with block-ipv6 and how to remove its routes
+    unsigned int block_ipv6_users = 0;
+    ActionList remove_cmds_block_ipv6;
 };
 
 class MyClientInstance : public WS::Server::Listener::Client
@@ -547,11 +768,12 @@ class MyClientInstance : public WS::Server::Listener::Client
     {
         // alloc output buffer
         std::ostringstream os;
+        DWORD client_pid = 0;
 
         try
         {
             const HANDLE client_pipe = get_client_pipe();
-            const DWORD client_pid = get_client_pid(client_pipe);
+            client_pid = get_client_pid(client_pipe);
             const std::wstring client_exe = get_client_exe(client_pipe);
 
             const HTTP::Request &req = request();
@@ -574,8 +796,10 @@ class MyClientInstance : public WS::Server::Listener::Client
 
                 if (req.uri == "/tun-open")
                 {
-                    // destroy previous instance
-                    if (parent()->destroy_tun(os))
+                    const TunSession::Ptr session = parent()->get_session(client_pid);
+
+                    // destroy previous instance of this client
+                    if (parent()->destroy_session_tun(*session, os))
                     {
                         os << "Destroyed previous TAP instance\n";
                         ::Sleep(1000);
@@ -589,26 +813,26 @@ class MyClientInstance : public WS::Server::Listener::Client
 
                         Win::NamedPipeImpersonate impersonate(client_pipe);
 
-                        parent()->set_client_process(get_client_process(client_pipe, pid));
-                        parent()->set_client_confirm_event(confirm_event_hex);
-                        parent()->set_client_destroy_event(destroy_event_hex);
+                        session->set_client_process(get_client_process(client_pipe, pid));
+                        session->set_client_confirm_event(confirm_event_hex);
+                        session->set_client_destroy_event(destroy_event_hex);
                     }
 
                     bool allow_local_dns_resolvers = json::get_bool_optional(root, "allow_local_dns_resolvers");
-                    Win::ScopedHANDLE th(parent()->tun_get_handle(os, TunWin::OvpnDco, allow_local_dns_resolvers));
+                    Win::ScopedHANDLE th(session->tun_get_handle(os, TunWin::OvpnDco, allow_local_dns_resolvers));
                     {
                         // duplicate the TAP handle into the client process
                         Win::NamedPipeImpersonate impersonate(client_pipe);
-                        parent()->set_remote_tap_handle_hex(th());
+                        session->set_remote_tap_handle_hex(th());
                     }
 
                     // build JSON return dictionary
                     const std::string log_txt = string::remove_blanks(os.str());
                     Json::Value jout(Json::objectValue);
                     jout["log_txt"] = log_txt;
-                    jout["tap_handle_hex"] = parent()->get_remote_tap_handle_hex();
+                    jout["tap_handle_hex"] = session->get_remote_tap_handle_hex();
 
-                    auto tap = parent()->get_adapter_state();
+                    auto tap = session->get_adapter_state();
                     jout["adapter_guid"] = tap.guid;
                     jout["adapter_index"] = Json::Int(tap.index);
                     jout["adapter_name"] = tap.name;
@@ -643,8 +867,19 @@ class MyClientInstance : public WS::Server::Listener::Client
                     TunBuilderCapture::Ptr tbc = TunBuilderCapture::from_json(json::get_dict(root, "tun", false));
                     tbc->validate();
 
-                    // destroy previous instance
-                    if (tun_type != TunWin::OvpnDco && parent()->destroy_tun(os))
+                    // Only one tunnel can be the default route. Pushed options are
+                    // only known here, so this is the place to refuse a second one.
+                    if (tbc->reroute_gw.ipv4 || tbc->reroute_gw.ipv6)
+                    {
+                        if (const TunSession::Ptr owner = parent()->gateway_owner(client_pid))
+                            throw Exception("redirect-gateway: the default gateway is already redirected by the tunnel of process "
+                                            + std::to_string(owner->pid()));
+                    }
+
+                    const TunSession::Ptr session = parent()->get_session(client_pid);
+
+                    // destroy previous instance of this client
+                    if (tun_type != TunWin::OvpnDco && parent()->destroy_session_tun(*session, os))
                     {
                         os << "Destroyed previous TAP instance\n";
                         ::Sleep(1000);
@@ -655,11 +890,11 @@ class MyClientInstance : public WS::Server::Listener::Client
                         Win::NamedPipeImpersonate impersonate(client_pipe);
 
                         // remember the client process that sent the request
-                        parent()->set_client_process(get_client_process(client_pipe, pid));
+                        session->set_client_process(get_client_process(client_pipe, pid));
 
                         // save destroy event
                         const std::string destroy_event_hex = json::get_string(root, "destroy_event");
-                        parent()->set_client_destroy_event(destroy_event_hex);
+                        session->set_client_destroy_event(destroy_event_hex);
 
                         if (tun_type != TunWin::OvpnDco)
                         {
@@ -667,18 +902,18 @@ class MyClientInstance : public WS::Server::Listener::Client
                             const std::string confirm_event_hex = json::get_string(root, "confirm_event");
 
                             // save the confirm event
-                            parent()->set_client_confirm_event(confirm_event_hex);
+                            session->set_client_confirm_event(confirm_event_hex);
                         }
                     }
 
                     if (tun_type == TunWin::Wintun)
                     {
-                        parent()->assign_ring_buffer(new TunWin::RingBuffer(io_context,
-                                                                            parent()->get_client_process(),
-                                                                            json::get_string(root, "send_ring_hmem"),
-                                                                            json::get_string(root, "receive_ring_hmem"),
-                                                                            json::get_string(root, "send_ring_tail_moved"),
-                                                                            json::get_string(root, "receive_ring_tail_moved")));
+                        session->assign_ring_buffer(new TunWin::RingBuffer(io_context,
+                                                                           session->get_client_process(),
+                                                                           json::get_string(root, "send_ring_hmem"),
+                                                                           json::get_string(root, "receive_ring_hmem"),
+                                                                           json::get_string(root, "send_ring_tail_moved"),
+                                                                           json::get_string(root, "receive_ring_tail_moved")));
                     }
 
                     TunWin::Util::TapNameGuidPair tap;
@@ -690,21 +925,39 @@ class MyClientInstance : public WS::Server::Listener::Client
                     }
 
                     // establish the tun setup object
-                    Win::ScopedHANDLE tap_handle(parent()->establish_tun(*tbc, client_exe, client_pid, nullptr, os, tun_type, allow_local_dns_resolvers, tap));
+                    Win::ScopedHANDLE tap_handle(session->establish_tun(*tbc, client_exe, nullptr, os, tun_type, allow_local_dns_resolvers, tap, parent()->other_vpn_interfaces(client_pid)));
 
                     // post-establish impersonation
                     {
                         Win::NamedPipeImpersonate impersonate(client_pipe);
 
                         // duplicate the TAP handle into the client process
-                        parent()->set_remote_tap_handle_hex(tap_handle());
+                        session->set_remote_tap_handle_hex(tap_handle());
                     }
+
+                    parent()->announce_vpn_interface(client_pid, session->vpn_interface(), os);
+                    if (session->blocks_ipv6())
+                        parent()->acquire_block_ipv6(os);
+
+                    // The client shows conflicts to the user, see "ROUTE CONFLICT"
+                    // in the GUI; overlaps are only logged.
+                    std::vector<std::string> conflicts, overlaps;
+                    parent()->route_conflicts(client_pid, session->routes(), conflicts, overlaps);
+                    const size_t max_lines = 10;
+                    for (size_t i = 0; i < conflicts.size() && i < max_lines; ++i)
+                        os << "ROUTE CONFLICT: " << conflicts[i] << "\n";
+                    if (conflicts.size() > max_lines)
+                        os << "ROUTE CONFLICT: " << (conflicts.size() - max_lines) << " more\n";
+                    for (size_t i = 0; i < overlaps.size() && i < max_lines; ++i)
+                        os << "ROUTE OVERLAP: " << overlaps[i] << "\n";
+                    if (overlaps.size() > max_lines)
+                        os << "ROUTE OVERLAP: " << (overlaps.size() - max_lines) << " more\n";
 
                     // build JSON return dictionary
                     const std::string log_txt = string::remove_blanks(os.str());
                     Json::Value jout(Json::objectValue);
                     jout["log_txt"] = log_txt;
-                    jout["tap_handle_hex"] = parent()->get_remote_tap_handle_hex();
+                    jout["tap_handle_hex"] = session->get_remote_tap_handle_hex();
                     OPENVPN_LOG_NTNL("TUN SETUP\n"
                                      << log_txt);
 
@@ -716,15 +969,17 @@ class MyClientInstance : public WS::Server::Listener::Client
                     bool ipv6 = json::get_bool(root, "ipv6");
                     const std::string host = json::get_string(root, "host");
 
+                    const TunSession::Ptr session = parent()->get_session(client_pid);
+
                     // pre-establish impersonation
                     {
                         Win::NamedPipeImpersonate impersonate(client_pipe);
 
                         // remember the client process that sent the request
-                        parent()->set_client_process(get_client_process(client_pipe, pid));
+                        session->set_client_process(get_client_process(client_pipe, pid));
                     }
 
-                    parent()->add_bypass_route(host, ipv6);
+                    session->add_bypass_route(host, ipv6, parent()->other_vpn_interfaces(client_pid));
 
                     Json::Value jout(Json::objectValue);
 
@@ -770,8 +1025,13 @@ class MyClientInstance : public WS::Server::Listener::Client
         }
         catch (const std::exception &e)
         {
-            if (parent()->destroy_tun(os))
-                os << "Destroyed previous TAP instance due to exception\n";
+            // only the tunnel of the failed client is affected
+            const TunSession::Ptr session = parent()->find_session(client_pid);
+            if (session)
+            {
+                if (parent()->destroy_session_tun(*session, os))
+                    os << "Destroyed previous TAP instance due to exception\n";
+            }
 
             const std::string error_msg = string::remove_blanks(os.str() + e.what() + '\n');
             OPENVPN_LOG_NTNL("EXCEPTION\n"
@@ -899,6 +1159,13 @@ class MyService : public Win::Service
 
         MyConfig conf;
 
+        // Refuse to share the pipe with another agent, e.g. "ovpnagent run"
+        // while the service is running. Windows reports the process that
+        // created the pipe first as its server, so clients would validate
+        // against that one and fail once it is gone.
+        if (::WaitNamedPipeA(conf.pipe_name.c_str(), 0) || ::GetLastError() != ERROR_FILE_NOT_FOUND)
+            throw Exception("another agent is already serving " + conf.pipe_name);
+
         Win::NamedPipePeerInfo::allow_client_query();
         TunWin::NRPT::delete_rules(0); // remove stale NRPT rules
 
@@ -947,7 +1214,7 @@ class MyService : public Win::Service
                          {
 	if (listener)
 	  {
-	    listener->destroy_tun_exit();
+	    listener->close_all_sessions("exit");
 	    listener->stop();
 	  } });
     }
