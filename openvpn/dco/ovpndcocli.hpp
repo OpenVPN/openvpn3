@@ -211,9 +211,10 @@ class OvpnDcoClient : public Client,
             return;
         }
 
+        const bool tcp = config->transport.protocol.is_tcp();
         genl->new_peer(peer_id,
                        transport->native_handle(),
-                       (struct sockaddr *)&sa,
+                       tcp ? nullptr : reinterpret_cast<sockaddr *>(&sa),
                        salen,
                        ipv4,
                        ipv6);

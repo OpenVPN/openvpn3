@@ -17,6 +17,7 @@
 #include <openvpn/addr/ipv6.hpp>
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/buffer/bufstr.hpp>
+#include <openvpn/common/alignment.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/dco/key.hpp>
 
@@ -197,17 +198,22 @@ class GeNL : public RC<thread_unsafe_refcount>
     }
 
     /**
-     * Add peer information to kernel module
+     * @brief Add peer information to kernel module
+     *
+     * @details The kernel derives a TCP peer's endpoint from its connected
+     * socket and rejects an explicit one, so TCP callers pass a null @p sa.
      *
      * @param peer_id Peer ID of the peer being created
      * @param fd socket to be used to communicate with the peer
-     * @param sa sockaddr object representing the remote endpoint
-     * @param salen length of sa (either sizeof(sockaddr_in) or
-     * sizeof(sockaddr_in6)
+     * @param sa sockaddr object representing the remote endpoint, or
+     * nullptr to omit it
+     * @param salen length of the object behind sa; at least sizeof(sockaddr_in)
+     * or sizeof(sockaddr_in6) for its family
      * @param vpn4 IPv4 address associated with this peer in the tunnel
      * @param vpn6 IPv6 address associated with this peer in the tunnel
      *
-     * @throws netlink_error thrown if error occurs during sending netlink message
+     * @throws netlink_error if sa has an unknown family or is too short for
+     * it, or if sending the netlink message fails
      */
     void new_peer(int peer_id,
                   int fd,
@@ -216,28 +222,40 @@ class GeNL : public RC<thread_unsafe_refcount>
                   IPv4::Addr vpn4,
                   IPv6::Addr vpn6)
     {
-        struct sockaddr_in *sin = (struct sockaddr_in *)sa;
         auto msg_ptr = create_msg(OVPN_CMD_PEER_NEW);
         auto *msg = msg_ptr.get();
         struct nlattr *attr = nla_nest_start(msg, OVPN_A_PEER);
 
         NLA_PUT_U32(msg, OVPN_A_PEER_ID, peer_id);
         NLA_PUT_U32(msg, OVPN_A_PEER_SOCKET, fd);
-        if (sa->sa_family == AF_INET)
+        if (sa != nullptr)
         {
-            NLA_PUT_U32(msg, OVPN_A_PEER_REMOTE_IPV4, sin->sin_addr.s_addr);
+            if (sa->sa_family == AF_INET)
+            {
+                if (salen < sizeof(sockaddr_in))
+                {
+                    OPENVPN_THROW(netlink_error, " new_peer() short sockaddr_in: " << salen);
+                }
+                const auto sin = alignment_safe_extract<sockaddr_in>(sa);
+                NLA_PUT_U32(msg, OVPN_A_PEER_REMOTE_IPV4, sin.sin_addr.s_addr);
+                NLA_PUT_U16(msg, OVPN_A_PEER_REMOTE_PORT, sin.sin_port);
+            }
+            else if (sa->sa_family == AF_INET6)
+            {
+                if (salen < sizeof(sockaddr_in6))
+                {
+                    OPENVPN_THROW(netlink_error, " new_peer() short sockaddr_in6: " << salen);
+                }
+                const auto sin6 = alignment_safe_extract<sockaddr_in6>(sa);
+                NLA_PUT(msg, OVPN_A_PEER_REMOTE_IPV6, sizeof(sin6.sin6_addr), &sin6.sin6_addr);
+                NLA_PUT_U32(msg, OVPN_A_PEER_REMOTE_IPV6_SCOPE_ID, sin6.sin6_scope_id);
+                NLA_PUT_U16(msg, OVPN_A_PEER_REMOTE_PORT, sin6.sin6_port);
+            }
+            else
+            {
+                OPENVPN_THROW(netlink_error, " new_peer() bogus remote address family " << sa->sa_family);
+            }
         }
-        else if (sa->sa_family == AF_INET6)
-        {
-            struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)sa;
-            NLA_PUT(msg, OVPN_A_PEER_REMOTE_IPV6, sizeof(sin6->sin6_addr), &sin6->sin6_addr);
-            NLA_PUT_U32(msg, OVPN_A_PEER_REMOTE_IPV6_SCOPE_ID, sin6->sin6_scope_id);
-        }
-        else
-        {
-            OPENVPN_THROW(netlink_error, " new_peer() bogus remote address family " << sa->sa_family);
-        }
-        NLA_PUT_U16(msg, OVPN_A_PEER_REMOTE_PORT, sin->sin_port);
 
         if (vpn4.specified())
         {

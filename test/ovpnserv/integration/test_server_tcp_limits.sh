@@ -289,7 +289,8 @@ ca ${SSL_DIR}/ca.crt
 cert ${SSL_DIR}/client.crt
 key ${SSL_DIR}/client.key
 EOF
-    ns_bg "${NS_CLIENT}" "${CLI_BIN}" "${CLIENT_CFG}" >"${CLIENT_LOG}" 2>&1 &
+    # -d: kernel DCO would keep draining the socket through SIGSTOP
+    ns_bg "${NS_CLIENT}" "${CLI_BIN}" -d "${CLIENT_CFG}" >"${CLIENT_LOG}" 2>&1 &
     CLIENT_PID=$!
     if ! wait_for_connected "${CLIENT_LOG}" "$(scaled 15)" "${SERVER_PID}" "${CLIENT_PID}"; then
         fail "Client did not connect" "${SERVER_LOG}" "${CLIENT_LOG}"
