@@ -18,7 +18,6 @@ jobs:
     env:
       VCPKG_ROOT: ${{ github.workspace }}/vcpkg
       VCPKG_DEFAULT_TRIPLET: ${{ matrix.arch }}-windows
-      VCPKG_GIT_COMMIT_ID: 3aea538b2bb21a586502c67b00eb474fdd2e3098
       BUILD_CONFIGURATION: Release
 
     runs-on: windows-2022
@@ -30,16 +29,14 @@ jobs:
       env:
           VCPKG_BINARY_SOURCES: default,rw
       with:
-        vcpkgGitCommitId: ${{ env.VCPKG_GIT_COMMIT_ID }}
         vcpkgJsonGlob: '**/windows/vcpkg.json'
 
     - name: Set up vcpkg binary cache
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: ${{ env.VCPKG_DEFAULT_BINARY_CACHE }}
-        key: ${{ runner.os }}-${{ matrix.arch }}-vcpkg-binary-cache-${{ hashFiles('**/windows/vcpkg.json') }}-${{ env.VCPKG_GIT_COMMIT_ID }}
+        key: ${{ runner.os }}-${{ matrix.arch }}-vcpkg-binary-cache-${{ hashFiles('**/windows/vcpkg.json') }}
         restore-keys: |
-          ${{ runner.os }}-${{ matrix.arch }}-vcpkg-binary-cache-${{ hashFiles('**/windows/vcpkg.json') }}-
           ${{ runner.os }}-${{ matrix.arch }}-vcpkg-binary-cache-
 
     - name: Run CMake with vcpkg.json manifest
@@ -78,7 +75,6 @@ jobs:
 
     env:
       VCPKG_ROOT: ${{ github.workspace }}/vcpkg
-      VCPKG_GIT_COMMIT_ID: 3aea538b2bb21a586502c67b00eb474fdd2e3098
 
     runs-on: ubuntu-24.04
     steps:
@@ -93,16 +89,14 @@ jobs:
       env:
           VCPKG_BINARY_SOURCES: default,rw
       with:
-        vcpkgGitCommitId: ${{ env.VCPKG_GIT_COMMIT_ID }}
         vcpkgJsonGlob: '**/mingw/vcpkg.json'
 
     - name: Set up vcpkg binary cache
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: ${{ env.VCPKG_DEFAULT_BINARY_CACHE }}
-        key: ${{ runner.os }}-${{ matrix.arch }}-vcpkg-binary-cache-${{ hashFiles('**/mingw/vcpkg.json') }}-${{ env.VCPKG_GIT_COMMIT_ID }}
+        key: ${{ runner.os }}-${{ matrix.arch }}-vcpkg-binary-cache-${{ hashFiles('**/mingw/vcpkg.json') }}
         restore-keys: |
-          ${{ runner.os }}-${{ matrix.arch }}-vcpkg-binary-cache-${{ hashFiles('**/mingw/vcpkg.json') }}-
           ${{ runner.os }}-${{ matrix.arch }}-vcpkg-binary-cache-
 
     - name: Run CMake with vcpkg.json manifest
