@@ -505,11 +505,7 @@ class Server : public TransportServer
         for (const std::uint64_t conn_id : conn_ids)
         {
             const auto found = connections_.find(conn_id);
-            if (found == connections_.end())
-            {
-                continue;
-            }
-            if (found->second.recv)
+            if (found != connections_.end() && found->second.recv)
             {
                 found->second.recv->set_disconnect_cause(DisconnectCause::SERVER_SHUTDOWN);
                 found->second.recv->push_halt_restart_msg(HaltRestart::RESTART, reason, client_reason);
