@@ -783,8 +783,8 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
             }
             catch (const std::exception &e)
             {
-                OPENVPN_THROW(process_server_push_error, "Problem accepting server-pushed parameter: " << e.what());
                 app_control_config = {};
+                OPENVPN_THROW(process_server_push_error, "Problem accepting server-pushed parameter: " << e.what());
             }
         }
 
