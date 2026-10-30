@@ -303,15 +303,16 @@ class WinCommandAgent : public TunWin::SetupFactory
                 throw ExceptionCode(Error::TUN_ERROR);
             }
 
+            // os is only logged on success, so the details go into the exception
             if (!t.comm_status_success())
             {
                 os << content;
-                throw ovpnagent("communication error");
+                throw ovpnagent("communication error: " + t.format_status(ts));
             }
             if (!t.request_status_success())
             {
                 os << content;
-                throw ovpnagent("request error");
+                throw ovpnagent("request error: " + string::trim_copy(content));
             }
 
             // Verify content-type

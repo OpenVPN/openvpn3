@@ -37,6 +37,7 @@
 
 #include <string>
 #include <vector>
+#include <set>
 #include <sstream>
 #include <cstdint> // for std::uint32_t
 #include <memory>
@@ -1040,6 +1041,21 @@ class BestGateway
      * @param vpn_interface_index index of VPN interface which is excluded from gateway selection
      */
     BestGateway(ADDRESS_FAMILY af, const std::string &dest_str, DWORD vpn_interface_index)
+        : BestGateway(af,
+                      dest_str,
+                      vpn_interface_index == DWORD(-1) ? std::set<DWORD>{} : std::set<DWORD>{vpn_interface_index})
+    {
+    }
+
+    /**
+     * Same as above, but excludes several VPN interfaces, e.g. those of
+     * other tunnels that are up at the same time.
+     *
+     * @param af address family, AF_INET or AF_INET6
+     * @param dest_str destination IPv4/IPv6 address
+     * @param vpn_interfaces indexes of VPN interfaces which are excluded from gateway selection
+     */
+    BestGateway(ADDRESS_FAMILY af, const std::string &dest_str, const std::set<DWORD> &vpn_interfaces)
     {
         unique_ptr_del<const MIB_IPFORWARD_TABLE2> rt2(windows_routing_table2(af),
                                                        [](const MIB_IPFORWARD_TABLE2 *p)
@@ -1094,7 +1110,7 @@ class BestGateway
         }
 
         // if there is no VPN interface - we're done
-        if (vpn_interface_index == DWORD(-1))
+        if (vpn_interfaces.empty())
         {
             fill_gw_details(&row, dest_str);
             return;
@@ -1114,11 +1130,11 @@ class BestGateway
             if ((dest & mask) == dest_prefix)
             {
                 // skip gateway on VPN interface
-                if ((vpn_interface_index != DWORD(-1)) && (row->InterfaceIndex == vpn_interface_index))
+                if (vpn_interfaces.contains(row->InterfaceIndex))
                 {
                     OPENVPN_LOG("GetBestGateway: skip gateway "
                                 << IP::Addr::from_sockaddr((const sockaddr *)&row->NextHop).to_string()
-                                << " on VPN interface " << vpn_interface_index);
+                                << " on VPN interface " << row->InterfaceIndex);
                     continue;
                 }
 
