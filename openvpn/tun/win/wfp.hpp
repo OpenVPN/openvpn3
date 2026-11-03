@@ -14,6 +14,9 @@
 #pragma once
 
 #include <ostream>
+#include <map>
+#include <set>
+#include <vector>
 
 #include <openvpn/common/rc.hpp>
 #include <openvpn/common/wstring.hpp>
@@ -166,6 +169,44 @@ class WFP : public RC<thread_unsafe_refcount>
       public:
         typedef RCPtr<Context> Ptr;
 
+        /**
+         * @brief Set the VPN interfaces of other tunnels which are not blocked
+         *
+         * With several tunnels up at the same time, the block filters of one
+         * tunnel must not block the traffic (e.g. DNS) of the others. The set
+         * is kept across block() / unblock() and applied whenever filters are
+         * active.
+         *
+         * @param interfaces    interface indexes of the other tunnels
+         * @param log           the log stream for diagnostics
+         */
+        void set_other_interfaces(std::set<NET_IFINDEX> interfaces, std::ostream &log)
+        {
+            if (wfp)
+            {
+                for (const NET_IFINDEX idx : other_interfaces)
+                    if (!interfaces.contains(idx))
+                        wfp->revoke_interface(idx, log);
+                for (const NET_IFINDEX idx : interfaces)
+                    permit(idx, log);
+            }
+            other_interfaces = std::move(interfaces);
+        }
+
+        void permit_interface(const NET_IFINDEX idx, std::ostream &log)
+        {
+            other_interfaces.insert(idx);
+            if (wfp)
+                permit(idx, log);
+        }
+
+        void revoke_interface(const NET_IFINDEX idx, std::ostream &log)
+        {
+            other_interfaces.erase(idx);
+            if (wfp)
+                wfp->revoke_interface(idx, log);
+        }
+
       private:
         friend class ActionBase;
 
@@ -177,6 +218,22 @@ class WFP : public RC<thread_unsafe_refcount>
             unblock(log);
             wfp.reset(new WFP());
             wfp->block(openvpn_app_path, itf_index, block_type, log);
+            for (const NET_IFINDEX idx : other_interfaces)
+                if (idx != itf_index)
+                    permit(idx, log);
+        }
+
+        // an interface that went away must not fail the caller
+        void permit(const NET_IFINDEX idx, std::ostream &log)
+        {
+            try
+            {
+                wfp->permit_interface(idx, log);
+            }
+            catch (const std::exception &e)
+            {
+                log << "WFP: cannot allow traffic from VPN interface " << idx << ": " << e.what() << "\n";
+            }
         }
 
         void unblock(std::ostream &log)
@@ -189,6 +246,7 @@ class WFP : public RC<thread_unsafe_refcount>
         }
 
         WFP::Ptr wfp;
+        std::set<NET_IFINDEX> other_interfaces;
     };
 
     /**
@@ -427,12 +485,78 @@ class WFP : public RC<thread_unsafe_refcount>
     }
 
     /**
+     * @brief Permit traffic from another VPN interface
+     *
+     * Adds filters with the same weight as the ones permitting traffic from
+     * our own VPN interface, so the block filters added by block() don't
+     * apply to it.
+     *
+     * @param itf_index     interface index of the other VPN interface
+     * @param log           the log ostream to use for diagnostics
+     */
+    void permit_interface(const NET_IFINDEX itf_index, std::ostream &log)
+    {
+        if (permitted_.contains(itf_index))
+            return;
+
+        NET_LUID itf_luid = adapter_index_to_luid(itf_index);
+
+        FWPM_FILTER_CONDITION0 match_interface = {};
+        match_interface.fieldKey = FWPM_CONDITION_IP_LOCAL_INTERFACE;
+        match_interface.matchType = FWP_MATCH_EQUAL;
+        match_interface.conditionValue.type = FWP_UINT64;
+        match_interface.conditionValue.uint64 = &itf_luid.Value;
+
+        FWPM_FILTER0 filter = {};
+        filter.subLayerKey = subLayerGUID;
+        filter.displayData.name = const_cast<wchar_t *>(L"OpenVPN");
+        filter.weight.type = FWP_UINT8;
+        filter.weight.uint8 = 0xF;
+        filter.action.type = FWP_ACTION_PERMIT;
+        filter.numFilterConditions = 1;
+        filter.filterCondition = &match_interface;
+
+        std::vector<UINT64> ids;
+        for (const GUID &layer : {FWPM_LAYER_ALE_AUTH_CONNECT_V4, FWPM_LAYER_ALE_AUTH_CONNECT_V6})
+        {
+            filter.layerKey = layer;
+            UINT64 filterid = 0;
+            add_filter(&filter, NULL, &filterid);
+            ids.push_back(filterid);
+        }
+        permitted_.emplace(itf_index, std::move(ids));
+        log << "allow IPv4/IPv6 traffic from VPN interface " << itf_index << "\n";
+    }
+
+    /**
+     * @brief Undo permit_interface()
+     *
+     * @param itf_index     interface index of the other VPN interface
+     * @param log           the log ostream to use for diagnostics
+     */
+    void revoke_interface(const NET_IFINDEX itf_index, std::ostream &log)
+    {
+        const auto it = permitted_.find(itf_index);
+        if (it == permitted_.end())
+            return;
+        for (const UINT64 id : it->second)
+        {
+            const DWORD status = ::FwpmFilterDeleteById0(engineHandle(), id);
+            if (status != ERROR_SUCCESS)
+                log << "FwpmFilterDeleteById0 failed, status=0x" << std::hex << status << std::dec << "\n";
+        }
+        permitted_.erase(it);
+        log << "stop allowing traffic from VPN interface " << itf_index << "\n";
+    }
+
+    /**
      * @brief Remove WFP block filters
      *
      * @param log   the log ostream to use for disgnostics
      */
     void reset(std::ostream &log)
     {
+        permitted_.clear();
         engineHandle.reset(&log);
     }
 
@@ -546,6 +670,9 @@ class WFP : public RC<thread_unsafe_refcount>
 
     const GUID subLayerGUID{new_guid()};
     EngineHandle engineHandle;
+
+    // filters of permit_interface(), by interface index
+    std::map<NET_IFINDEX, std::vector<UINT64>> permitted_;
 };
 
 } // namespace openvpn::TunWin

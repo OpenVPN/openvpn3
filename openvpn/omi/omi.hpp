@@ -28,6 +28,8 @@
 #include <openvpn/common/hostport.hpp>
 #include <openvpn/common/options.hpp>
 #include <openvpn/common/string.hpp>
+#include <openvpn/options/merge.hpp>
+#include <openvpn/client/cliconstants.hpp>
 #include <openvpn/buffer/bufstr.hpp>
 #include <openvpn/time/timestr.hpp>
 #include <openvpn/time/asiotimersafe.hpp>
@@ -761,8 +763,16 @@ class OMICore : public Acceptor::ListenerBase
     {
         if (fn == "stdin")
             return read_stdin();
-        else
-            return read_text_utf8(fn);
+
+        // Inline the files the profile refers to (ca, cert, key, tls-auth,
+        // auth-user-pass, ...), like OpenVPN 2.x does. Relative paths are
+        // resolved against the directory of the profile.
+        return ProfileMerge::merge(fn,
+                                   "",
+                                   "",
+                                   ProfileMerge::FOLLOW_FULL,
+                                   ProfileParseLimits::MAX_LINE_SIZE,
+                                   ProfileParseLimits::MAX_PROFILE_SIZE);
     }
 
     void listen_tcp(const std::string &addr, const std::string &port)
