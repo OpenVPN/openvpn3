@@ -70,6 +70,27 @@ class TLS1PRF
 
         return true;
     }
+#elif defined(OPENSSL_IS_AWSLC)
+    static bool PRF(unsigned char *label,
+                    const size_t label_len,
+                    const unsigned char *sec,
+                    const size_t slen,
+                    unsigned char *out1,
+                    const size_t olen)
+    {
+        return CRYPTO_tls1_prf(EVP_md5_sha1(),
+                               out1,
+                               olen,
+                               sec,
+                               slen,
+                               reinterpret_cast<const char *>(label),
+                               label_len,
+                               nullptr,
+                               0,
+                               nullptr,
+                               0)
+               == 1;
+    }
 #else
     static bool PRF(unsigned char *label,
                     const size_t label_len,

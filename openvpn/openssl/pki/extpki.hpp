@@ -31,6 +31,9 @@ class ExternalPKIRsaImpl : public ExternalPKIImpl
     ExternalPKIRsaImpl(SSL_CTX *ssl_ctx, ::X509 *cert, ExternalPKIBase *external_pki_arg, const std::string &alias)
         : external_pki(external_pki_arg), alias(alias), n_errors(0)
     {
+        if (rsa_self_data_index < 0)
+            throw ssl_external_pki("ExternalPKIRsaImpl::rsa_self_data_index is uninitialized");
+
         RSA *rsa = nullptr;
         const RSA *pub_rsa = nullptr;
         RSA_METHOD *rsa_meth = nullptr;
@@ -46,7 +49,6 @@ class ExternalPKIRsaImpl : public ExternalPKIImpl
         RSA_meth_set_priv_dec(rsa_meth, rsa_priv_dec);
         RSA_meth_set_init(rsa_meth, nullptr);
         RSA_meth_set_finish(rsa_meth, rsa_finish);
-        RSA_meth_set0_app_data(rsa_meth, this);
 
 
         /* get the public key */
@@ -86,6 +88,12 @@ class ExternalPKIRsaImpl : public ExternalPKIImpl
          */
         rsa_meth = nullptr;
 
+        if (!RSA_set_ex_data(rsa, rsa_self_data_index, this))
+        {
+            errtext = "RSA_set_ex_data";
+            goto err;
+        }
+
         /* bind our custom RSA object to ssl_ctx */
         if (!SSL_CTX_use_RSAPrivateKey(ssl_ctx, rsa))
         {
@@ -110,6 +118,11 @@ class ExternalPKIRsaImpl : public ExternalPKIImpl
         return n_errors;
     }
 
+    static void init_static()
+    {
+        rsa_self_data_index = RSA_get_ex_new_index(0, (char *)"ExternalPKIRsaImpl", nullptr, nullptr, nullptr);
+    }
+
   private:
     /* called at RSA_free */
     static int rsa_finish(RSA *rsa)
@@ -122,7 +135,7 @@ class ExternalPKIRsaImpl : public ExternalPKIImpl
     static int
     rsa_priv_enc(int flen, const unsigned char *from, unsigned char *to, RSA *rsa, int padding)
     {
-        ExternalPKIRsaImpl *self = (ExternalPKIRsaImpl *)(RSA_meth_get0_app_data(RSA_get_method(rsa)));
+        ExternalPKIRsaImpl *self = (ExternalPKIRsaImpl *)(RSA_get_ex_data(rsa, rsa_self_data_index));
 
         try
         {
@@ -173,7 +186,7 @@ class ExternalPKIRsaImpl : public ExternalPKIImpl
 
     static void not_implemented(RSA *rsa)
     {
-        ExternalPKIRsaImpl *self = (ExternalPKIRsaImpl *)(RSA_meth_get0_app_data(RSA_get_method(rsa)));
+        ExternalPKIRsaImpl *self = (ExternalPKIRsaImpl *)(RSA_get_ex_data(rsa, rsa_self_data_index));
         ++self->n_errors;
     }
 
@@ -204,6 +217,7 @@ class ExternalPKIRsaImpl : public ExternalPKIImpl
     ExternalPKIBase *external_pki;
     std::string alias;
     unsigned int n_errors;
+    inline static int rsa_self_data_index = -1;
 };
 
 /* The OpenSSL EC_* methods we are using here are only available for OpenSSL 1.1.0 and later */
@@ -227,7 +241,7 @@ class ExternalPKIECImpl : public ExternalPKIImpl
 
         /* we only need to override a small number of methods */
         EC_KEY_METHOD_set_init(ec_method, NULL, ec_finish, NULL, NULL, NULL, NULL);
-        EC_KEY_METHOD_set_sign(ec_method, ecdsa_sign, ecdsa_sign_setup, ecdsa_sign_sig);
+        EC_KEY_METHOD_set_sign(ec_method, ecdsa_sign, NULL, ecdsa_sign_sig);
 
         /* get the public key */
         EVP_PKEY *pubkey = X509_get0_pubkey(cert);
@@ -333,12 +347,6 @@ class ExternalPKIECImpl : public ExternalPKIImpl
             OPENVPN_LOG("OpenSSLContext::ExternalPKIECImpl::ecdsa_sign exception: " << e.what());
             return 0;
         }
-    }
-
-    static int ecdsa_sign_setup(EC_KEY *eckey, BN_CTX *ctx_in, BIGNUM **kinvp, BIGNUM **rp)
-    {
-        /* No precomputation, return success */
-        return 1;
     }
 
     static ECDSA_SIG *

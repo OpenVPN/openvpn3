@@ -916,6 +916,9 @@ class OpenSSLContext : public SSLFactoryAPI
         static void init_static()
         {
             bmq_stream::init_static();
+#if OPENSSL_VERSION_NUMBER < 0x30000010L && defined(ENABLE_EXTERNAL_PKI)
+            ExternalPKIRsaImpl::init_static();
+#endif
 #if OPENSSL_VERSION_NUMBER < 0x30000010L && !defined(OPENSSL_NO_EC) && defined(ENABLE_EXTERNAL_PKI)
             ExternalPKIECImpl::init_static();
 #endif
@@ -1113,7 +1116,8 @@ class OpenSSLContext : public SSLFactoryAPI
             const SSL_CIPHER *ciph = SSL_get_current_cipher(ssl);
             if (ciph)
             {
-                char *desc = SSL_CIPHER_description(ciph, nullptr, 0);
+                char desc_buf[256];
+                const char *desc = SSL_CIPHER_description(ciph, desc_buf, sizeof(desc_buf));
                 if (!desc)
                 {
                     os << ", cipher: Error getting TLS cipher description from SSL_CIPHER_description";
@@ -1124,7 +1128,6 @@ class OpenSSLContext : public SSLFactoryAPI
                     // remove \n at the end and any other excess whitespace
                     string::trim(cipher_str);
                     os << ", cipher: " << cipher_str;
-                    OPENSSL_free(desc);
                 }
             }
 
@@ -1440,7 +1443,7 @@ class OpenSSLContext : public SSLFactoryAPI
         SSL_CTX_set_ecdh_auto(ctx.get(), 1); // this method becomes a no-op in OpenSSL 1.1
 #endif
 
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(OPENSSL_IS_AWSLC)
         switch (TLSCertProfile::default_if_undef(config->tls_cert_profile))
         {
         case TLSCertProfile::UNDEF:

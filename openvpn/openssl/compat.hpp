@@ -123,3 +123,7 @@ SSL_get0_group_name(SSL *s)
     return SSL_group_to_name(s, nid);
 }
 #endif
+
+#ifdef OPENSSL_IS_AWSLC
+#include <openvpn/openssl/aws-lc-compat.hpp>
+#endif
