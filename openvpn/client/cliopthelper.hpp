@@ -20,7 +20,7 @@
 #include <utility>
 
 #ifdef HAVE_CONFIG_JSONCPP
-#include "json/json.h"
+#include <json/json.h>
 #endif /* HAVE_CONFIG_JSONCPP */
 
 #include <openvpn/common/size.hpp>
