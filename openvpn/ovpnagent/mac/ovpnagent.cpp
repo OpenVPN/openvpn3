@@ -17,6 +17,11 @@
 
 #include <iostream>
 #include <string>
+#include <set>
+#include <fstream>
+#include <memory>
+#include <pwd.h>
+#include <cctype>
 #include <utility>
 
 #include <unistd.h>
@@ -313,9 +318,63 @@ class MyListener : public WS::Server::Listener
     }
 
   private:
+    // Peer-credential gate: root is always allowed. Non-root peers are
+    // allowed only when their UID is listed in the agent's allowlist.
+    // The allowlist is read from /etc/openvpn/ovpnagent.allowed_uids:
+    //   - one entry per line: a numeric UID or a username
+    //   - the special value "all" disables the UID gate entirely
+    //     (NOT recommended; preserves legacy open behaviour)
+    // An absent or unreadable file means root-only access.
+    static std::unique_ptr<std::set<uid_t>> load_allowed_uids()
+    {
+        auto uids = std::make_unique<std::set<uid_t>>();
+        std::ifstream in("/etc/openvpn/ovpnagent.allowed_uids");
+        std::string line;
+        while (std::getline(in, line))
+        {
+            while (!line.empty() && (line.back() == '\r' || line.back() == ' ' || line.back() == '\t'))
+                line.pop_back();
+            if (line.empty() || line[0] == '#')
+                continue;
+            if (line == "all")
+                return nullptr; // gate disabled
+            if (std::all_of(line.begin(), line.end(), ::isdigit))
+            {
+                uids->insert(uid_t(std::stoul(line)));
+            }
+            else
+            {
+                if (struct passwd *pw = ::getpwnam(line.c_str()))
+                    uids->insert(pw->pw_uid);
+            }
+        }
+        return uids;
+    }
+
     bool allow_client(AsioPolySock::Base &sock) override
     {
-        return true;
+        SockOpt::Creds cr;
+        if (!sock.peercreds(cr))
+        {
+            OPENVPN_LOG("ovpnagent: failed to get peer credentials, rejecting connection");
+            return false;
+        }
+        if (cr.uid == 0)
+            return true;
+
+        static const std::unique_ptr<std::set<uid_t>> allowed = load_allowed_uids();
+        if (!allowed)
+        {
+            OPENVPN_LOG("ovpnagent: UID allowlist contains 'all'; allowing UID " << cr.uid);
+            return true;
+        }
+        if (allowed->find(cr.uid) != allowed->end())
+        {
+            OPENVPN_LOG("ovpnagent: allowing UID " << cr.uid << " (in allowlist)");
+            return true;
+        }
+        OPENVPN_LOG("ovpnagent: rejected connection from UID " << cr.uid << " (not root and not in allowlist)");
+        return false;
     }
 
     std::string bypass_host;
@@ -546,7 +605,7 @@ class ServerThread : public ServerThreadBase
         config->http_server_id = OVPNAGENT_NAME_STRING "/" HTTP_SERVER_VERSION;
         config->frame = frame;
         config->stats = tc.stats;
-        config->unix_mode = 0777;
+        config->unix_mode = 0666;
 
         MyClientFactory::Ptr factory = new MyClientFactory();
         listener.reset(new MyListener(io_context_arg, config, tc.listen_list, factory));
