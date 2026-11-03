@@ -26,7 +26,6 @@
 #include <openvpn/crypto/cryptoalgs.hpp>
 #include <openvpn/crypto/aead_usage_limit.hpp>
 #include <openvpn/openssl/util/error.hpp>
-#include <openvpn/openssl/compat.hpp>
 
 namespace openvpn::OpenSSLCrypto {
 class CipherContextAEAD
@@ -151,7 +150,7 @@ class CipherContextAEAD
             openssl_clear_error_stack();
             throw openssl_gcm_error("EVP_EncryptInit_ex (reset)");
         }
-        if (!EVP_EncryptUpdate(ctx, nullptr, &len, ad, int(ad_len)))
+        if (ad_len && !EVP_EncryptUpdate(ctx, nullptr, &len, ad, int(ad_len)))
         {
             openssl_clear_error_stack();
             throw openssl_gcm_error("EVP_EncryptUpdate AD");
@@ -229,7 +228,7 @@ class CipherContextAEAD
         }
 
         int len;
-        if (!EVP_DecryptUpdate(ctx, nullptr, &len, ad, int(ad_len)))
+        if (ad_len && !EVP_DecryptUpdate(ctx, nullptr, &len, ad, int(ad_len)))
         {
             openssl_clear_error_stack();
             throw openssl_gcm_error("EVP_DecryptUpdate AD");

@@ -20,7 +20,6 @@
 #include <openssl/kdf.h>
 
 #include <openvpn/common/numeric_util.hpp>
-#include <openvpn/openssl/compat.hpp>
 
 namespace openvpn::OpenSSLCrypto {
 
@@ -71,6 +70,27 @@ class TLS1PRF
 
         return true;
     }
+#elif defined(OPENSSL_IS_AWSLC)
+    static bool PRF(unsigned char *label,
+                    const size_t label_len,
+                    const unsigned char *sec,
+                    const size_t slen,
+                    unsigned char *out1,
+                    const size_t olen)
+    {
+        return CRYPTO_tls1_prf(EVP_md5_sha1(),
+                               out1,
+                               olen,
+                               sec,
+                               slen,
+                               reinterpret_cast<const char *>(label),
+                               label_len,
+                               nullptr,
+                               0,
+                               nullptr,
+                               0)
+               == 1;
+    }
 #else
     static bool PRF(unsigned char *label,
                     const size_t label_len,
@@ -79,9 +99,6 @@ class TLS1PRF
                     unsigned char *out1,
                     const size_t olen)
     {
-#ifdef OPENSSL_IS_AWSLC
-        return CRYPTO_tls1_prf_wrapper(out1, olen, sec, slen, label, label_len);
-#else
         /* TODO use EVP_PKEY_CTX_new_from_name and library context for OpenSSL 3.0 but
          * this needs passing the library context down here.*/
         using EVP_PKEY_CTX_ptr = std::unique_ptr<EVP_PKEY_CTX, decltype(&::EVP_PKEY_CTX_free)>;
@@ -112,7 +129,6 @@ class TLS1PRF
             return false;
 
         return true;
-#endif
     }
 #endif
 };

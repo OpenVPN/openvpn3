@@ -23,7 +23,6 @@
 #include <openvpn/common/cleanup.hpp>
 #include <openvpn/common/numeric_cast.hpp>
 #include <openvpn/openssl/pki/x509.hpp>
-#include <openvpn/openssl/compat.hpp>
 #include <openvpn/openssl/util/error.hpp>
 
 namespace openvpn::OpenSSLSign {
@@ -39,6 +38,7 @@ inline void verify_pkcs7(const std::list<OpenSSLPKI::X509> &certs,
     STACK_OF(X509) *x509_stack = nullptr;
     BIO *in = nullptr;
     PKCS7 *p7 = nullptr;
+    X509_STORE *store = X509_STORE_new();
 
     auto clean = Cleanup([&]()
                          {
@@ -47,7 +47,9 @@ inline void verify_pkcs7(const std::list<OpenSSLPKI::X509> &certs,
 	  if (in)
 	    BIO_free(in);
 	  if (p7)
-	    PKCS7_free(p7); });
+	    PKCS7_free(p7);
+	  if (store)
+	    X509_STORE_free(store); });
 
     /* create x509_stack from cert */
     x509_stack = sk_X509_new_null();
@@ -72,7 +74,7 @@ inline void verify_pkcs7(const std::list<OpenSSLPKI::X509> &certs,
         PKCS7_set_detached(p7, 1);
 
     /* do the verify */
-    if (PKCS7_verify(p7, x509_stack, nullptr, in, nullptr, PKCS7_NOVERIFY) != 1)
+    if (PKCS7_verify(p7, x509_stack, store, in, nullptr, PKCS7_NOVERIFY) != 1)
         throw OpenSSLException("OpenSSLSign::verify_pkcs7: verification failed");
 }
 } // namespace openvpn::OpenSSLSign

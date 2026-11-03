@@ -20,11 +20,7 @@
 #include <openssl/evp.h>
 #include <openssl/ec.h>
 #include <openssl/objects.h>
-#include <openssl/rsa.h>
 
-#ifdef OPENSSL_IS_AWSLC
-  #include <openvpn/openssl/aws-lc-compat.hpp>
-#endif
 
 /* Note that this is not a perfect emulation of the new function but
  * is good enough for our case of printing certificate details during
@@ -126,4 +122,8 @@ SSL_get0_group_name(SSL *s)
     int nid = static_cast<int>(SSL_get_negotiated_group(s));
     return SSL_group_to_name(s, nid);
 }
+#endif
+
+#ifdef OPENSSL_IS_AWSLC
+#include <openvpn/openssl/aws-lc-compat.hpp>
 #endif

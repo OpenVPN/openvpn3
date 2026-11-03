@@ -178,11 +178,9 @@ class OpenSSLException : public ExceptionCode
             case SSL_R_SSLV3_ALERT_HANDSHAKE_FAILURE:
                 set_code(Error::TLS_ALERT_HANDSHAKE_FAILURE, true);
                 break;
-#ifdef SSL_R_TLSV13_ALERT_CERTIFICATE_REQUIRED
             case SSL_R_TLSV13_ALERT_CERTIFICATE_REQUIRED:
                 set_code(Error::TLS_ALERT_CERTIFICATE_REQUIRED, true);
                 break;
-#endif
             case SSL_R_SSLV3_ALERT_CERTIFICATE_EXPIRED:
                 set_code(Error::TLS_ALERT_CERTIFICATE_EXPIRED, true);
                 break;

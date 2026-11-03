@@ -62,7 +62,6 @@
 #include <openvpn/ssl/sslapi.hpp>
 #include <openvpn/ssl/sni_handler.hpp>
 #include <openvpn/ssl/iana_ciphers.hpp>
-#include <openvpn/openssl/compat.hpp>
 #include <openvpn/openssl/util/error.hpp>
 #if ENABLE_EXTERNAL_PKI
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L
@@ -909,6 +908,9 @@ class OpenSSLContext : public SSLFactoryAPI
         static void init_static()
         {
             bmq_stream::init_static();
+#if OPENSSL_VERSION_NUMBER < 0x30000010L && defined(ENABLE_EXTERNAL_PKI)
+            ExternalPKIRsaImpl::init_static();
+#endif
 #if OPENSSL_VERSION_NUMBER < 0x30000010L && !defined(OPENSSL_NO_EC) && defined(ENABLE_EXTERNAL_PKI)
             ExternalPKIECImpl::init_static();
 #endif
@@ -1101,7 +1103,8 @@ class OpenSSLContext : public SSLFactoryAPI
             const SSL_CIPHER *ciph = SSL_get_current_cipher(ssl);
             if (ciph)
             {
-                char *desc = const_cast<char *>(SSL_CIPHER_description(ciph, nullptr, 0));
+                char desc_buf[256];
+                const char *desc = SSL_CIPHER_description(ciph, desc_buf, sizeof(desc_buf));
                 if (!desc)
                 {
                     os << ", cipher: Error getting TLS cipher description from SSL_CIPHER_description";
@@ -1112,7 +1115,6 @@ class OpenSSLContext : public SSLFactoryAPI
                     // remove \n at the end and any other excess whitespace
                     string::trim(cipher_str);
                     os << ", cipher: " << cipher_str;
-                    OPENSSL_free(desc);
                 }
             }
 
@@ -1427,7 +1429,7 @@ class OpenSSLContext : public SSLFactoryAPI
         SSL_CTX_set_ecdh_auto(ctx.get(), 1); // this method becomes a no-op in OpenSSL 1.1
 #endif
 
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(OPENSSL_IS_AWSLC)
         switch (TLSCertProfile::default_if_undef(config->tls_cert_profile))
         {
         case TLSCertProfile::UNDEF:
@@ -1481,12 +1483,12 @@ class OpenSSLContext : public SSLFactoryAPI
                 auto certType = EVP_PKEY_id(X509_get0_pubkey(config->cert.obj()));
                 if (certType == EVP_PKEY_RSA)
                 {
-                    epki = std::make_shared<ExternalPKIRsaImpl>(ctx.get(), config->cert.obj(), config->external_pki, config->external_pki_alias);
+                    epki = std::make_shared<ExternalPKIImpl>(ExternalPKIRsaImpl(ctx.get(), config->cert.obj(), config->external_pki, config->external_pki_alias));
                 }
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(OPENSSL_NO_EC)
                 else if (certType == EVP_PKEY_EC)
                 {
-                    epki = std::make_shared<ExternalPKIECImpl>(ctx.get(), config->cert.obj(), config->external_pki, config->external_pki_alias);
+                    epki = std::make_shared<ExternalPKIImpl>(ExternalPKIECImpl(ctx.get(), config->cert.obj(), config->external_pki, config->external_pki_alias));
                 }
 #endif
                 else
