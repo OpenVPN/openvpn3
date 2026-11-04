@@ -1590,6 +1590,7 @@ T *ConstBufferType<T>::write_alloc(const size_t size)
         resize(offset_ + size_ + size);
     T *ret = data() + size_;
     size_ += size;
+    // codechecker_false_positive [ReturnPtrRange] write_alloc() calls resize() above to guarantee capacity
     return ret;
 }
 

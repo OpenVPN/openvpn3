@@ -252,6 +252,7 @@ class PrintFormatted
     template <typename T>
     bool process_arg(const T &arg)
     {
+        // codechecker_false_positive [MismatchedIterator] fi is initialized to fmt.begin() in the constructor
         while (fi != fmt.end())
         {
             const char c = *fi++;

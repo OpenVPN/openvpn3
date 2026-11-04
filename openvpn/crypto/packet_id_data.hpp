@@ -322,6 +322,7 @@ class PacketIDDataReceiveType
         id_floor = other.id_floor;
         unit = other.unit;
         name = other.name;
+        // codechecker_false_positive [BufferOverlap] move-assignment result in distinct objects
         memcpy(history, other.history, sizeof(history));
         return *this;
     }
