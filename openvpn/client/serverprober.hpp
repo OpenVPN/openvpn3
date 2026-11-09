@@ -29,6 +29,7 @@
 #ifndef OPENVPN_CLIENT_SERVERPROBER_H
 #define OPENVPN_CLIENT_SERVERPROBER_H
 
+#include <cstdint>
 #include <map>
 #include <memory>
 #include <utility>
@@ -170,8 +171,9 @@ class ServerProber : public std::enable_shared_from_this<ServerProber>
 
     struct Pending
     {
-        size_t index;
+        size_t index = 0;
         Time sent;
+        std::uint64_t request_id = 0;
     };
 
     struct RecvCtx
@@ -241,9 +243,16 @@ class ServerProber : public std::enable_shared_from_this<ServerProber>
         // protection so a standard server accepts it
         BufferAllocated buf;
         buf.reset(512, 2048, BufAllocFlags::NO_FLAGS);
+        // from the RNG, not a counter: the id binds a reply to this request, so
+        // it has to be unpredictable
+        // probe only: we measure the round trip and connect separately, so the
+        // server may forget the exchange at once. Without it a connect_lifetime
+        // of 0 would mean the server had rejected the connection attempt.
         const oob::ProbeRequest req{
+            .request_id = proto_config->rng->rand_get<std::uint64_t>(),
             .timestamp = static_cast<std::uint64_t>(Time::now().seconds_since_epoch()),
-            .flags = 0};
+            .flags = oob::request_flag_probe_only,
+        };
         if (!req.write(buf))
         {
             return;
@@ -251,7 +260,7 @@ class ServerProber : public std::enable_shared_from_this<ServerProber>
         BufferAllocated work;
         probe_wrap.wrap(buf, work);
 
-        pending[t.ep] = Pending{t.index, Time::now()};
+        pending[t.ep] = Pending{.index = t.index, .sent = Time::now(), .request_id = req.request_id};
 
         openvpn_io::error_code ec;
         s->send_to(buf.const_buffer(), t.ep, 0, ec);
@@ -315,9 +324,12 @@ class ServerProber : public std::enable_shared_from_this<ServerProber>
         const auto reply = oob::probe_reply_find(buf);
         if (!reply)
             return;
-        // the reply must echo the session id of our probe
-        if (!reply->peer_session_id.match(probe_wrap.self_psid()))
+        // the endpoint above can be forged off-path; the echoed request_id is
+        // what an attacker cannot guess
+        if (reply->request_id != it->second.request_id)
+        {
             return;
+        }
 
         results.push_back(Result{.remote_index = it->second.index,
                                  .addr = IP::Addr::from_asio(it->first.address()),

@@ -16,11 +16,15 @@
 
 #include "test_common.hpp"
 
+#include <cstdint>
 #include <memory>
 #include <string>
 
+#include <gtest/gtest.h>
+
 #include <openvpn/io/io.hpp>
 #include <openvpn/addr/ip.hpp>
+#include <openvpn/log/sessionstats.hpp>
 #include <openvpn/frame/frame.hpp>
 #include <openvpn/time/time.hpp>
 #include <openvpn/transport/protocol.hpp>
@@ -45,12 +49,13 @@ ProtoContext::ProtoConfig::Ptr make_plain_config(Frame::Ptr frame, StrongRandomA
 }
 
 // A loopback UDP server that answers a single probe request with a probe reply,
-// echoing the client's probe session id and advertising fixed parameters.
+// echoing the request_id and advertising fixed parameters. With echo_request_id
+// false it answers a different id, as a spoofed reply would.
 class FakeProbeServer
 {
   public:
-    FakeProbeServer(openvpn_io::io_context &io, const ProtoContext::ProtoConfig::Ptr &cfg, const SessionStats::Ptr &stats)
-        : socket(io), wrap(cfg, stats)
+    FakeProbeServer(openvpn_io::io_context &io_ctx, const ProtoContext::ProtoConfig::Ptr &cfg, const SessionStats::Ptr &stats, const bool echo_request_id_arg = true) // NOLINT(misc-include-cleaner) -- openvpn_io is the asio indirection used across the tree
+        : socket(io_ctx), wrap(cfg, stats), echo_request_id(echo_request_id_arg)
     {
         socket.open(openvpn_io::ip::udp::v4());
         socket.bind(openvpn_io::ip::udp::endpoint(openvpn_io::ip::make_address("127.0.0.1"), 0));
@@ -71,6 +76,9 @@ class FakeProbeServer
         openvpn_io::error_code ec;
         socket.close(ec);
     }
+
+    //! flags of the last probe request received, for the caller to assert on
+    std::uint32_t last_request_flags = 0;
 
     static constexpr std::uint16_t REPLY_PRIORITY = 5;
     static constexpr std::uint16_t REPLY_WEIGHT = 9;
@@ -90,7 +98,9 @@ class FakeProbeServer
         socket.async_receive_from(rc->buf.mutable_buffer(), rc->sender, [this, rc](const openvpn_io::error_code &error, const size_t n)
                                   {
                                       if (error || !n)
+                                      {
                                           return;
+                                      }
                                       rc->buf.set_size(n);
                                       respond(rc->buf, rc->sender); });
     }
@@ -101,17 +111,25 @@ class FakeProbeServer
         ProtoSessionID client_psid;
         PacketIDControl pid;
         if (wrap.unwrap(buf, work, client_psid, pid) != ProtoContext::UnwrapStatus::OK)
+        {
             return;
+        }
 
-        if (!oob::probe_request_find(buf))
+        const auto req = oob::probe_request_find(buf);
+        if (!req)
+        {
             return;
+        }
+        last_request_flags = req->flags;
 
-        const oob::ProbeReply reply{.peer_session_id = client_psid,
-                                    .priority = REPLY_PRIORITY,
-                                    .weight = REPLY_WEIGHT,
-                                    .max_latency_diff = 0,
-                                    .connect_lifetime = REPLY_CONNECT_LIFETIME,
-                                    .flags = 0};
+        const oob::ProbeReply reply{
+            .request_id = echo_request_id ? req->request_id : ~req->request_id,
+            .priority = REPLY_PRIORITY,
+            .weight = REPLY_WEIGHT,
+            .max_latency_diff = 0,
+            .connect_lifetime = REPLY_CONNECT_LIFETIME,
+            .flags = 0,
+        };
 
         BufferAllocated rbuf;
         rbuf.reset(512, 2048, BufAllocFlags::NO_FLAGS);
@@ -128,6 +146,7 @@ class FakeProbeServer
 
     openvpn_io::ip::udp::socket socket;
     ProtoContext::ProbeWrap wrap;
+    bool echo_request_id;
 };
 
 struct Collector : public ServerProber::NotifyCallback
@@ -144,16 +163,16 @@ struct Collector : public ServerProber::NotifyCallback
 
 } // namespace
 
-TEST(ServerProber, plaintext_probe_roundtrip)
+TEST(ServerProber, PlaintextProbeRoundtrip)
 {
-    openvpn_io::io_context io(1);
+    openvpn_io::io_context io_ctx(1);
     Frame::Ptr frame(new Frame(Frame::Context(512, 2048, 512, 0, 16, BufAllocFlags::NO_FLAGS)));
     StrongRandomAPI::Ptr rng(new FakeSecureRand(0x33));
     Time time = Time::now();
     SessionStats::Ptr stats(new SessionStats());
 
     // fake server on an ephemeral loopback port
-    FakeProbeServer server(io, make_plain_config(frame, rng, time), stats);
+    FakeProbeServer server(io_ctx, make_plain_config(frame, rng, time), stats);
     server.start();
     const unsigned short port = server.port();
 
@@ -161,16 +180,16 @@ TEST(ServerProber, plaintext_probe_roundtrip)
     RemoteList::Ptr rl(new RemoteList("127.0.0.1", std::to_string(port), Protocol(Protocol::UDPv4), "test"));
     rl->get_item(0)->set_ip_addr(IP::Addr::from_string("127.0.0.1"));
 
-    auto prober = std::make_shared<ServerProber>(io,
-                                                 rl,
-                                                 make_plain_config(frame, rng, time),
-                                                 nullptr, // no socket_protect
-                                                 stats,
-                                                 Time::Duration::milliseconds(300));
+    const auto prober = std::make_shared<ServerProber>(io_ctx,
+                                                       rl,
+                                                       make_plain_config(frame, rng, time),
+                                                       nullptr, // no socket_protect
+                                                       stats,
+                                                       Time::Duration::milliseconds(300));
 
     Collector cb;
     prober->start(&cb);
-    io.run();
+    io_ctx.run();
 
     ASSERT_TRUE(cb.done);
     ASSERT_EQ(cb.results.size(), 1u);
@@ -182,14 +201,49 @@ TEST(ServerProber, plaintext_probe_roundtrip)
     EXPECT_EQ(r.reply.weight, FakeProbeServer::REPLY_WEIGHT);
     EXPECT_EQ(r.reply.connect_lifetime, FakeProbeServer::REPLY_CONNECT_LIFETIME);
     EXPECT_LE(r.rtt, Time::Duration::seconds(2)); // sane, non-garbage latency
+    // the prober measures only, so the server is told it need not hold the state
+    EXPECT_EQ(server.last_request_flags, oob::request_flag_probe_only);
+
+    server.stop();
+}
+
+// A reply that is correctly wrapped and comes from the address we probed, but
+// does not echo our request_id, is not an answer to our probe.
+TEST(ServerProber, ReplyWithWrongRequestIdIsIgnored)
+{
+    openvpn_io::io_context io_ctx(1);
+    Frame::Ptr frame(new Frame(Frame::Context(512, 2048, 512, 0, 16, BufAllocFlags::NO_FLAGS)));
+    StrongRandomAPI::Ptr rng(new FakeSecureRand(0x55));
+    Time time = Time::now();
+    SessionStats::Ptr stats(new SessionStats());
+
+    FakeProbeServer server(io_ctx, make_plain_config(frame, rng, time), stats, false);
+    server.start();
+
+    RemoteList::Ptr rl(new RemoteList("127.0.0.1", std::to_string(server.port()), Protocol(Protocol::UDPv4), "test"));
+    rl->get_item(0)->set_ip_addr(IP::Addr::from_string("127.0.0.1"));
+
+    const auto prober = std::make_shared<ServerProber>(io_ctx,
+                                                       rl,
+                                                       make_plain_config(frame, rng, time),
+                                                       nullptr,
+                                                       stats,
+                                                       Time::Duration::milliseconds(300));
+
+    Collector cb;
+    prober->start(&cb);
+    io_ctx.run();
+
+    ASSERT_TRUE(cb.done);
+    EXPECT_EQ(cb.results.size(), 0u);
 
     server.stop();
 }
 
 // No server listening: the probe window elapses and the prober reports nothing.
-TEST(ServerProber, no_reply_times_out_empty)
+TEST(ServerProber, NoReplyTimesOutEmpty)
 {
-    openvpn_io::io_context io(1);
+    openvpn_io::io_context io_ctx(1);
     Frame::Ptr frame(new Frame(Frame::Context(512, 2048, 512, 0, 16, BufAllocFlags::NO_FLAGS)));
     StrongRandomAPI::Ptr rng(new FakeSecureRand(0x44));
     Time time = Time::now();
@@ -199,25 +253,25 @@ TEST(ServerProber, no_reply_times_out_empty)
     RemoteList::Ptr rl(new RemoteList("127.0.0.1", "1", Protocol(Protocol::UDPv4), "test"));
     rl->get_item(0)->set_ip_addr(IP::Addr::from_string("127.0.0.1"));
 
-    auto prober = std::make_shared<ServerProber>(io,
-                                                 rl,
-                                                 make_plain_config(frame, rng, time),
-                                                 nullptr,
-                                                 stats,
-                                                 Time::Duration::milliseconds(200));
+    const auto prober = std::make_shared<ServerProber>(io_ctx,
+                                                       rl,
+                                                       make_plain_config(frame, rng, time),
+                                                       nullptr,
+                                                       stats,
+                                                       Time::Duration::milliseconds(200));
 
     Collector cb;
     prober->start(&cb);
-    io.run();
+    io_ctx.run();
 
     ASSERT_TRUE(cb.done);
     EXPECT_EQ(cb.results.size(), 0u);
 }
 
 // Nothing resolved -> the callback still fires (immediately), with no results.
-TEST(ServerProber, empty_remote_list_completes)
+TEST(ServerProber, EmptyRemoteListCompletes)
 {
-    openvpn_io::io_context io(1);
+    openvpn_io::io_context io_ctx(1);
     Frame::Ptr frame(new Frame(Frame::Context(512, 2048, 512, 0, 16, BufAllocFlags::NO_FLAGS)));
     StrongRandomAPI::Ptr rng(new FakeSecureRand(0x55));
     Time time = Time::now();
@@ -226,16 +280,16 @@ TEST(ServerProber, empty_remote_list_completes)
     // resolved list intentionally left empty (no set_ip_addr)
     RemoteList::Ptr rl(new RemoteList("127.0.0.1", "1194", Protocol(Protocol::UDPv4), "test"));
 
-    auto prober = std::make_shared<ServerProber>(io,
-                                                 rl,
-                                                 make_plain_config(frame, rng, time),
-                                                 nullptr,
-                                                 stats,
-                                                 Time::Duration::milliseconds(200));
+    const auto prober = std::make_shared<ServerProber>(io_ctx,
+                                                       rl,
+                                                       make_plain_config(frame, rng, time),
+                                                       nullptr,
+                                                       stats,
+                                                       Time::Duration::milliseconds(200));
 
     Collector cb;
     prober->start(&cb);
-    io.run();
+    io_ctx.run();
 
     ASSERT_TRUE(cb.done);
     EXPECT_EQ(cb.results.size(), 0u);
@@ -248,8 +302,8 @@ namespace {
 class FakeRuntServer
 {
   public:
-    explicit FakeRuntServer(openvpn_io::io_context &io)
-        : socket(io)
+    explicit FakeRuntServer(openvpn_io::io_context &io_ctx)
+        : socket(io_ctx)
     {
         socket.open(openvpn_io::ip::udp::v4());
         socket.bind(openvpn_io::ip::udp::endpoint(openvpn_io::ip::make_address("127.0.0.1"), 0));
@@ -285,7 +339,9 @@ class FakeRuntServer
         socket.async_receive_from(rc->buf.mutable_buffer(), rc->sender, [this, rc](const openvpn_io::error_code &error, const size_t n)
                                   {
                                       if (error || !n)
+                                      {
                                           return;
+                                      }
                                       // 3 bytes: an opcode and not much else
                                       static const unsigned char runt[3] = {0x60, 0x01, 0x02};
                                       openvpn_io::error_code ec;
@@ -300,30 +356,30 @@ class FakeRuntServer
 // A truncated reply must be dropped without disturbing the probe: the window
 // still closes normally and the prober reports no responder. Before the header
 // length check this threw out of the asio receive handler.
-TEST(ServerProber, truncated_reply_is_dropped)
+TEST(ServerProber, TruncatedReplyIsDropped)
 {
-    openvpn_io::io_context io(1);
+    openvpn_io::io_context io_ctx(1);
     Frame::Ptr frame(new Frame(Frame::Context(512, 2048, 512, 0, 16, BufAllocFlags::NO_FLAGS)));
     StrongRandomAPI::Ptr rng(new FakeSecureRand(0x66));
     Time time = Time::now();
     SessionStats::Ptr stats(new SessionStats());
 
-    FakeRuntServer server(io);
+    FakeRuntServer server(io_ctx);
     server.start();
 
     RemoteList::Ptr rl(new RemoteList("127.0.0.1", std::to_string(server.port()), Protocol(Protocol::UDPv4), "test"));
     rl->get_item(0)->set_ip_addr(IP::Addr::from_string("127.0.0.1"));
 
-    auto prober = std::make_shared<ServerProber>(io,
-                                                 rl,
-                                                 make_plain_config(frame, rng, time),
-                                                 nullptr,
-                                                 stats,
-                                                 Time::Duration::milliseconds(300));
+    const auto prober = std::make_shared<ServerProber>(io_ctx,
+                                                       rl,
+                                                       make_plain_config(frame, rng, time),
+                                                       nullptr,
+                                                       stats,
+                                                       Time::Duration::milliseconds(300));
 
     Collector cb;
     prober->start(&cb);
-    io.run(); // must not propagate an exception
+    io_ctx.run(); // must not propagate an exception
 
     ASSERT_TRUE(cb.done);
     EXPECT_EQ(cb.results.size(), 0u);

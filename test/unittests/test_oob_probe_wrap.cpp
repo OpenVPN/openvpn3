@@ -18,6 +18,8 @@
 
 #include "test_common.hpp"
 
+#include <gtest/gtest.h>
+
 #include <openvpn/common/file.hpp>
 #include <openvpn/ssl/sslchoose.hpp>
 #include <openvpn/ssl/proto.hpp>
@@ -188,7 +190,7 @@ BufferAllocated make_msg_buffer()
 }
 
 // client probe request -> server unwrap -> server probe reply -> client unwrap
-void run_roundtrip(WrapMode m)
+void run_roundtrip(WrapMode mode) // NOLINT(readability-function-cognitive-complexity) -- a linear round-trip, the count is gtest macro expansion
 {
     Frame::Ptr frame(new Frame(Frame::Context(512, 2048, 512, 0, 16, BufAllocFlags::NO_FLAGS)));
     // Use the SSL library's own RNG: mbedTLS requires an MbedTLSRandom for the
@@ -196,14 +198,18 @@ void run_roundtrip(WrapMode m)
     // tests assert round-trip correctness, not specific random bytes.
     StrongRandomAPI::Ptr rng(new SSLLib::RandomAPI());
     Time time = Time::now();
-    auto cp = make_config(m, frame, rng, time);
+    auto cp = make_config(mode, frame, rng, time);
     SessionStats::Ptr stats(new SessionStats());
 
     ProtoContext::ProbeWrap client(cp, stats);
-    ServerSim server(cp, m, stats);
+    ServerSim server(cp, mode, stats);
 
     // ---- client wraps a probe request ----
-    const oob::ProbeRequest req{.timestamp = 0x1122334455667788ULL, .flags = 0};
+    const oob::ProbeRequest req{
+        .request_id = 0x0123456789abcdefULL,
+        .timestamp = 0x1122334455667788ULL,
+        .flags = 0,
+    };
 
     BufferAllocated probe = make_msg_buffer();
     ASSERT_TRUE(req.write(probe));
@@ -217,18 +223,22 @@ void run_roundtrip(WrapMode m)
     ASSERT_EQ(server.unwrap(probe, swork, src, pid), ProtoContext::UnwrapStatus::OK);
     EXPECT_TRUE(src.match(client.self_psid()));
 
-    const auto got_req = oob::probe_request_find(probe);
-    ASSERT_TRUE(got_req);
-    EXPECT_EQ(got_req->timestamp, req.timestamp);
-    EXPECT_EQ(got_req->flags, req.flags);
+    const auto got_req_opt = oob::probe_request_find(probe);
+    ASSERT_TRUE(got_req_opt);
+    const auto &got_req = *got_req_opt; // NOLINT(bugprone-unchecked-optional-access) -- guarded by the ASSERT_TRUE above
+    EXPECT_EQ(got_req.request_id, req.request_id);
+    EXPECT_EQ(got_req.timestamp, req.timestamp);
+    EXPECT_EQ(got_req.flags, req.flags);
 
     // ---- server wraps a probe reply ----
-    const oob::ProbeReply reply{.peer_session_id = client.self_psid(),
-                                .priority = 3,
-                                .weight = 7,
-                                .max_latency_diff = 0,
-                                .connect_lifetime = 60,
-                                .flags = 0};
+    const oob::ProbeReply reply{
+        .request_id = req.request_id,
+        .priority = 3,
+        .weight = 7,
+        .max_latency_diff = 0,
+        .connect_lifetime = 60,
+        .flags = 0,
+    };
 
     BufferAllocated rbuf = make_msg_buffer();
     ASSERT_TRUE(reply.write(rbuf));
@@ -242,12 +252,13 @@ void run_roundtrip(WrapMode m)
     ASSERT_EQ(client.unwrap(rbuf, cwork2, rsrc, rpid), ProtoContext::UnwrapStatus::OK);
     EXPECT_TRUE(rsrc.match(server.psid_self));
 
-    const auto got_reply = oob::probe_reply_find(rbuf);
-    ASSERT_TRUE(got_reply);
-    EXPECT_TRUE(got_reply->peer_session_id.match(client.self_psid()));
-    EXPECT_EQ(got_reply->priority, reply.priority);
-    EXPECT_EQ(got_reply->weight, reply.weight);
-    EXPECT_EQ(got_reply->connect_lifetime, reply.connect_lifetime);
+    const auto got_reply_opt = oob::probe_reply_find(rbuf);
+    ASSERT_TRUE(got_reply_opt);
+    const auto &got_reply = *got_reply_opt; // NOLINT(bugprone-unchecked-optional-access) -- guarded by the ASSERT_TRUE above
+    EXPECT_EQ(got_reply.request_id, reply.request_id);
+    EXPECT_EQ(got_reply.priority, reply.priority);
+    EXPECT_EQ(got_reply.weight, reply.weight);
+    EXPECT_EQ(got_reply.connect_lifetime, reply.connect_lifetime);
 }
 
 } // namespace
@@ -310,9 +321,10 @@ TEST(OobProbeWrap, tls_crypt_v2_probe_appends_wkc)
     ASSERT_EQ(server.unwrap(stripped, swork, src, pid), ProtoContext::UnwrapStatus::OK);
     EXPECT_TRUE(src.match(client.self_psid()));
 
-    const auto got_req = oob::probe_request_find(stripped);
-    ASSERT_TRUE(got_req);
-    EXPECT_EQ(got_req->timestamp, req.timestamp);
+    const auto got_req_opt = oob::probe_request_find(stripped);
+    ASSERT_TRUE(got_req_opt);
+    const auto &got_req = *got_req_opt; // NOLINT(bugprone-unchecked-optional-access) -- guarded by the ASSERT_TRUE above
+    EXPECT_EQ(got_req.timestamp, req.timestamp);
 }
 
 namespace {
