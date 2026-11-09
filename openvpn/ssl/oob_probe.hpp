@@ -11,7 +11,7 @@
 
 /**
  * @file
- * Encoding/decoding of out-of-band (CONTROL_OOB_V1) control messages, used for
+ * Encoding/decoding of out-of-band (CONTROL_V2) control messages, used for
  * server latency probing and best-server selection.
  *
  * An OOB message payload starts with a 16-bit message type (the 0x1xx space:

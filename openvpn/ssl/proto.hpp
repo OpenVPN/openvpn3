@@ -227,8 +227,8 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
         CONTROL_SOFT_RESET_V1 = 3, // new key, graceful transition from old to new key
         CONTROL_V1 = 4,            // control channel packet (usually TLS ciphertext)
         CONTROL_WKC_V1 = 11,       // control channel packet with wrapped client key appended
-        CONTROL_OOB_V1 = 12,       // out-of-band control message (belongs to no session)
-        CONTROL_OOB_WKC_V1 = 13,   // out-of-band control message + wrapped client key appended
+        CONTROL_V2 = 12,           // extendable control message, carries TLVs, belongs to no session
+        CONTROL_WKC_V2 = 13,       // CONTROL_V2 + wrapped client key appended
         ACK_V1 = 5,                // acknowledgement for packets received
         DATA_V1 = 6,               // data channel packet with 1-byte header
         DATA_V2 = 9,               // data channel packet with 4-byte header
@@ -1790,7 +1790,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
 
         // append the WKc: opcode_carries_wkc() covers the in-session handshake
         // packets, and an OOB probe carries one too (it has no session to key)
-        if ((opcode_carries_wkc(opcode) || opcode == CONTROL_OOB_WKC_V1) && wkc)
+        if ((opcode_carries_wkc(opcode) || opcode == CONTROL_WKC_V2) && wkc != nullptr)
         {
             if (!wkc->defined())
                 throw proto_error("Client Key Wrapper undefined");
@@ -1989,7 +1989,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
      * no session exists yet. The on-wire framing is identical to an in-session
      * control packet (the wrap_ / unwrap_ helpers), so a standard server accepts
      * it. The probe is always sent by the client; for tls-crypt-v2 the wrapped
-     * client key (WKc) is appended (opcode CONTROL_OOB_WKC_V1) so a stateless
+     * client key (WKc) is appended (opcode CONTROL_WKC_V2) so a stateless
      * server can derive the session key and unwrap the probe.
      */
     class ProbeWrap
@@ -2043,16 +2043,16 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
             switch (mode)
             {
             case TLS_AUTH:
-                wrap_tls_auth(CONTROL_OOB_V1, buf, ta_pid_send, now_secs, hmac_size, psid_self, KEY_ID, *ta_hmac_send);
+                wrap_tls_auth(CONTROL_V2, buf, ta_pid_send, now_secs, hmac_size, psid_self, KEY_ID, *ta_hmac_send);
                 break;
             case TLS_CRYPT:
-                wrap_tls_crypt(CONTROL_OOB_V1, buf, work, *config->frame, ta_pid_send, now_secs, hmac_size, psid_self, KEY_ID, *tls_crypt_send, nullptr);
+                wrap_tls_crypt(CONTROL_V2, buf, work, *config->frame, ta_pid_send, now_secs, hmac_size, psid_self, KEY_ID, *tls_crypt_send, nullptr);
                 break;
             case TLS_CRYPT_V2:
-                wrap_tls_crypt(CONTROL_OOB_WKC_V1, buf, work, *config->frame, ta_pid_send, now_secs, hmac_size, psid_self, KEY_ID, *tls_crypt_send, &config->wkc);
+                wrap_tls_crypt(CONTROL_WKC_V2, buf, work, *config->frame, ta_pid_send, now_secs, hmac_size, psid_self, KEY_ID, *tls_crypt_send, &config->wkc);
                 break;
             case TLS_PLAIN:
-                wrap_tls_plain(CONTROL_OOB_V1, buf, psid_self, KEY_ID);
+                wrap_tls_plain(CONTROL_V2, buf, psid_self, KEY_ID);
                 break;
             }
         }

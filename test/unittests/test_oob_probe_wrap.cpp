@@ -156,14 +156,14 @@ class ServerSim
         switch (mode)
         {
         case WrapMode::AUTH:
-            ProtoContext::wrap_tls_auth(ProtoContext::CONTROL_OOB_V1, buf, pid_send, now_secs, hmac_size, psid_self, 0, *ta_send);
+            ProtoContext::wrap_tls_auth(ProtoContext::CONTROL_V2, buf, pid_send, now_secs, hmac_size, psid_self, 0, *ta_send);
             break;
         case WrapMode::CRYPT:
         case WrapMode::CRYPT_V2:
-            ProtoContext::wrap_tls_crypt(ProtoContext::CONTROL_OOB_V1, buf, work, *config->frame, pid_send, now_secs, hmac_size, psid_self, 0, *tc_send, nullptr);
+            ProtoContext::wrap_tls_crypt(ProtoContext::CONTROL_V2, buf, work, *config->frame, pid_send, now_secs, hmac_size, psid_self, 0, *tc_send, nullptr);
             break;
         case WrapMode::PLAIN:
-            ProtoContext::wrap_tls_plain(ProtoContext::CONTROL_OOB_V1, buf, psid_self, 0);
+            ProtoContext::wrap_tls_plain(ProtoContext::CONTROL_V2, buf, psid_self, 0);
             break;
         }
     }
@@ -290,9 +290,8 @@ TEST(OobProbeWrap, tls_crypt_v2_probe_appends_wkc)
     BufferAllocated cwork;
     client.wrap(probe, cwork);
 
-    // opcode is CONTROL_OOB_WKC_V1 with key-id 0
-    const unsigned char expected_op =
-        static_cast<unsigned char>(ProtoContext::CONTROL_OOB_WKC_V1 << ProtoContext::OPCODE_SHIFT);
+    // opcode is CONTROL_WKC_V2 with key-id 0
+    const unsigned char expected_op = ProtoContext::op_compose(ProtoContext::CONTROL_WKC_V2, 0);
     ASSERT_GE(probe.size(), wkc_size);
     EXPECT_EQ(probe.c_data()[0], expected_op);
 
