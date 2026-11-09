@@ -29,21 +29,21 @@ ProtoSessionID make_psid(const unsigned char (&bytes)[ProtoSessionID::SIZE])
 
 } // namespace
 
-// SERVER_PROBE round-trips: what we write, we read back identically.
-TEST(oob_probe, server_probe_roundtrip)
+// A probe request round-trips: what we write, we read back identically.
+TEST(oob_probe, probe_request_roundtrip)
 {
-    const oob::ProbeParameter in{.timestamp = 0x1122334455667788ULL, .flags = 0};
+    const oob::ProbeRequest in{.timestamp = 0x1122334455667788ULL, .flags = 0};
 
     BufferAllocated buf(128);
-    ASSERT_TRUE(oob::server_probe_write(buf, in));
+    ASSERT_TRUE(in.write(buf));
 
-    const auto out = oob::server_probe_read(buf);
+    const auto out = oob::probe_request_find(buf);
     ASSERT_TRUE(out);
     EXPECT_EQ(out->timestamp, in.timestamp);
     EXPECT_EQ(out->flags, in.flags);
 }
 
-// PROBE_REPLY round-trips, session id and all fields preserved.
+// A probe reply round-trips, session id and all fields preserved.
 TEST(oob_probe, probe_reply_roundtrip)
 {
     const unsigned char sid[ProtoSessionID::SIZE] = {1, 2, 3, 4, 5, 6, 7, 8};
@@ -55,9 +55,9 @@ TEST(oob_probe, probe_reply_roundtrip)
                              .flags = oob::REPLY_FLAG_RESEND_WKC};
 
     BufferAllocated buf(128);
-    ASSERT_TRUE(oob::client_reply_write(buf, in));
+    ASSERT_TRUE(in.write(buf));
 
-    const auto out = oob::client_reply_read(buf);
+    const auto out = oob::probe_reply_find(buf);
     ASSERT_TRUE(out);
     EXPECT_TRUE(out->peer_session_id.match(in.peer_session_id));
     EXPECT_EQ(out->priority, in.priority);
@@ -68,18 +68,16 @@ TEST(oob_probe, probe_reply_roundtrip)
 }
 
 // Wire format is locked (big-endian) so it stays interoperable with the C impl.
-TEST(oob_probe, server_probe_wire_format)
+TEST(oob_probe, probe_request_wire_format)
 {
-    const oob::ProbeParameter in{.timestamp = 0x1122334455667788ULL, .flags = 0};
+    const oob::ProbeRequest in{.timestamp = 0x1122334455667788ULL, .flags = 0};
 
     BufferAllocated buf(128);
-    ASSERT_TRUE(oob::server_probe_write(buf, in));
+    ASSERT_TRUE(in.write(buf));
 
     const unsigned char expected[] = {
-        0x01,
-        0x00, // msg type SERVER_PROBE (0x100)
-        0x02,
-        0x00, // TLV type 0x200 (not optional)
+        0x00,
+        0x02, // TLV type 0x2 = probe request (not optional)
         0x00,
         0x0c, // TLV value length = 12
         0x11,
@@ -99,7 +97,7 @@ TEST(oob_probe, server_probe_wire_format)
     EXPECT_EQ(std::memcmp(buf.c_data(), expected, sizeof(expected)), 0);
 }
 
-// PROBE_REPLY wire format is locked to the spec's field order
+// The probe reply wire format is locked to the spec's field order
 // (priority, weight, max_latency_diff, connect_lifetime, flags).
 TEST(oob_probe, probe_reply_wire_format)
 {
@@ -112,13 +110,11 @@ TEST(oob_probe, probe_reply_wire_format)
                              .flags = oob::REPLY_FLAG_RESEND_WKC};
 
     BufferAllocated buf(128);
-    ASSERT_TRUE(oob::client_reply_write(buf, in));
+    ASSERT_TRUE(in.write(buf));
 
     const unsigned char expected[] = {
-        0x01,
-        0x01, // msg type PROBE_REPLY (0x101)
-        0x02,
-        0x01, // TLV type 0x201 (not optional)
+        0x00,
+        0x03, // TLV type 0x3 = probe reply (not optional)
         0x00,
         0x14, // TLV value length = 20
         0x01,
@@ -150,16 +146,15 @@ TEST(oob_probe, probe_reply_wire_format)
 TEST(oob_probe, skips_unknown_optional_tlv)
 {
     BufferAllocated buf(128);
-    ASSERT_TRUE(oob::msg_write_header(buf, oob::MSG_SERVER_PROBE));
     // an unknown TLV (type 0x7ff, 3 bytes of value) marked optional, so skippable
     ASSERT_TRUE(oob::tlv_write_header(buf, 0x7ff, true, 3));
     ASSERT_TRUE(oob::write_u16(buf, 0xdead));
     buf.push_back(0xaa);
     // the real probe_parameter TLV
-    const oob::ProbeParameter in{.timestamp = 42, .flags = 0};
+    const oob::ProbeRequest in{.timestamp = 42, .flags = 0};
     ASSERT_TRUE(in.write(buf));
 
-    const auto out = oob::server_probe_read(buf);
+    const auto out = oob::probe_request_find(buf);
     ASSERT_TRUE(out);
     EXPECT_EQ(out->timestamp, 42u);
 }
@@ -169,42 +164,39 @@ TEST(oob_probe, skips_unknown_optional_tlv)
 TEST(oob_probe, rejects_unknown_mandatory_tlv)
 {
     BufferAllocated buf(128);
-    ASSERT_TRUE(oob::msg_write_header(buf, oob::MSG_SERVER_PROBE));
     ASSERT_TRUE(oob::tlv_write_header(buf, 0x7ff, false, 3));
     ASSERT_TRUE(oob::write_u16(buf, 0xdead));
     buf.push_back(0xaa);
-    const oob::ProbeParameter in{.timestamp = 42, .flags = 0};
+    const oob::ProbeRequest in{.timestamp = 42, .flags = 0};
     ASSERT_TRUE(in.write(buf));
 
-    EXPECT_FALSE(oob::server_probe_read(buf));
+    EXPECT_FALSE(oob::probe_request_find(buf));
 }
 
 // ... and equally when that TLV sits *after* the one we were looking for.
 TEST(oob_probe, rejects_unknown_mandatory_tlv_after_wanted)
 {
     BufferAllocated buf(128);
-    ASSERT_TRUE(oob::msg_write_header(buf, oob::MSG_SERVER_PROBE));
-    const oob::ProbeParameter in{.timestamp = 42, .flags = 0};
+    const oob::ProbeRequest in{.timestamp = 42, .flags = 0};
     ASSERT_TRUE(in.write(buf));
     ASSERT_TRUE(oob::tlv_write_header(buf, 0x7ff, false, 3));
     ASSERT_TRUE(oob::write_u16(buf, 0xdead));
     buf.push_back(0xaa);
 
-    EXPECT_FALSE(oob::server_probe_read(buf));
+    EXPECT_FALSE(oob::probe_request_find(buf));
 }
 
 // An unknown *optional* TLV after the wanted one is skipped, not tripped over.
 TEST(oob_probe, skips_unknown_optional_tlv_after_wanted)
 {
     BufferAllocated buf(128);
-    ASSERT_TRUE(oob::msg_write_header(buf, oob::MSG_SERVER_PROBE));
-    const oob::ProbeParameter in{.timestamp = 42, .flags = 0};
+    const oob::ProbeRequest in{.timestamp = 42, .flags = 0};
     ASSERT_TRUE(in.write(buf));
     ASSERT_TRUE(oob::tlv_write_header(buf, 0x7ff, true, 3));
     ASSERT_TRUE(oob::write_u16(buf, 0xdead));
     buf.push_back(0xaa);
 
-    const auto out = oob::server_probe_read(buf);
+    const auto out = oob::probe_request_find(buf);
     ASSERT_TRUE(out);
     EXPECT_EQ(out->timestamp, 42u);
 }
@@ -214,37 +206,34 @@ TEST(oob_probe, skips_unknown_optional_tlv_after_wanted)
 TEST(oob_probe, rejects_repeated_probe_tlv)
 {
     BufferAllocated buf(128);
-    ASSERT_TRUE(oob::msg_write_header(buf, oob::MSG_SERVER_PROBE));
-    ASSERT_TRUE((oob::ProbeParameter{.timestamp = 42, .flags = 0}).write(buf));
-    ASSERT_TRUE((oob::ProbeParameter{.timestamp = 43, .flags = 0}).write(buf));
+    ASSERT_TRUE((oob::ProbeRequest{.timestamp = 42, .flags = 0}).write(buf));
+    ASSERT_TRUE((oob::ProbeRequest{.timestamp = 43, .flags = 0}).write(buf));
 
-    EXPECT_FALSE(oob::server_probe_read(buf));
+    EXPECT_FALSE(oob::probe_request_find(buf));
 }
 
 // Trailing bytes too few to hold a TLV header are a truncated entry, not padding.
 TEST(oob_probe, rejects_trailing_partial_header)
 {
     BufferAllocated buf(128);
-    ASSERT_TRUE(oob::msg_write_header(buf, oob::MSG_SERVER_PROBE));
-    const oob::ProbeParameter in{.timestamp = 42, .flags = 0};
+    const oob::ProbeRequest in{.timestamp = 42, .flags = 0};
     ASSERT_TRUE(in.write(buf));
     ASSERT_TRUE(oob::write_u16(buf, 0x0002)); // 2 bytes: half a header
 
-    EXPECT_FALSE(oob::server_probe_read(buf));
+    EXPECT_FALSE(oob::probe_request_find(buf));
 }
 
 // A forward-compatible longer TLV value (extra trailing bytes) still parses.
 TEST(oob_probe, tolerates_longer_tlv_value)
 {
     BufferAllocated buf(128);
-    ASSERT_TRUE(oob::msg_write_header(buf, oob::MSG_SERVER_PROBE));
-    ASSERT_TRUE(oob::tlv_write_header(buf, oob::TLV_PROBE_PARAMETER, false,
-                                      oob::ProbeParameter::WIRE_LEN + 4)); // 4 extra bytes
+    ASSERT_TRUE(oob::tlv_write_header(buf, oob::TLV_PROBE_REQUEST, false,
+                                      oob::ProbeRequest::WIRE_LEN + 4)); // 4 extra bytes
     ASSERT_TRUE(oob::write_u64(buf, 7));
     ASSERT_TRUE(oob::write_u32(buf, 0));
     ASSERT_TRUE(oob::write_u32(buf, 0xffffffff)); // trailing bytes to skip
 
-    const auto out = oob::server_probe_read(buf);
+    const auto out = oob::probe_request_find(buf);
     ASSERT_TRUE(out);
     EXPECT_EQ(out->timestamp, 7u);
 }
@@ -255,14 +244,14 @@ TEST(oob_probe, truncated_input_fails)
     const unsigned char sid[ProtoSessionID::SIZE] = {9, 9, 9, 9, 9, 9, 9, 9};
     const oob::ProbeReply in{.peer_session_id = make_psid(sid)};
     BufferAllocated full(128);
-    ASSERT_TRUE(oob::client_reply_write(full, in));
+    ASSERT_TRUE(in.write(full));
 
     // every prefix shorter than the full message must fail, not throw
     for (size_t n = 0; n < full.size(); ++n)
     {
         BufferAllocated trunc(128);
         trunc.write(full.c_data(), n);
-        EXPECT_FALSE(oob::client_reply_read(trunc)) << "prefix len " << n;
+        EXPECT_FALSE(oob::probe_reply_find(trunc)) << "prefix len " << n;
     }
 }
 
@@ -270,19 +259,19 @@ TEST(oob_probe, truncated_input_fails)
 TEST(oob_probe, oversized_tlv_length_fails)
 {
     BufferAllocated buf(128);
-    ASSERT_TRUE(oob::msg_write_header(buf, oob::MSG_SERVER_PROBE));
-    ASSERT_TRUE(oob::tlv_write_header(buf, oob::TLV_PROBE_PARAMETER, false, 0xffff));
+    ASSERT_TRUE(oob::tlv_write_header(buf, oob::TLV_PROBE_REQUEST, false, 0xffff));
     ASSERT_TRUE(oob::write_u64(buf, 1)); // only a little body, far less than 0xffff
 
-    EXPECT_FALSE(oob::server_probe_read(buf));
+    EXPECT_FALSE(oob::probe_request_find(buf));
 }
 
-// Wrong message type is rejected.
-TEST(oob_probe, wrong_message_type_fails)
+// With no message type ahead of the TLVs, the TLV type is what tells a request
+// from a reply: reading one as the other finds a mandatory TLV it did not want.
+TEST(oob_probe, request_payload_is_not_a_reply)
 {
-    const oob::ProbeParameter in{.timestamp = 1};
+    const oob::ProbeRequest in{.timestamp = 1};
     BufferAllocated buf(128);
-    ASSERT_TRUE(oob::server_probe_write(buf, in)); // this is a SERVER_PROBE
+    ASSERT_TRUE(in.write(buf));
 
-    EXPECT_FALSE(oob::client_reply_read(buf)); // read as PROBE_REPLY -> fail
+    EXPECT_FALSE(oob::probe_reply_find(buf));
 }

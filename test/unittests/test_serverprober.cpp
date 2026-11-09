@@ -10,7 +10,7 @@
 //
 
 // Tests for ServerProber: drive it against a loopback fake server that answers a
-// SERVER_PROBE with a PROBE_REPLY, and check the prober reports the responding
+// probe request with a probe reply, and check the prober reports the responding
 // remote with its advertised parameters and a measured round-trip time. Uses the
 // plaintext control-channel mode so the fake server needs no key material.
 
@@ -44,7 +44,7 @@ ProtoContext::ProtoConfig::Ptr make_plain_config(Frame::Ptr frame, StrongRandomA
     return cp;
 }
 
-// A loopback UDP server that answers a single SERVER_PROBE with a PROBE_REPLY,
+// A loopback UDP server that answers a single probe request with a probe reply,
 // echoing the client's probe session id and advertising fixed parameters.
 class FakeProbeServer
 {
@@ -103,7 +103,7 @@ class FakeProbeServer
         if (wrap.unwrap(buf, work, client_psid, pid) != ProtoContext::UnwrapStatus::OK)
             return;
 
-        if (!oob::server_probe_read(buf))
+        if (!oob::probe_request_find(buf))
             return;
 
         const oob::ProbeReply reply{.peer_session_id = client_psid,
@@ -115,8 +115,10 @@ class FakeProbeServer
 
         BufferAllocated rbuf;
         rbuf.reset(512, 2048, BufAllocFlags::NO_FLAGS);
-        if (!oob::client_reply_write(rbuf, reply))
+        if (!reply.write(rbuf))
+        {
             return;
+        }
         BufferAllocated rwork;
         wrap.wrap(rbuf, rwork);
 

@@ -13,9 +13,9 @@
  * @file
  * Out-of-band server latency probing for best-server selection.
  *
- * Before the client connects, ServerProber sends a SERVER_PROBE (wrapped with the
+ * Before the client connects, ServerProber sends a probe request (wrapped with the
  * configured control-channel protection) to every already-resolved remote
- * endpoint, waits a short asynchronous window for the PROBE_REPLYs, and reports
+ * endpoint, waits a short asynchronous window for the replies, and reports
  * each responding server together with its measured round-trip time. A caller
  * (the connect loop) then reorders the remote list by latency/priority.
  *
@@ -230,22 +230,24 @@ class ServerProber : public std::enable_shared_from_this<ServerProber>
         return slot.get();
     }
 
-    //! Wrap and send one SERVER_PROBE, recording the endpoint as pending.
+    //! Wrap and send one probe request, recording the endpoint as pending.
     void send_probe(const Target &t)
     {
         UDPSocket *s = socket_for(t.ep);
         if (!s)
             return;
 
-        // encode the SERVER_PROBE payload, then wrap it with the control-channel
+        // encode the probe request payload, then wrap it with the control-channel
         // protection so a standard server accepts it
         BufferAllocated buf;
         buf.reset(512, 2048, BufAllocFlags::NO_FLAGS);
-        const oob::ProbeParameter param{
+        const oob::ProbeRequest req{
             .timestamp = static_cast<std::uint64_t>(Time::now().seconds_since_epoch()),
             .flags = 0};
-        if (!oob::server_probe_write(buf, param))
+        if (!req.write(buf))
+        {
             return;
+        }
         BufferAllocated work;
         probe_wrap.wrap(buf, work);
 
@@ -296,7 +298,7 @@ class ServerProber : public std::enable_shared_from_this<ServerProber>
                                       self->queue_recv(v4); });
     }
 
-    //! Unwrap a PROBE_REPLY and record a Result, ignoring anything unsolicited.
+    //! Unwrap a probe reply and record a Result, ignoring anything unsolicited.
     void handle_reply(const UDPEndpoint &sender, BufferAllocated &buf)
     {
         auto it = pending.find(sender);
@@ -310,7 +312,7 @@ class ServerProber : public std::enable_shared_from_this<ServerProber>
         if (probe_wrap.unwrap(buf, work, src, pid) != ProtoContext::UnwrapStatus::OK)
             return;
 
-        const auto reply = oob::client_reply_read(buf);
+        const auto reply = oob::probe_reply_find(buf);
         if (!reply)
             return;
         // the reply must echo the session id of our probe

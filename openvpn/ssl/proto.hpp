@@ -1711,8 +1711,8 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
     // ---- standalone control-channel wrapping -----------------------------------
     // The framing/protection of an outgoing control packet, factored out of
     // KeyContext so it can also wrap packets that belong to no established session
-    // (e.g. an out-of-band SERVER_PROBE). These are pure functions of the crypto
-    // context + the caller's session id / packet-id / key-id; KeyContext::gen_head_*
+    // (e.g. a probe request). These are pure functions of the crypto context +
+    // the caller's session id / packet-id / key-id; KeyContext::gen_head_*
     // delegate here with their own state, so on-wire behaviour is unchanged.
 
     /**
@@ -1982,7 +1982,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
 
   public:
     /**
-     * @brief Wrap an out-of-band SERVER_PROBE / unwrap the matching PROBE_REPLY.
+     * @brief Wrap a probe request / unwrap the matching probe reply.
      *
      * Applies whichever control-channel protection is configured (tls-auth,
      * tls-crypt, tls-crypt-v2 or plaintext), built directly from a ProtoConfig --
@@ -2032,8 +2032,8 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
         }
 
         /**
-         * @brief Wrap an already-encoded SERVER_PROBE payload in place.
-         * @param buf   holds the plaintext OOB payload on entry, the wrapped
+         * @brief Wrap an already-encoded probe request payload in place.
+         * @param buf   holds the plaintext CONTROL_V2 payload on entry, the wrapped
          *              packet on return
          * @param work  scratch buffer (used only by the tls-crypt paths)
          */
@@ -2058,8 +2058,8 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
         }
 
         /**
-         * @brief Unwrap a received PROBE_REPLY in place.
-         * @param recv     the wrapped packet on entry, the plaintext OOB payload
+         * @brief Unwrap a received probe reply in place.
+         * @param recv     the wrapped packet on entry, the plaintext CONTROL_V2 payload
          *                 on return (when OK)
          * @param work     scratch buffer (used only by the tls-crypt paths)
          * @param src_psid set to the server's session id

@@ -9,8 +9,8 @@
 //    SPDX-License-Identifier: MPL-2.0 OR AGPL-3.0-only WITH openvpn3-openssl-exception
 //
 
-// Tests for ProtoContext::ProbeWrap -- wrapping an out-of-band SERVER_PROBE and
-// unwrapping the matching PROBE_REPLY with each control-channel protection mode
+// Tests for ProtoContext::ProbeWrap -- wrapping a probe request and
+// unwrapping the matching probe reply with each control-channel protection mode
 // (tls-auth, tls-crypt, tls-crypt-v2, plaintext), built standalone from a
 // ProtoConfig without an established session. Each test wraps as the client, then
 // plays the server with the low-level static helpers (ProtoContext::build_* /
@@ -187,7 +187,7 @@ BufferAllocated make_msg_buffer()
     return buf;
 }
 
-// client SERVER_PROBE -> server unwrap -> server PROBE_REPLY -> client unwrap
+// client probe request -> server unwrap -> server probe reply -> client unwrap
 void run_roundtrip(WrapMode m)
 {
     Frame::Ptr frame(new Frame(Frame::Context(512, 2048, 512, 0, 16, BufAllocFlags::NO_FLAGS)));
@@ -202,11 +202,11 @@ void run_roundtrip(WrapMode m)
     ProtoContext::ProbeWrap client(cp, stats);
     ServerSim server(cp, m, stats);
 
-    // ---- client wraps a SERVER_PROBE ----
-    const oob::ProbeParameter param{.timestamp = 0x1122334455667788ULL, .flags = 0};
+    // ---- client wraps a probe request ----
+    const oob::ProbeRequest req{.timestamp = 0x1122334455667788ULL, .flags = 0};
 
     BufferAllocated probe = make_msg_buffer();
-    ASSERT_TRUE(oob::server_probe_write(probe, param));
+    ASSERT_TRUE(req.write(probe));
     BufferAllocated cwork;
     client.wrap(probe, cwork);
 
@@ -217,12 +217,12 @@ void run_roundtrip(WrapMode m)
     ASSERT_EQ(server.unwrap(probe, swork, src, pid), ProtoContext::UnwrapStatus::OK);
     EXPECT_TRUE(src.match(client.self_psid()));
 
-    const auto got_param = oob::server_probe_read(probe);
-    ASSERT_TRUE(got_param);
-    EXPECT_EQ(got_param->timestamp, param.timestamp);
-    EXPECT_EQ(got_param->flags, param.flags);
+    const auto got_req = oob::probe_request_find(probe);
+    ASSERT_TRUE(got_req);
+    EXPECT_EQ(got_req->timestamp, req.timestamp);
+    EXPECT_EQ(got_req->flags, req.flags);
 
-    // ---- server wraps a PROBE_REPLY ----
+    // ---- server wraps a probe reply ----
     const oob::ProbeReply reply{.peer_session_id = client.self_psid(),
                                 .priority = 3,
                                 .weight = 7,
@@ -231,7 +231,7 @@ void run_roundtrip(WrapMode m)
                                 .flags = 0};
 
     BufferAllocated rbuf = make_msg_buffer();
-    ASSERT_TRUE(oob::client_reply_write(rbuf, reply));
+    ASSERT_TRUE(reply.write(rbuf));
     BufferAllocated rwork;
     server.wrap_reply(rbuf, rwork);
 
@@ -242,7 +242,7 @@ void run_roundtrip(WrapMode m)
     ASSERT_EQ(client.unwrap(rbuf, cwork2, rsrc, rpid), ProtoContext::UnwrapStatus::OK);
     EXPECT_TRUE(rsrc.match(server.psid_self));
 
-    const auto got_reply = oob::client_reply_read(rbuf);
+    const auto got_reply = oob::probe_reply_find(rbuf);
     ASSERT_TRUE(got_reply);
     EXPECT_TRUE(got_reply->peer_session_id.match(client.self_psid()));
     EXPECT_EQ(got_reply->priority, reply.priority);
@@ -283,10 +283,10 @@ TEST(OobProbeWrap, tls_crypt_v2_probe_appends_wkc)
 
     ProtoContext::ProbeWrap client(cp, stats);
 
-    const oob::ProbeParameter param{.timestamp = 0xdeadbeefcafef00dULL, .flags = 0};
+    const oob::ProbeRequest req{.timestamp = 0xdeadbeefcafef00dULL, .flags = 0};
 
     BufferAllocated probe = make_msg_buffer();
-    ASSERT_TRUE(oob::server_probe_write(probe, param));
+    ASSERT_TRUE(req.write(probe));
     BufferAllocated cwork;
     client.wrap(probe, cwork);
 
@@ -310,9 +310,9 @@ TEST(OobProbeWrap, tls_crypt_v2_probe_appends_wkc)
     ASSERT_EQ(server.unwrap(stripped, swork, src, pid), ProtoContext::UnwrapStatus::OK);
     EXPECT_TRUE(src.match(client.self_psid()));
 
-    const auto got_param = oob::server_probe_read(stripped);
-    ASSERT_TRUE(got_param);
-    EXPECT_EQ(got_param->timestamp, param.timestamp);
+    const auto got_req = oob::probe_request_find(stripped);
+    ASSERT_TRUE(got_req);
+    EXPECT_EQ(got_req->timestamp, req.timestamp);
 }
 
 namespace {
