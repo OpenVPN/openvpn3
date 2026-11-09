@@ -179,6 +179,60 @@ TEST(oob_probe, rejects_unknown_mandatory_tlv)
     EXPECT_FALSE(oob::server_probe_read(buf));
 }
 
+// ... and equally when that TLV sits *after* the one we were looking for.
+TEST(oob_probe, rejects_unknown_mandatory_tlv_after_wanted)
+{
+    BufferAllocated buf(128);
+    ASSERT_TRUE(oob::msg_write_header(buf, oob::MSG_SERVER_PROBE));
+    const oob::ProbeParameter in{.timestamp = 42, .flags = 0};
+    ASSERT_TRUE(in.write(buf));
+    ASSERT_TRUE(oob::tlv_write_header(buf, 0x7ff, false, 3));
+    ASSERT_TRUE(oob::write_u16(buf, 0xdead));
+    buf.push_back(0xaa);
+
+    EXPECT_FALSE(oob::server_probe_read(buf));
+}
+
+// An unknown *optional* TLV after the wanted one is skipped, not tripped over.
+TEST(oob_probe, skips_unknown_optional_tlv_after_wanted)
+{
+    BufferAllocated buf(128);
+    ASSERT_TRUE(oob::msg_write_header(buf, oob::MSG_SERVER_PROBE));
+    const oob::ProbeParameter in{.timestamp = 42, .flags = 0};
+    ASSERT_TRUE(in.write(buf));
+    ASSERT_TRUE(oob::tlv_write_header(buf, 0x7ff, true, 3));
+    ASSERT_TRUE(oob::write_u16(buf, 0xdead));
+    buf.push_back(0xaa);
+
+    const auto out = oob::server_probe_read(buf);
+    ASSERT_TRUE(out);
+    EXPECT_EQ(out->timestamp, 42u);
+}
+
+// The probe TLV may appear only once; a second one is not something to choose
+// between.
+TEST(oob_probe, rejects_repeated_probe_tlv)
+{
+    BufferAllocated buf(128);
+    ASSERT_TRUE(oob::msg_write_header(buf, oob::MSG_SERVER_PROBE));
+    ASSERT_TRUE((oob::ProbeParameter{.timestamp = 42, .flags = 0}).write(buf));
+    ASSERT_TRUE((oob::ProbeParameter{.timestamp = 43, .flags = 0}).write(buf));
+
+    EXPECT_FALSE(oob::server_probe_read(buf));
+}
+
+// Trailing bytes too few to hold a TLV header are a truncated entry, not padding.
+TEST(oob_probe, rejects_trailing_partial_header)
+{
+    BufferAllocated buf(128);
+    ASSERT_TRUE(oob::msg_write_header(buf, oob::MSG_SERVER_PROBE));
+    const oob::ProbeParameter in{.timestamp = 42, .flags = 0};
+    ASSERT_TRUE(in.write(buf));
+    ASSERT_TRUE(oob::write_u16(buf, 0x0002)); // 2 bytes: half a header
+
+    EXPECT_FALSE(oob::server_probe_read(buf));
+}
+
 // A forward-compatible longer TLV value (extra trailing bytes) still parses.
 TEST(oob_probe, tolerates_longer_tlv_value)
 {

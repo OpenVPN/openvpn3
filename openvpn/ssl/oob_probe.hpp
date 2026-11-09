@@ -146,33 +146,53 @@ inline bool skip_trailing(Buffer &buf, std::uint16_t value_len, std::size_t cons
 }
 
 /**
- * Scan for the first TLV of type @p wanted_type, skipping optional other/future
- * types. On success @p buf is left positioned at that TLV's value.
- * @param buf         buffer positioned at a TLV header
- * @param wanted_type the TLV type to find
- * @return the found TLV's declared value length, or std::nullopt if the type is
- *         not present, a header/length is malformed, or a TLV we do not
- *         understand is not marked optional
+ * Scan @p buf for the TLV of type @p wanted_type, skipping any other type that is
+ * marked optional. On success @p buf is left at that TLV's value and its declared
+ * length is returned.
+ *
+ * The whole sequence is walked even once the wanted TLV has been found, because
+ * a mandatory TLV we do not understand invalidates the message wherever it sits,
+ * as does a second TLV of @p wanted_type. The scan runs on a copy of the buffer
+ * view, so a message we refuse never leaves @p buf inside a value.
  */
 inline std::optional<std::uint16_t> find_tlv(Buffer &buf, std::uint16_t wanted_type)
 {
-    while (buf.size() >= 4) // a TLV header is 4 bytes
+    Buffer scan(buf); // walk the sequence without moving buf off the match
+    std::optional<std::uint16_t> found_len;
+    std::size_t found_offset = 0;
+
+    while (!scan.empty())
     {
-        const auto hdr = tlv_read_header(buf);
+        const auto hdr = tlv_read_header(scan);
         if (!hdr)
-            return std::nullopt;
+        {
+            return std::nullopt; // fewer bytes left than a TLV header
+        }
         if (hdr->type == wanted_type)
-            return hdr->value_len;
-        // Only an optional TLV may be ignored when we do not understand it. A
-        // mandatory one carries something the sender requires us to act on, so
-        // the message as a whole is not ours to interpret.
-        if (!hdr->optional)
+        {
+            if (found_len)
+            {
+                return std::nullopt; // the TLV may occur only once
+            }
+            found_len = hdr->value_len;
+            found_offset = buf.size() - scan.size(); // start of its value
+        }
+        else if (!hdr->optional)
+        {
             return std::nullopt;
-        if (buf.size() < hdr->value_len)
-            return std::nullopt;
-        buf.advance(hdr->value_len); // optional and unknown: skip its value
+        }
+        if (scan.size() < hdr->value_len)
+        {
+            return std::nullopt; // the header claims more than is there
+        }
+        scan.advance(hdr->value_len);
     }
-    return std::nullopt;
+
+    if (found_len)
+    {
+        buf.advance(found_offset);
+    }
+    return found_len;
 }
 
 // ---- probe_parameter / probe_reply TLVs -----------------------------------------
