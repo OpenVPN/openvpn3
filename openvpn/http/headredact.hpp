@@ -11,44 +11,71 @@
 
 #pragma once
 
+#include <sstream>
 #include <string>
-#include <regex>
+#include <string_view>
+
+#include <openvpn/common/string.hpp>
 
 namespace openvpn::HTTP {
+
+namespace detail {
+
+// Redact the credential of an Authorization (or Proxy-Authorization)
+// header contained in line. Matching is case-insensitive and accepts
+// both the wire format ("Authorization: Basic xxx") and the
+// name=value format produced by HeaderList::to_string()
+// ("[3] Authorization=Basic xxx").
+// Everything after the scheme is redacted, up to the end of the line
+// (a trailing '\r' is preserved).
+inline void header_line_redact(std::string &line)
+{
+    static constexpr std::string_view key = "authorization";
+    static constexpr const char *whitespace = " \t";
+    static constexpr const char *tok_end = " \t\r";
+
+    const std::string lower = string::to_lower_copy(line);
+    for (size_t auth_pos = lower.find(key); auth_pos != std::string::npos; auth_pos = lower.find(key, auth_pos + 1))
+    {
+        // expect optional whitespace, then ':' or '='
+        size_t pos = line.find_first_not_of(whitespace, auth_pos + key.size());
+        if (pos == std::string::npos || (line.at(pos) != ':' && line.at(pos) != '='))
+            continue;
+        pos = line.find_first_not_of(whitespace, pos + 1);
+        if (pos == std::string::npos || line.at(pos) == '\r')
+            return; // empty value, nothing to redact
+
+        // value is either "<scheme> <credential>" or just "<credential>"
+        size_t cred_pos = pos;
+        const size_t tok1_end = line.find_first_of(tok_end, pos);
+        if (tok1_end != std::string::npos)
+        {
+            const size_t tok2_pos = line.find_first_not_of(whitespace, tok1_end);
+            if (tok2_pos != std::string::npos && line.at(tok2_pos) != '\r')
+                cred_pos = tok2_pos; // keep the scheme, redact what follows
+        }
+        size_t cred_end = line.size();
+        if (line.back() == '\r')
+            --cred_end;
+        line.replace(cred_pos, cred_end - cred_pos, "[REDACTED]");
+        return;
+    }
+}
+
+} // namespace detail
 
 inline std::string headers_redact(const std::string &headers)
 {
 #ifdef OPENVPN_HTTP_HEADERS_NO_REDACT
     return headers;
 #else
-    // Alternative regex implementation:
-    // static const std::regex re(R"((authorization[\s:=]+basic\s+)([^\s]+))", std::regex_constants::ECMAScript | std::regex_constants::icase);
-    // return std::regex_replace(headers, re, "$1[REDACTED]");
-    std::stringstream result;
-
+    std::ostringstream result;
     std::istringstream iss(headers);
 
     for (std::string line; std::getline(iss, line);)
     {
-        if (auto authpos = line.find("Authorization: "); authpos != std::string::npos)
-        {
-            auto auth = line.substr(authpos);
-            auto argument = auth.substr(auth.find(' ') + 1);
-            std::string authtype;
-            if (auto arg1 = argument.find(' '); arg1 != std::string::npos)
-            {
-                authtype = argument.substr(0, arg1);
-            }
-            result << line.substr(0, authpos) << "Authorization: " << authtype << " [REDACTED]\r\n";
-        }
-        else if ((authpos = line.find("authorization=basic ")) != std::string::npos)
-        {
-            result << line.substr(0, authpos) << "authorization=basic [REDACTED]\r\n";
-        }
-        else
-        {
-            result << line << '\n';
-        }
+        detail::header_line_redact(line);
+        result << line << '\n';
     }
     return result.str();
 #endif

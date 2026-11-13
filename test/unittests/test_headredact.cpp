@@ -57,3 +57,56 @@ TEST(Http, Headredact2)
     const std::string out = HTTP::headers_redact(in2);
     ASSERT_EQ(out, out2);
 }
+
+// Format produced by HTTP::Request::to_string() / HeaderList::to_string(),
+// as logged by AppServer on debug-level >= 2 (PORTALS-3679)
+TEST(Http, HeadredactHeaderList)
+{
+    const std::string in = "HTTP Request\n"
+                           "method=POST\n"
+                           "uri=/api\n"
+                           "version=1/1\n"
+                           "[0] Host=example.com\n"
+                           "[1] Authorization=Basic dXNlcjpwYXNz\n"
+                           "[2] Content-Type=application/json\n";
+    const std::string out = "HTTP Request\n"
+                            "method=POST\n"
+                            "uri=/api\n"
+                            "version=1/1\n"
+                            "[0] Host=example.com\n"
+                            "[1] Authorization=Basic [REDACTED]\n"
+                            "[2] Content-Type=application/json\n";
+    ASSERT_EQ(HTTP::headers_redact(in), out);
+}
+
+TEST(Http, HeadredactCaseAndScheme)
+{
+    ASSERT_EQ(HTTP::headers_redact("authorization: basic dXNlcjpwYXNz\r\n"),
+              "authorization: basic [REDACTED]\r\n");
+    ASSERT_EQ(HTTP::headers_redact("AUTHORIZATION:Bearer abc.def.ghi\n"),
+              "AUTHORIZATION:Bearer [REDACTED]\n");
+    ASSERT_EQ(HTTP::headers_redact("[4] Proxy-Authorization=Basic dXNlcjpwYXNz\n"),
+              "[4] Proxy-Authorization=Basic [REDACTED]\n");
+}
+
+TEST(Http, HeadredactNoScheme)
+{
+    ASSERT_EQ(HTTP::headers_redact("Authorization: sekrit\r\n"),
+              "Authorization: [REDACTED]\r\n");
+}
+
+TEST(Http, HeadredactMultiWordValue)
+{
+    ASSERT_EQ(HTTP::headers_redact("Authorization: Digest username=\"u\", realm=\"x\", nonce=\"abc\", response=\"6629fae4\"\r\n"),
+              "Authorization: Digest [REDACTED]\r\n");
+    ASSERT_EQ(HTTP::headers_redact("[1] Authorization=Digest realm=\"x\", nonce=\"abc\"\n"),
+              "[1] Authorization=Digest [REDACTED]\n");
+}
+
+TEST(Http, HeadredactUnrelated)
+{
+    // "authorization" not followed by ':' or '=' must be left alone
+    const std::string in = "uri=/authorization/check\n"
+                           "[0] X-Authorization-Mode=strict\n";
+    ASSERT_EQ(HTTP::headers_redact(in), in);
+}
