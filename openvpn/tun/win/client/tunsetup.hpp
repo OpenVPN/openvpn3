@@ -21,6 +21,7 @@
 #include <utility>
 #include <thread>
 #include <algorithm>
+#include <set>
 
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/rc.hpp>
@@ -89,6 +90,87 @@ class Setup : public SetupBase
     void set_process_id(DWORD process_id)
     {
         process_id_ = process_id;
+    }
+
+    /**
+     * @brief Set the VPN interfaces of other tunnels that are up at the same time
+     *
+     * They are skipped, like our own interface, when looking for the gateway
+     * of the server bypass route, so that it goes through the physical network,
+     * and the WFP block filters (block-outside-dns, block-local) don't apply
+     * to them.
+     *
+     * @param interfaces    interface indexes of the other tunnels
+     * @param os            the log stream for diagnostics
+     */
+    void set_other_vpn_interfaces(std::set<DWORD> interfaces, std::ostream &os)
+    {
+#if _WIN32_WINNT >= 0x0600 // Vista+
+        wfp->set_other_interfaces(std::set<NET_IFINDEX>(interfaces.begin(), interfaces.end()), os);
+#endif
+        other_vpn_interfaces_ = std::move(interfaces);
+    }
+
+    /**
+     * @brief Add the routes that blackhole global IPv6 traffic for block-ipv6
+     *
+     * The routes are the same for every tunnel, so a caller that runs several
+     * tunnels can add them once and keep them until the last tunnel that
+     * needs them is gone, see set_block_ipv6_routes().
+     *
+     * @param create    gets the commands that add the routes
+     * @param destroy   gets the commands that remove them again
+     */
+    static void add_block_ipv6_routes(ActionList &create, ActionList &destroy)
+    {
+        static const char *const block_ipv6_net[] = {
+            "2000::/4",
+            "3000::/4",
+            "fc00::/7",
+        };
+        for (size_t i = 0; i < array_size(block_ipv6_net); ++i)
+        {
+            create.add(new WinCmd("netsh interface ipv6 add route " + std::string(block_ipv6_net[i]) + " interface=1 store=active"));
+            destroy.add(new WinCmd("netsh interface ipv6 delete route " + std::string(block_ipv6_net[i]) + " interface=1 store=active"));
+        }
+    }
+
+    /**
+     * @brief Whether establish() adds the block-ipv6 routes itself
+     *
+     * @param enabled   false if the caller manages them with add_block_ipv6_routes()
+     */
+    void set_block_ipv6_routes(bool enabled)
+    {
+        block_ipv6_routes_ = enabled;
+    }
+
+    /**
+     * @brief Another tunnel came up while this one is established
+     *
+     * @param itf_index     interface index of the other tunnel
+     * @param os            the log stream for diagnostics
+     */
+    void add_other_vpn_interface(DWORD itf_index, std::ostream &os)
+    {
+        other_vpn_interfaces_.insert(itf_index);
+#if _WIN32_WINNT >= 0x0600 // Vista+
+        wfp->permit_interface(itf_index, os);
+#endif
+    }
+
+    /**
+     * @brief Another tunnel went down while this one is established
+     *
+     * @param itf_index     interface index of the other tunnel
+     * @param os            the log stream for diagnostics
+     */
+    void remove_other_vpn_interface(DWORD itf_index, std::ostream &os)
+    {
+        other_vpn_interfaces_.erase(itf_index);
+#if _WIN32_WINNT >= 0x0600 // Vista+
+        wfp->revoke_interface(itf_index, os);
+#endif
     }
 
     HANDLE get_handle(std::ostream &os) override
@@ -504,19 +586,8 @@ class Setup : public SetupBase
         }
 
         // Should we block IPv6?
-        if (pull.block_ipv6)
-        {
-            static const char *const block_ipv6_net[] = {
-                "2000::/4",
-                "3000::/4",
-                "fc00::/7",
-            };
-            for (size_t i = 0; i < array_size(block_ipv6_net); ++i)
-            {
-                create.add(new WinCmd("netsh interface ipv6 add route " + std::string(block_ipv6_net[i]) + " interface=1 store=active"));
-                destroy.add(new WinCmd("netsh interface ipv6 delete route " + std::string(block_ipv6_net[i]) + " interface=1 store=active"));
-            }
-        }
+        if (pull.block_ipv6 && block_ipv6_routes_)
+            add_block_ipv6_routes(create, destroy);
 
         // Set IPv6 Interface
         //
@@ -620,7 +691,9 @@ class Setup : public SetupBase
         {
             // get default gateway
             ADDRESS_FAMILY af = pull.remote_address.ipv6 ? AF_INET6 : AF_INET;
-            const Util::BestGateway gw{af, pull.remote_address.address, tap.index};
+            std::set<DWORD> vpn_interfaces = other_vpn_interfaces_;
+            vpn_interfaces.insert(tap.index);
+            const Util::BestGateway gw{af, pull.remote_address.address, vpn_interfaces};
 
             if (!gw.local_route())
             {
@@ -967,5 +1040,7 @@ class Setup : public SetupBase
     Util::TapNameGuidPair tap_;
     bool allow_local_dns_resolvers = false;
     DWORD process_id_ = 0;
+    std::set<DWORD> other_vpn_interfaces_;
+    bool block_ipv6_routes_ = true;
 };
 } // namespace openvpn::TunWin
