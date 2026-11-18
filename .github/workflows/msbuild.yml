@@ -49,7 +49,9 @@ jobs:
         configurePreset: win-${{ matrix.arch }}-release
         buildPreset: win-${{ matrix.arch }}-release
         testPreset: win-${{ matrix.arch }}-release
-        testPresetAdditionalArgs: "['--output-on-failure']"
+        # -j without a value (CMake >= 3.29) runs one test per CPU; CoreTests
+        # is split into several ctest entries so they run in parallel.
+        testPresetAdditionalArgs: "['--output-on-failure', '-j']"
 
     - name: Run CMake with vcpkg.json manifest (NO TESTS)
       uses: lukka/run-cmake@5d55ea7949e25f69f0ecb516d8d572297e03a956 # v10.9
