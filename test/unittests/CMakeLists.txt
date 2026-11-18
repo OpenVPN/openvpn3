@@ -222,6 +222,22 @@ target_link_libraries(coreUnitTests ${GTEST_LIB} GTest::gmock rapidcheck rapidch
 target_compile_definitions(coreUnitTests PRIVATE ${CORE_TEST_DEFINES})
 target_include_directories(coreUnitTests PRIVATE ${EXTRA_INCLUDES})
 
-add_test(NAME CoreTests
-    COMMAND ${RUN_UT_AS_ROOT} $<TARGET_FILE:coreUnitTests> --gtest_shuffle --gtest_output=xml:test_results/test_core_$<CONFIG>.xml
-    WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+# Split the test binary into several ctest entries using googletest sharding
+# so that "ctest -jN" can run them in parallel. A single process is dominated
+# by a few slow suites (e.g. ProtoUnitTest). The shard variables are passed via
+# "cmake -E env" so that they survive RUN_UT_AS_ROOT (e.g. sudo).
+set(CORE_UNITTEST_SHARDS 8 CACHE STRING "Number of ctest shards to split coreUnitTests into")
+if (CORE_UNITTEST_SHARDS LESS 2)
+    add_test(NAME CoreTests
+        COMMAND ${RUN_UT_AS_ROOT} $<TARGET_FILE:coreUnitTests> --gtest_shuffle --gtest_output=xml:test_results/test_core_$<CONFIG>.xml
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+else ()
+    math(EXPR _last_shard "${CORE_UNITTEST_SHARDS} - 1")
+    foreach (_shard RANGE ${_last_shard})
+        add_test(NAME CoreTests-${_shard}
+            COMMAND ${RUN_UT_AS_ROOT} ${CMAKE_COMMAND} -E env
+                GTEST_TOTAL_SHARDS=${CORE_UNITTEST_SHARDS} GTEST_SHARD_INDEX=${_shard}
+                $<TARGET_FILE:coreUnitTests> --gtest_shuffle --gtest_output=xml:test_results/test_core_$<CONFIG>_${_shard}.xml
+            WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+    endforeach ()
+endif ()
