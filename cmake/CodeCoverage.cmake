@@ -484,7 +484,7 @@ function(setup_target_for_coverage_gcovr_xml)
 
     # Show info where to find the report
     add_custom_command(TARGET ${Coverage_NAME} POST_BUILD
-        COMMAND ;
+        COMMAND true
         COMMENT "Cobertura code coverage report saved in ${Coverage_NAME}.xml."
     )
 endfunction() # setup_target_for_coverage_gcovr_xml
@@ -585,7 +585,7 @@ function(setup_target_for_coverage_gcovr_html)
 
     # Show info where to find the report
     add_custom_command(TARGET ${Coverage_NAME} POST_BUILD
-        COMMAND ;
+        COMMAND true
         COMMENT "Open ./${Coverage_NAME}/index.html in your browser to view the coverage report."
     )
 
