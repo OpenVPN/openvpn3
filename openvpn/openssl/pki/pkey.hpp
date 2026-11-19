@@ -99,10 +99,12 @@ class PKey
         case EVP_PKEY_EC:
             return PKType::PK_EC;
         case EVP_PKEY_DSA:
+#ifdef EVP_PKEY_DSA1
         case EVP_PKEY_DSA1:
         case EVP_PKEY_DSA2:
         case EVP_PKEY_DSA3:
         case EVP_PKEY_DSA4:
+#endif
             return PKType::PK_DSA;
         case EVP_PKEY_NONE:
             return PKType::PK_NONE;
