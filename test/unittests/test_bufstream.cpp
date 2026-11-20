@@ -11,6 +11,9 @@
 
 #include <gtest/gtest.h>
 
+#include "test_common.hpp"
+#include "test_generators.hpp"
+
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/buffer/bufstream.hpp>
 #include <openvpn/buffer/bufstr.hpp>
@@ -768,4 +771,41 @@ TEST(BufferStream, UnderflowPublishesAGetArea)
     // And it survives being read down to nothing.
     EXPECT_EQ(drain(ios), "abcdef");
     EXPECT_EQ(sbuf.underflow(), std::streambuf::traits_type::eof());
+}
+
+/// PROPERTY: for any content of two or more bytes read partway through a published get area, an out-of-range get-only seek from cur leaves the get area in place.
+RC_GTEST_PROP(BufferStream, AFailedRelativeSeekKeepsTheGetArea, ())
+{
+    using off_type = std::streambuf::off_type;
+    const auto head = *rc::gen::arbitrary<char>().as("first byte");
+    const auto rest = *rc::gen::nonEmpty(rc::gen::arbitrary<std::string>()).as("remaining bytes");
+    const std::string content = head + rest;
+    const auto consumed = *rc::gen::oneOf(rc::gen::just<size_t>(1),
+                                          rc::gen::just(content.size() - 1),
+                                          rc::gen::inRange<size_t>(1, content.size()))
+                               .as("bytes read through the get area");
+    const auto ahead = static_cast<off_type>(content.size() - consumed);
+    const auto behind = static_cast<off_type>(consumed);
+    const auto offset = *rc::gen::oneOf(rc::gen::just(ahead + 1),
+                                        rc::gen::just(-behind - 1),
+                                        rc::gen::inRange<off_type>(ahead + 1, ahead + 64),
+                                        rc::gen::inRange<off_type>(-behind - 64, -behind))
+                             .as("out-of-range offset from cur");
+
+    BufferAllocated buf(content.size(), BufAllocFlags::GROW);
+    buf.write(content.data(), content.size());
+    GetAreaProbe sbuf(buf);
+    for (size_t i = 0; i < consumed; ++i)
+    {
+        sbuf.sbumpc();
+    }
+    const char *const before_g = sbuf.gptr();
+    const char *const before_e = sbuf.egptr();
+
+    const bool refused = sbuf.pubseekoff(offset, std::ios_base::cur, std::ios_base::in) == bad_pos();
+    RC_ASSERT(refused);
+
+    // Not gptr() inside RC_ASSERT: its expansion would dereference the null char *.
+    const bool area_kept = sbuf.gptr() == before_g && sbuf.egptr() == before_e;
+    RC_ASSERT(area_kept);
 }
