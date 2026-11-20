@@ -29,6 +29,7 @@
 #ifndef OPENVPN_CLIENT_SERVERPROBER_H
 #define OPENVPN_CLIENT_SERVERPROBER_H
 
+#include <algorithm>
 #include <chrono>
 #include <cstdint>
 #include <map>
@@ -107,8 +108,7 @@ class ServerProber : public std::enable_shared_from_this<ServerProber>
     {
         notify_callback = cb;
 
-        std::vector<Target> targets;
-        gather_targets(targets);
+        const std::vector<Target> targets = select_first_wave(gather_per_remote());
         if (targets.empty())
         {
             finish();
@@ -178,13 +178,64 @@ class ServerProber : public std::enable_shared_from_this<ServerProber>
         return Time::Duration::binary_ms(static_cast<Time::type>(ticks < 0 ? 0 : ticks));
     }
 
-  private:
     struct Target
     {
         size_t index;
         UDPEndpoint ep;
     };
 
+    /**
+     * Probe ceiling for a single wave. The specification suggests probing every
+     * resolved address only while there are few of them ("a small number like
+     * 32") and one probe per remote above that; it does not fix the number.
+     * The same ceiling bounds each later wave, so no configuration turns
+     * probing into an unbounded burst.
+     */
+    static constexpr size_t max_probes_per_wave = 32;
+
+    /**
+     * Pick the first wave of probe targets from each remote's addresses.
+     *
+     * While there are few addresses in total, probe every one of them. Above
+     * that, fall back to one probe per remote: the address the resolver put
+     * first, because getaddrinfo has already applied RFC 6724 and the local
+     * policy table and so knows more than we do about which family to prefer,
+     * and the remotes in configuration order, that order being the user's own
+     * statement of preference. Either way the wave is capped at
+     * max_probes_per_wave.
+     *
+     * Addresses left unprobed here are not discarded; they are what a later
+     * wave draws on once the replies say which are worth a packet.
+     *
+     * @param per_remote each remote's resolved endpoints, in resolver order
+     */
+    static std::vector<Target> select_first_wave(const std::vector<std::vector<Target>> &per_remote)
+    {
+        size_t total = 0;
+        for (const auto &addrs : per_remote)
+            total += addrs.size();
+
+        std::vector<Target> out;
+        if (total <= max_probes_per_wave)
+        {
+            out.reserve(total);
+            for (const auto &addrs : per_remote)
+                out.insert(out.end(), addrs.begin(), addrs.end());
+            return out;
+        }
+
+        out.reserve(std::min(per_remote.size(), max_probes_per_wave));
+        for (const auto &addrs : per_remote)
+        {
+            if (out.size() >= max_probes_per_wave)
+                break;
+            if (!addrs.empty())
+                out.push_back(addrs.front());
+        }
+        return out;
+    }
+
+  private:
     struct Pending
     {
         size_t index = 0;
@@ -199,26 +250,33 @@ class ServerProber : public std::enable_shared_from_this<ServerProber>
     };
 
     //! Collect every resolved UDP endpoint from the remote list.
-    void gather_targets(std::vector<Target> &targets)
+    //! Each UDP remote's resolved endpoints, in resolver order; remotes that
+    //! resolved to nothing are left out entirely.
+    std::vector<std::vector<Target>> gather_per_remote() const
     {
+        std::vector<std::vector<Target>> per_remote;
         if (!remote_list)
-            return;
+            return per_remote;
         for (size_t i = 0; i < remote_list->size(); ++i)
         {
             const RemoteList::Item::Ptr item = remote_list->get_item(i);
             if (!item || !item->transport_protocol.is_udp())
                 continue;
+            std::vector<Target> addrs;
             try
             {
                 UDPEndpoint ep;
                 for (size_t j = 0; item->get_endpoint(ep, j); ++j)
-                    targets.push_back({i, ep});
+                    addrs.push_back({i, ep});
             }
             catch (const std::exception &)
             {
                 continue; // unparsable port: skip the whole remote
             }
+            if (!addrs.empty())
+                per_remote.push_back(std::move(addrs));
         }
+        return per_remote;
     }
 
     //! Lazily open (and socket_protect) the per-family socket, arming its receive.

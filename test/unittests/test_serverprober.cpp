@@ -19,6 +19,7 @@
 #include <cstdint>
 #include <memory>
 #include <chrono>
+#include <set>
 #include <string>
 
 #include <gtest/gtest.h>
@@ -426,4 +427,104 @@ TEST(ServerProber, elapsed_is_monotonic_and_starts_at_zero)
         EXPECT_GE(now.to_binary_ms(), prev.to_binary_ms()) << "elapsed went backwards";
         prev = now;
     }
+}
+
+// ---------------------------------------------------------------------------
+// First-wave target selection.
+//
+// Pure policy: no sockets, no clock. Builds per-remote endpoint lists directly
+// rather than going through RemoteList, so each rule can be stated on its own.
+
+namespace {
+
+ServerProber::Target mk_target(size_t index, const std::string &ip, unsigned short port = 1194)
+{
+    return ServerProber::Target{index,
+                                ServerProber::UDPEndpoint(openvpn_io::ip::make_address(ip), port)};
+}
+
+// n remotes, each with addrs_each addresses, numbered so every address differs.
+std::vector<std::vector<ServerProber::Target>> make_grid(size_t n, size_t addrs_each)
+{
+    std::vector<std::vector<ServerProber::Target>> per_remote;
+    for (size_t i = 0; i < n; ++i)
+    {
+        std::vector<ServerProber::Target> addrs;
+        for (size_t j = 0; j < addrs_each; ++j)
+            addrs.push_back(mk_target(i, "10." + std::to_string(i / 250) + "." + std::to_string(i % 250) + "." + std::to_string(j + 1)));
+        per_remote.push_back(std::move(addrs));
+    }
+    return per_remote;
+}
+
+size_t distinct_remotes(const std::vector<ServerProber::Target> &v)
+{
+    std::set<size_t> s;
+    for (const auto &t : v)
+        s.insert(t.index);
+    return s.size();
+}
+
+} // namespace
+
+TEST(ProbeTargets, few_addresses_are_all_probed)
+{
+    // 10 remotes x 3 = 30 addresses, under the ceiling: every one is probed.
+    const auto sel = ServerProber::select_first_wave(make_grid(10, 3));
+    EXPECT_EQ(sel.size(), 30u);
+    EXPECT_EQ(distinct_remotes(sel), 10u);
+}
+
+TEST(ProbeTargets, exactly_the_ceiling_is_still_all_probed)
+{
+    // The threshold is inclusive: 32 addresses are all probed, 33 are not.
+    const auto at = ServerProber::select_first_wave(make_grid(16, 2));
+    EXPECT_EQ(at.size(), ServerProber::max_probes_per_wave);
+    EXPECT_EQ(distinct_remotes(at), 16u);
+
+    auto over = make_grid(16, 2);
+    over.push_back({mk_target(16, "10.9.9.9")});
+    const auto past = ServerProber::select_first_wave(over);
+    EXPECT_EQ(past.size(), 17u) << "one per remote once the ceiling is passed";
+    EXPECT_EQ(distinct_remotes(past), 17u);
+}
+
+TEST(ProbeTargets, above_the_ceiling_one_probe_per_remote)
+{
+    // 20 remotes x 4 = 80 addresses: one probe each, so 20 probes.
+    const auto sel = ServerProber::select_first_wave(make_grid(20, 4));
+    EXPECT_EQ(sel.size(), 20u);
+    EXPECT_EQ(distinct_remotes(sel), 20u) << "every remote gets exactly one";
+}
+
+TEST(ProbeTargets, never_exceeds_the_ceiling)
+{
+    // The pathological config: 600 remotes, 2 addresses each.
+    const auto sel = ServerProber::select_first_wave(make_grid(600, 2));
+    EXPECT_EQ(sel.size(), ServerProber::max_probes_per_wave);
+    EXPECT_EQ(distinct_remotes(sel), ServerProber::max_probes_per_wave);
+}
+
+TEST(ProbeTargets, takes_remotes_in_configuration_order)
+{
+    // Which 32 is not arbitrary: configuration order is the user's preference.
+    const auto sel = ServerProber::select_first_wave(make_grid(600, 2));
+    for (size_t i = 0; i < sel.size(); ++i)
+        EXPECT_EQ(sel[i].index, i) << "remote " << i << " out of order";
+}
+
+TEST(ProbeTargets, takes_the_resolver_s_first_address)
+{
+    // Not a family preference of ours: getaddrinfo already ordered these.
+    auto per_remote = make_grid(40, 3);
+    const auto sel = ServerProber::select_first_wave(per_remote);
+    ASSERT_EQ(sel.size(), ServerProber::max_probes_per_wave);
+    for (size_t i = 0; i < sel.size(); ++i)
+        EXPECT_EQ(sel[i].ep, per_remote[i].front().ep) << "remote " << i;
+}
+
+TEST(ProbeTargets, empty_input_selects_nothing)
+{
+    EXPECT_TRUE(ServerProber::select_first_wave({}).empty());
+    EXPECT_TRUE(ServerProber::select_first_wave({{}, {}}).empty());
 }
