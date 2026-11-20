@@ -1710,3 +1710,53 @@ RC_GTEST_PROP(BufferStream, SeekoffRefusesAnUnknownSeekdir, (const std::string &
 
     RC_ASSERT(sbuf.pubseekoff(offset, unknown_dir, which) == bad_pos());
 }
+
+/// PROPERTY: for any content, any read position, any of in/out/in|out, any of beg/cur/end and any offset to a target from -2 to two past the end, pubseekoff returns the position the seekoff documentation prescribes, refusing a cur seek that names both positions as [stringbuf.virtuals] does.
+RC_GTEST_PROP(BufferStream, SeekoffReturnsTheDocumentedPosition, (const std::string &content))
+{
+    const size_t read = *rc::helpers::genIndexUpTo(content.size()).as("bytes read");
+    const auto which = *rc::gen::element(std::ios_base::in, std::ios_base::out, std::ios_base::in | std::ios_base::out)
+                            .as("mode");
+    const auto dir = *rc::gen::element(std::ios_base::beg, std::ios_base::cur, std::ios_base::end).as("seekdir");
+    const auto pos = static_cast<std::streamoff>(read);
+    const auto end = static_cast<std::streamoff>(content.size());
+    const auto target = *rc::gen::oneOf(rc::gen::just<std::streamoff>(-1),
+                                        rc::gen::just<std::streamoff>(0),
+                                        rc::gen::just(pos),
+                                        rc::gen::just(end),
+                                        rc::gen::just(end + 1),
+                                        rc::gen::inRange<std::streamoff>(-2, end + 3))
+                             .as("absolute target");
+    const std::streamoff cur_base = which == std::ios_base::in ? pos : end;
+    const std::streamoff base = [&]() -> std::streamoff
+    {
+        if (dir == std::ios_base::beg)
+        {
+            return 0;
+        }
+        return dir == std::ios_base::cur ? cur_base : end;
+    }();
+    const auto documented_result = [&]() -> std::streamoff
+    {
+        const bool names_in = (which & std::ios_base::in) == std::ios_base::in;
+        const bool names_out = (which & std::ios_base::out) == std::ios_base::out;
+        if (names_in && names_out && dir == std::ios_base::cur)
+        {
+            return -1;
+        }
+        if (names_out)
+        {
+            return target == end ? end : -1;
+        }
+        return names_in && target >= 0 && target <= end ? target : -1;
+    };
+    const std::streamoff expected = documented_result();
+
+    BufferAllocated buf(content.size(), BufAllocFlags::GROW);
+    buf.write(content.data(), content.size());
+    BufferStream sbuf(buf);
+    rc::helpers::bumpReads(sbuf, read);
+
+    const std::streamoff got = sbuf.pubseekoff(target - base, dir, which);
+    RC_ASSERT(got == expected);
+}
