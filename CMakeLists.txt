@@ -57,7 +57,7 @@ if (ENABLE_DOXYGEN)
         "*/test/unittests/output/*"
         "*/test/unittests/userpass/*"
         )
-    set(DOXYGEN_EXCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/test/unittests/test_addrpair.cpp;${CMAKE_CURRENT_SOURCE_DIR}/test/unittests/test_addrlist.cpp;${CMAKE_CURRENT_SOURCE_DIR}/test/unittests/test_capture.cpp")
+    set(DOXYGEN_EXCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/test/unittests/test_addrpair.cpp;${CMAKE_CURRENT_SOURCE_DIR}/test/unittests/test_addrlist.cpp;${CMAKE_CURRENT_SOURCE_DIR}/test/unittests/test_capture.cpp;${CMAKE_CURRENT_SOURCE_DIR}/test/unittests/test_bufstream.cpp")
     set(DOXYGEN_USE_MDFILE_AS_MAINPAGE "${PROJECT_SOURCE_DIR}/doc/developer_guide.md")
 
     configure_doxygen("OpenVPN 3 Core Library" "core" "doxygen/core")
