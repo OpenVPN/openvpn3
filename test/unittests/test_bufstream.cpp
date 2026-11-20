@@ -1760,3 +1760,21 @@ RC_GTEST_PROP(BufferStream, SeekoffReturnsTheDocumentedPosition, (const std::str
     const std::streamoff got = sbuf.pubseekoff(target - base, dir, which);
     RC_ASSERT(got == expected);
 }
+
+//! A class derived from BufferStreamInOut, so that its constructor runs as a base subobject.
+struct DerivedInOut : BufferStreamInOut
+{
+    using BufferStreamInOut::BufferStreamInOut;
+};
+
+/// PROPERTY: for any bytes, a stream of a class derived from BufferStreamInOut over a growable Buffer reads back the bytes written to it.
+RC_GTEST_PROP(BufferStream, DerivedInOutStreamReadsBackWhatItWrote, (const std::string &bytes))
+{
+    BufferAllocated buf(4, BufAllocFlags::GROW);
+    DerivedInOut stream(buf);
+
+    stream.write(bytes.data(), static_cast<std::streamsize>(bytes.size()));
+    const std::string back{std::istreambuf_iterator<char>(stream), std::istreambuf_iterator<char>()};
+
+    RC_ASSERT(back == bytes);
+}
