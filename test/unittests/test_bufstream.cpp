@@ -1661,3 +1661,33 @@ RC_GTEST_PROP(BufferStream, OwnerConsumingFrontKeepsTheUndeliveredTail, (const s
                                                        OwnedTellg,
                                                        OwnedUnget>());
 }
+
+/// PROPERTY: for any content, any read position, any mode naming neither in nor out, any of beg/cur/end and an offset to an in-range target, pubseekoff returns -1.
+RC_GTEST_PROP(BufferStream, SeekoffRefusesARequestNamingNeitherPosition, (const std::string &content))
+{
+    const size_t read = *rc::helpers::genIndexUpTo(content.size()).as("bytes read");
+    const auto none = static_cast<std::ios_base::openmode>(0);
+    const auto which = (*rc::gen::arbitrary<bool>().as("binary") ? std::ios_base::binary : none)
+                       | (*rc::gen::arbitrary<bool>().as("app") ? std::ios_base::app : none)
+                       | (*rc::gen::arbitrary<bool>().as("ate") ? std::ios_base::ate : none)
+                       | (*rc::gen::arbitrary<bool>().as("trunc") ? std::ios_base::trunc : none);
+    const auto dir = *rc::gen::element(std::ios_base::beg, std::ios_base::cur, std::ios_base::end).as("seekdir");
+    const auto pos = static_cast<std::streamoff>(read);
+    const auto end = static_cast<std::streamoff>(content.size());
+    const auto target = static_cast<std::streamoff>(*rc::helpers::genIndexUpTo(content.size()).as("in-range target"));
+    const std::streamoff base = [&]() -> std::streamoff
+    {
+        if (dir == std::ios_base::beg)
+        {
+            return 0;
+        }
+        return dir == std::ios_base::cur ? pos : end;
+    }();
+
+    BufferAllocated buf(content.size(), BufAllocFlags::GROW);
+    buf.write(content.data(), content.size());
+    BufferStream sbuf(buf);
+    rc::helpers::bumpReads(sbuf, read);
+
+    RC_ASSERT(sbuf.pubseekoff(target - base, dir, which) == bad_pos());
+}

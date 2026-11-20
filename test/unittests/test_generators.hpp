@@ -22,6 +22,7 @@
 #include <string_view>
 #include <bitset>
 #include <sstream>
+#include <streambuf>
 #include <vector>
 
 #include "openvpn/addr/ip.hpp"
@@ -801,6 +802,22 @@ inline std::optional<std::string> rejectionMessage(const openvpn::IP::AddrMaskPa
 {
     return rejectionMessageOf([&]
                               { openvpn::IP::AddrMaskPair::from_string(pair); });
+}
+
+/// An index in [0, @p end], each end drawn as often as the whole interior.
+inline auto genIndexUpTo(const size_t end) -> Gen<size_t>
+{
+    return gen::oneOf(gen::just<size_t>(0), gen::just(end), gen::inRange<size_t>(0, end + 1));
+}
+
+/// Reads @p count bytes off @p sbuf one sbumpc() at a time, publishing its get area as a
+/// stream reading them would.
+inline void bumpReads(std::streambuf &sbuf, const size_t count)
+{
+    for (size_t i = 0; i < count; ++i)
+    {
+        sbuf.sbumpc();
+    }
 }
 
 } // namespace helpers
