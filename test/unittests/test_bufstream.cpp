@@ -1691,3 +1691,22 @@ RC_GTEST_PROP(BufferStream, SeekoffRefusesARequestNamingNeitherPosition, (const 
 
     RC_ASSERT(sbuf.pubseekoff(target - base, dir, which) == bad_pos());
 }
+
+/// PROPERTY: for any content, any read position, any of in/out/in|out and an offset that beg would accept, pubseekoff with seekdir 3, the one value past end that every library's seekdir can hold, returns -1.
+RC_GTEST_PROP(BufferStream, SeekoffRefusesAnUnknownSeekdir, (const std::string &content))
+{
+    const size_t read = *rc::helpers::genIndexUpTo(content.size()).as("bytes read");
+    const auto which = *rc::gen::element(std::ios_base::in, std::ios_base::out, std::ios_base::in | std::ios_base::out)
+                            .as("mode");
+    const auto read_target = static_cast<std::streamoff>(*rc::helpers::genIndexUpTo(content.size()).as("in-only target"));
+    const auto end = static_cast<std::streamoff>(content.size());
+    const std::streamoff offset = which == std::ios_base::in ? read_target : end;
+    const auto unknown_dir = static_cast<std::ios_base::seekdir>(3);
+
+    BufferAllocated buf(content.size(), BufAllocFlags::GROW);
+    buf.write(content.data(), content.size());
+    BufferStream sbuf(buf);
+    rc::helpers::bumpReads(sbuf, read);
+
+    RC_ASSERT(sbuf.pubseekoff(offset, unknown_dir, which) == bad_pos());
+}
