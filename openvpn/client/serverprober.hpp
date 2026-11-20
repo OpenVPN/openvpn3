@@ -29,6 +29,7 @@
 #ifndef OPENVPN_CLIENT_SERVERPROBER_H
 #define OPENVPN_CLIENT_SERVERPROBER_H
 
+#include <chrono>
 #include <cstdint>
 #include <map>
 #include <memory>
@@ -162,6 +163,21 @@ class ServerProber : public std::enable_shared_from_this<ServerProber>
         return std::move(slot);
     }
 
+    /**
+     * Time elapsed since @p start, as the Time::Duration the ranking uses.
+     * The monotonic clock rather than Time::now(), which reads GetTickCount64
+     * on Windows and so steps in ~15.6 ms -- coarser than the ranking it feeds.
+     */
+    static Time::Duration elapsed_since(const std::chrono::steady_clock::time_point start)
+    {
+        const auto us = std::chrono::duration_cast<std::chrono::microseconds>(
+                            std::chrono::steady_clock::now() - start)
+                            .count();
+        // Time::Duration counts 1/1024 s; round to nearest rather than truncate.
+        const auto ticks = (us * 1024 + 500000) / 1000000;
+        return Time::Duration::binary_ms(static_cast<Time::type>(ticks < 0 ? 0 : ticks));
+    }
+
   private:
     struct Target
     {
@@ -172,7 +188,7 @@ class ServerProber : public std::enable_shared_from_this<ServerProber>
     struct Pending
     {
         size_t index = 0;
-        Time sent;
+        std::chrono::steady_clock::time_point sent;
         std::uint64_t request_id = 0;
     };
 
@@ -260,7 +276,7 @@ class ServerProber : public std::enable_shared_from_this<ServerProber>
         BufferAllocated work;
         probe_wrap.wrap(buf, work);
 
-        pending[t.ep] = Pending{.index = t.index, .sent = Time::now(), .request_id = req.request_id};
+        pending[t.ep] = Pending{.index = t.index, .sent = std::chrono::steady_clock::now(), .request_id = req.request_id};
 
         openvpn_io::error_code ec;
         s->send_to(buf.const_buffer(), t.ep, 0, ec);
@@ -313,7 +329,7 @@ class ServerProber : public std::enable_shared_from_this<ServerProber>
         auto it = pending.find(sender);
         if (it == pending.end())
             return; // unsolicited or already recorded
-        const Time::Duration rtt = Time::now() - it->second.sent;
+        const Time::Duration rtt = elapsed_since(it->second.sent);
 
         BufferAllocated work;
         ProtoSessionID src;

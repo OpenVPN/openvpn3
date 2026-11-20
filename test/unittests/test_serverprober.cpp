@@ -18,6 +18,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <chrono>
 #include <string>
 
 #include <gtest/gtest.h>
@@ -385,4 +386,44 @@ TEST(ServerProber, TruncatedReplyIsDropped)
     EXPECT_EQ(cb.results.size(), 0u);
 
     server.stop();
+}
+
+// ---------------------------------------------------------------------------
+// Probe timing resolution.
+//
+// These guard the property the ranking depends on rather than any particular
+// number: a probe clock must resolve differences well below the ~15.6 ms
+// Windows system tick, because max_latency_diff defaults to 0 and that makes
+// the candidate band an exact RTT tie. Measured against Time::now() these
+// would fail on Windows, where it reads GetTickCount64.
+
+TEST(ServerProber, elapsed_resolves_below_the_system_tick)
+{
+    const auto start = std::chrono::steady_clock::now();
+
+    // Busy-wait rather than sleep: a sleep is itself quantized to the system
+    // tick, which is the very thing under test. 3 ms is comfortably inside one
+    // tick, so a tick-granular clock would usually still report 0 here.
+    while (std::chrono::steady_clock::now() - start < std::chrono::milliseconds(3))
+    {
+    }
+
+    const Time::Duration d = ServerProber::elapsed_since(start);
+    EXPECT_GT(d.to_binary_ms(), 0u) << "probe clock cannot resolve a 3 ms interval";
+    EXPECT_LT(d.to_milliseconds(), 1000u) << "implausible for a 3 ms busy-wait";
+}
+
+TEST(ServerProber, elapsed_is_monotonic_and_starts_at_zero)
+{
+    const auto t0 = std::chrono::steady_clock::now();
+    const Time::Duration immediate = ServerProber::elapsed_since(t0);
+    EXPECT_LT(immediate.to_milliseconds(), 100u);
+
+    Time::Duration prev = immediate;
+    for (int i = 0; i < 50; ++i)
+    {
+        const Time::Duration now = ServerProber::elapsed_since(t0);
+        EXPECT_GE(now.to_binary_ms(), prev.to_binary_ms()) << "elapsed went backwards";
+        prev = now;
+    }
 }
