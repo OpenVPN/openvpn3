@@ -1778,3 +1778,21 @@ RC_GTEST_PROP(BufferStream, DerivedInOutStreamReadsBackWhatItWrote, (const std::
 
     RC_ASSERT(back == bytes);
 }
+
+//! A class derived from BufferStreamOut, so that its constructor runs as a base subobject.
+struct DerivedOut : BufferStreamOut
+{
+    using BufferStreamOut::BufferStreamOut;
+};
+
+/// PROPERTY: for any bytes, a stream of a class derived from BufferStreamOut over a growable Buffer appends the bytes written to it to the Buffer.
+RC_GTEST_PROP(BufferStream, DerivedOutStreamAppendsWhatItWrites, (const std::string &bytes))
+{
+    BufferAllocated buf(4, BufAllocFlags::GROW);
+    DerivedOut stream(buf);
+
+    stream.write(bytes.data(), static_cast<std::streamsize>(bytes.size()));
+    stream.flush();
+
+    RC_ASSERT(buf_to_string(buf) == bytes);
+}
