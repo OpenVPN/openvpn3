@@ -87,7 +87,7 @@ function(add_corelibrary_dependencies target)
                 -D_CRT_SECURE_NO_WARNINGS
                 -DASIO_DISABLE_LOCAL_SOCKETS
                 )
-        set(EXTRA_LIBS fwpuclnt.lib iphlpapi.lib wininet.lib setupapi.lib rpcrt4.lib wtsapi32.lib)
+        set(EXTRA_LIBS fwpuclnt.lib iphlpapi.lib wininet.lib setupapi.lib rpcrt4.lib wtsapi32.lib winmm.lib)
         if ("${CMAKE_GENERATOR_PLATFORM}" STREQUAL "ARM64")
             # by some reasons CMake doesn't add those for ARM64
             list(APPEND EXTRA_LIBS advapi32.lib Ole32.lib Shell32.lib)

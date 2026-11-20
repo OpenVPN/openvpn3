@@ -33,12 +33,19 @@
 #include <chrono>
 #include <cstdint>
 #include <map>
+#include <optional>
 #include <memory>
 #include <utility>
 #include <vector>
 
 #include <openvpn/io/io.hpp>
 
+#include <openvpn/common/platform.hpp>
+
+#ifdef OPENVPN_PLATFORM_WIN
+#include <windows.h>
+#include <timeapi.h> // for timeBeginPeriod()
+#endif
 #include <openvpn/addr/ip.hpp>
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/log/sessionstats.hpp>
@@ -82,14 +89,17 @@ class ServerProber : public std::enable_shared_from_this<ServerProber>
                  ProtoContext::ProtoConfig::Ptr proto_config_arg,
                  SocketProtect *socket_protect_arg,
                  SessionStats::Ptr stats_arg,
-                 const Time::Duration &probe_window_arg)
+                 const Time::Duration &probe_window_arg,
+                 const Time::Duration &probe_spacing_arg = Time::Duration::milliseconds(default_probe_spacing_ms))
         : io_context(io_context_arg),
           remote_list(std::move(remote_list_arg)),
           proto_config(std::move(proto_config_arg)),
           socket_protect(socket_protect_arg),
           stats(std::move(stats_arg)),
           probe_window(probe_window_arg),
+          probe_spacing(probe_spacing_arg),
           timer(io_context_arg),
+          pace_timer(io_context_arg),
           probe_wrap(proto_config, stats)
     {
     }
@@ -115,14 +125,7 @@ class ServerProber : public std::enable_shared_from_this<ServerProber>
             return;
         }
 
-        for (const auto &t : targets)
-            send_probe(t);
-
-        timer.expires_after(probe_window);
-        timer.async_wait([self = shared_from_this()](const openvpn_io::error_code &error)
-                         {
-                             if (!error)
-                                 self->finish(); });
+        send_wave(targets); // arms the reply window once the last probe is away
     }
 
     //! Cancel probing without invoking the callback. Sockets stay open (transferable).
@@ -133,6 +136,8 @@ class ServerProber : public std::enable_shared_from_this<ServerProber>
         halt = true;
         openvpn_io::error_code ec;
         timer.cancel();
+        pace_timer.cancel();
+        resolution.reset();
         if (sock_v4)
             sock_v4->cancel(ec);
         if (sock_v6)
@@ -164,17 +169,21 @@ class ServerProber : public std::enable_shared_from_this<ServerProber>
     }
 
     /**
-     * Time elapsed since @p start, as the Time::Duration the ranking uses.
+     * @brief Time elapsed since @p start, as the Time::Duration the ranking uses.
+     *
      * The monotonic clock rather than Time::now(), which reads GetTickCount64
      * on Windows and so steps in ~15.6 ms -- coarser than the ranking it feeds.
+     *
+     * @param start when the probe was sent
+     * @return the interval since then, to the nearest 1/1024 s
      */
     static Time::Duration elapsed_since(const std::chrono::steady_clock::time_point start)
     {
-        const auto us = std::chrono::duration_cast<std::chrono::microseconds>(
-                            std::chrono::steady_clock::now() - start)
-                            .count();
+        const auto elapsed_us = std::chrono::duration_cast<std::chrono::microseconds>(
+                                    std::chrono::steady_clock::now() - start)
+                                    .count();
         // Time::Duration counts 1/1024 s; round to nearest rather than truncate.
-        const auto ticks = (us * 1024 + 500000) / 1000000;
+        const auto ticks = (elapsed_us * 1024 + 500000) / 1000000;
         return Time::Duration::binary_ms(static_cast<Time::type>(ticks < 0 ? 0 : ticks));
     }
 
@@ -194,6 +203,19 @@ class ServerProber : public std::enable_shared_from_this<ServerProber>
     static constexpr size_t max_probes_per_wave = 32;
 
     /**
+     * Default gap between two probe sends, in ms.
+     *
+     * Not a specification requirement; it exists so a wave does not arrive as
+     * one burst. What drops bursts is not scan detection, which works over
+     * seconds and is indifferent to this, but the new-flow rate limiting in
+     * CGNAT, conntrack tables and cloud egress, which is a token bucket and
+     * very much is not -- and a dropped probe is indistinguishable from a
+     * server that never answered, so a rate-limited client would quietly rank
+     * healthy remotes as dead. At this gap a full wave takes about 160 ms.
+     */
+    static constexpr unsigned int default_probe_spacing_ms = 5;
+
+    /**
      * Pick the first wave of probe targets from each remote's addresses.
      *
      * While there are few addresses in total, probe every one of them. Above
@@ -208,6 +230,7 @@ class ServerProber : public std::enable_shared_from_this<ServerProber>
      * wave draws on once the replies say which are worth a packet.
      *
      * @param per_remote each remote's resolved endpoints, in resolver order
+     * @return the targets to probe, never more than max_probes_per_wave
      */
     static std::vector<Target> select_first_wave(const std::vector<std::vector<Target>> &per_remote)
     {
@@ -236,6 +259,48 @@ class ServerProber : public std::enable_shared_from_this<ServerProber>
     }
 
   private:
+    /**
+     * @brief Holds the system timer resolution fine enough that short waits
+     *        mean what they say, for as long as the guard exists.
+     *
+     * Windows runs a ~15.6 ms system tick by default, and an asio timer waits on
+     * it, so asking for 1 ms and asking for 5 ms both come back at about 15.6 ms --
+     * the pacing interval would be whatever the machine happened to be set to
+     * rather than what we chose. Raising the resolution costs power, so the guard
+     * is held only while a probe run is in flight, a few hundred milliseconds, and
+     * dropped immediately after. Everywhere else a short wait is already honoured
+     * and this does nothing.
+     */
+    class TimerResolution
+    {
+      public:
+        TimerResolution()
+        {
+#ifdef OPENVPN_PLATFORM_WIN
+            raised_ = (::timeBeginPeriod(period_ms) == TIMERR_NOERROR);
+#endif
+        }
+
+        ~TimerResolution()
+        {
+#ifdef OPENVPN_PLATFORM_WIN
+            if (raised_)
+                ::timeEndPeriod(period_ms);
+#endif
+        }
+
+        TimerResolution(const TimerResolution &) = delete;
+        TimerResolution &operator=(const TimerResolution &) = delete;
+        TimerResolution(TimerResolution &&) = delete;
+        TimerResolution &operator=(TimerResolution &&) = delete;
+
+      private:
+#ifdef OPENVPN_PLATFORM_WIN
+        static constexpr UINT period_ms = 1;
+        bool raised_ = false;
+#endif
+    };
+
     struct Pending
     {
         size_t index = 0;
@@ -249,9 +314,11 @@ class ServerProber : public std::enable_shared_from_this<ServerProber>
         UDPEndpoint sender;
     };
 
-    //! Collect every resolved UDP endpoint from the remote list.
-    //! Each UDP remote's resolved endpoints, in resolver order; remotes that
-    //! resolved to nothing are left out entirely.
+    /**
+     * Each UDP remote's resolved endpoints, in resolver order.
+     * @return one entry per remote that resolved to something; a remote with
+     *         no usable endpoint is left out entirely
+     */
     std::vector<std::vector<Target>> gather_per_remote() const
     {
         std::vector<std::vector<Target>> per_remote;
@@ -306,10 +373,79 @@ class ServerProber : public std::enable_shared_from_this<ServerProber>
         return slot.get();
     }
 
-    //! Wrap and send one probe request, recording the endpoint as pending.
-    void send_probe(const Target &t)
+    /**
+     * @brief Send @p wave one probe at a time, probe_spacing apart.
+     *
+     * The first goes out immediately, so a single-target run is not delayed at
+     * all, and no wait follows the last one. A zero spacing sends the whole
+     * wave inline, which is what the tests use to take the clock out of play.
+     *
+     * @param wave the targets to probe, in the order to send them
+     */
+    void send_wave(const std::vector<Target> &wave)
     {
-        UDPSocket *s = socket_for(t.ep);
+        if (probe_spacing <= Time::Duration())
+        {
+            for (const auto &target : wave)
+                send_probe(target);
+            arm_window();
+            return;
+        }
+
+        // Short waits are only honoured at a fine system timer resolution; held
+        // until the run ends, see TimerResolution.
+        resolution.emplace();
+        pacing = wave;
+        pace_pos = 0;
+        send_next_paced();
+    }
+
+    /**
+     * @brief Send the next queued probe and arm the gap before the one after it.
+     *
+     * Arms the reply window instead once the wave is exhausted.
+     */
+    void send_next_paced()
+    {
+        if (halt || pace_pos >= pacing.size())
+            return;
+        send_probe(pacing[pace_pos++]);
+        if (pace_pos >= pacing.size())
+        {
+            arm_window();
+            return;
+        }
+
+        pace_timer.expires_after(probe_spacing);
+        pace_timer.async_wait([self = shared_from_this()](const openvpn_io::error_code &error)
+                              {
+                                  if (!error && !self->halt)
+                                      self->send_next_paced(); });
+    }
+
+    /**
+     * @brief Start the window the replies have to arrive in.
+     *
+     * It runs from the moment the last probe is away, not the first. Pacing a
+     * full wave takes a sixth of a second, so a window started at the first
+     * probe would give the last remote that much less time to answer than the
+     * first -- and a window shorter than the wave would close before the tail
+     * had even been sent, cancelling the pacing timer and leaving those
+     * remotes unprobed and indistinguishable from silent ones.
+     */
+    void arm_window()
+    {
+        timer.expires_after(probe_window);
+        timer.async_wait([self = shared_from_this()](const openvpn_io::error_code &error)
+                         {
+                             if (!error)
+                                 self->finish(); });
+    }
+
+    //! Wrap and send one probe request, recording the endpoint as pending.
+    void send_probe(const Target &target)
+    {
+        UDPSocket *s = socket_for(target.ep);
         if (!s)
             return;
 
@@ -334,14 +470,14 @@ class ServerProber : public std::enable_shared_from_this<ServerProber>
         BufferAllocated work;
         probe_wrap.wrap(buf, work);
 
-        pending[t.ep] = Pending{.index = t.index, .sent = std::chrono::steady_clock::now(), .request_id = req.request_id};
+        pending[target.ep] = Pending{.index = target.index, .sent = std::chrono::steady_clock::now(), .request_id = req.request_id};
 
         openvpn_io::error_code ec;
-        s->send_to(buf.const_buffer(), t.ep, 0, ec);
+        s->send_to(buf.const_buffer(), target.ep, 0, ec);
         if (ec)
         {
-            OPENVPN_LOG("ServerProber: send to " << t.ep << " failed: " << ec.message());
-            pending.erase(t.ep);
+            OPENVPN_LOG("ServerProber: send to " << target.ep << " failed: " << ec.message());
+            pending.erase(target.ep);
         }
     }
 
@@ -435,8 +571,13 @@ class ServerProber : public std::enable_shared_from_this<ServerProber>
     SocketProtect *socket_protect;
     SessionStats::Ptr stats;
     Time::Duration probe_window;
+    Time::Duration probe_spacing;
 
     AsioTimer timer;
+    AsioTimer pace_timer;
+    std::vector<Target> pacing;
+    size_t pace_pos = 0;
+    std::optional<TimerResolution> resolution;
     ProtoContext::ProbeWrap probe_wrap;
 
     std::unique_ptr<UDPSocket> sock_v4;

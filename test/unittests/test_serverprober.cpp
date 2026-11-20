@@ -528,3 +528,92 @@ TEST(ProbeTargets, empty_input_selects_nothing)
     EXPECT_TRUE(ServerProber::select_first_wave({}).empty());
     EXPECT_TRUE(ServerProber::select_first_wave({{}, {}}).empty());
 }
+
+// ---------------------------------------------------------------------------
+// Paced sending.
+//
+// No assertions on wall-clock spacing: the interval only holds as finely as the
+// system timer resolution allows, which is exactly what TimerResolution exists
+// to manage, and asserting it would make these tests a measurement of the host.
+// What is asserted is that pacing does not change the outcome.
+
+namespace {
+
+// Round-trip one probe at a given spacing; returns what the prober collected.
+std::vector<ServerProber::Result> roundtrip_with_spacing(const Time::Duration &spacing)
+{
+    openvpn_io::io_context io_ctx(1);
+    Frame::Ptr frame(new Frame(Frame::Context(512, 2048, 512, 0, 16, BufAllocFlags::NO_FLAGS)));
+    StrongRandomAPI::Ptr rng(new FakeSecureRand(0x33));
+    Time time = Time::now();
+    SessionStats::Ptr stats(new SessionStats());
+
+    FakeProbeServer server(io_ctx, make_plain_config(frame, rng, time), stats);
+    server.start();
+
+    RemoteList::Ptr rl(new RemoteList("127.0.0.1", std::to_string(server.port()), Protocol(Protocol::UDPv4), "test"));
+    rl->get_item(0)->set_ip_addr(IP::Addr::from_string("127.0.0.1"));
+
+    const auto prober = std::make_shared<ServerProber>(io_ctx,
+                                                       rl,
+                                                       make_plain_config(frame, rng, time),
+                                                       nullptr,
+                                                       stats,
+                                                       Time::Duration::milliseconds(300),
+                                                       spacing);
+    Collector cb;
+    prober->start(&cb);
+    io_ctx.run();
+    server.stop();
+    EXPECT_TRUE(cb.done);
+    return cb.results;
+}
+
+} // namespace
+
+TEST(ServerProber, ZeroSpacingSendsInline)
+{
+    // Spacing off is the pre-pacing behaviour, and the path the pure tests use.
+    const auto results = roundtrip_with_spacing(Time::Duration());
+    ASSERT_EQ(results.size(), 1u);
+    EXPECT_EQ(results[0].remote_index, 0u);
+}
+
+TEST(ServerProber, PacedRunReachesItsTarget)
+{
+    // A spacing long enough to force the timer path, short enough to finish
+    // well inside the 300 ms window.
+    const auto results = roundtrip_with_spacing(Time::Duration::milliseconds(20));
+    ASSERT_EQ(results.size(), 1u);
+    EXPECT_EQ(results[0].remote_index, 0u);
+}
+
+TEST(ServerProber, StopDuringPacedWaveFiresNoCallback)
+{
+    openvpn_io::io_context io_ctx(1);
+    Frame::Ptr frame(new Frame(Frame::Context(512, 2048, 512, 0, 16, BufAllocFlags::NO_FLAGS)));
+    StrongRandomAPI::Ptr rng(new FakeSecureRand(0x33));
+    Time time = Time::now();
+    SessionStats::Ptr stats(new SessionStats());
+
+    FakeProbeServer server(io_ctx, make_plain_config(frame, rng, time), stats);
+    server.start();
+
+    RemoteList::Ptr rl(new RemoteList("127.0.0.1", std::to_string(server.port()), Protocol(Protocol::UDPv4), "test"));
+    rl->get_item(0)->set_ip_addr(IP::Addr::from_string("127.0.0.1"));
+
+    const auto prober = std::make_shared<ServerProber>(io_ctx,
+                                                       rl,
+                                                       make_plain_config(frame, rng, time),
+                                                       nullptr,
+                                                       stats,
+                                                       Time::Duration::milliseconds(300),
+                                                       Time::Duration::milliseconds(50));
+    Collector cb;
+    prober->start(&cb);
+    prober->stop(); // mid-wave: the pacing timer is armed, the window timer too
+    io_ctx.run();   // must drain without running the callback or throwing
+
+    EXPECT_FALSE(cb.done) << "stop() must not invoke the callback";
+    server.stop();
+}
