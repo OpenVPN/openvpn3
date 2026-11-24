@@ -166,10 +166,16 @@ class MbedTLSContext : public SSLFactoryAPI
             throw MbedTLSException("set_session_ticket_handler not implemented");
         }
 
+        /**
+         * @brief Ignored: client-side session resumption is not implemented here.
+         *
+         * Tickets only save handshakes, so ignoring the request leaves every
+         * connection working, with a full handshake each time.
+         *
+         * @param v  Whether to enable client-side session tickets.
+         */
         void set_client_session_tickets(const bool v) override
         {
-            // fixme -- this method should be implemented for client-side TLS session resumption tickets
-            throw MbedTLSException("set_client_session_tickets not implemented");
         }
 
         void enable_legacy_algorithms(const bool v) override
