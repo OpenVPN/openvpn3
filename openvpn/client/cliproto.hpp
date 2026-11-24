@@ -1597,7 +1597,15 @@ class Session : ProtoContextCallbackInterface,
     {
         const ClientHalt ch(msg, true);
         if (!ch.psid() && creds)
-            creds->purge_session_id();
+        {
+            // On RESTART, clear the cached username/password but keep the auth-token,
+            // allowing the client to reconnect without prompting the user. If the token
+            // is no longer valid, it will be cleared when AUTH_FAILED is received.
+            if (ch.restart())
+                creds->purge_user_pass();
+            else
+                creds->purge_session_id();
+        }
         if (ch.restart())
             fatal_ = Error::CLIENT_RESTART;
         else
