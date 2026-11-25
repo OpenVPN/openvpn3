@@ -542,9 +542,7 @@ class OpenSSLContext : public SSLFactoryAPI
             ns_cert_type = NSCert::ns_cert_type(opt, relay_prefix);
 
             // parse remote-cert-x options
-            KUParse::remote_cert_tls(opt, relay_prefix, ku, eku);
-            KUParse::remote_cert_ku(opt, relay_prefix, ku);
-            KUParse::remote_cert_eku(opt, relay_prefix, eku);
+            KUParse::remote_cert(opt, relay_prefix, ku, eku);
 
             // parse tls-remote
             tls_remote = opt.get_optional(relay_prefix + "tls-remote", 1, 256);
@@ -804,7 +802,8 @@ class OpenSSLContext : public SSLFactoryAPI
                     return SSLConst::SHOULD_RETRY;
 
                 mark_no_cache();
-                OPENVPN_THROW(OpenSSLException, "OpenSSLContext::SSL::write_cleartext: BIO_write failed, size=" << size << " status=" << status);
+                throw_ssl_error("OpenSSLContext::SSL::write_cleartext: BIO_write failed, size="
+                                + std::to_string(size) + " status=" + std::to_string(status));
             }
             else
                 return status;
@@ -821,7 +820,8 @@ class OpenSSLContext : public SSLFactoryAPI
                         return SSLConst::SHOULD_RETRY;
 
                     mark_no_cache();
-                    OPENVPN_THROW(OpenSSLException, "OpenSSLContext::SSL::read_cleartext: BIO_read failed, cap=" << capacity << " status=" << status);
+                    throw_ssl_error("OpenSSLContext::SSL::read_cleartext: BIO_read failed, cap="
+                                    + std::to_string(capacity) + " status=" + std::to_string(status));
                 }
                 else
                     return status;
@@ -1044,6 +1044,61 @@ class OpenSSLContext : public SSLFactoryAPI
             }
         }
 
+        /**
+          @brief Maps an X509 chain verification error to the OpenVPN code for it
+          @param x509_err an X509_V_ERR_* value, as SSL_get_verify_result() reports it
+          @return the matching Error::Type, or Error::UNDEF where there is none
+        */
+        static Error::Type cert_verify_error_code(const long x509_err)
+        {
+            switch (x509_err)
+            {
+            case X509_V_ERR_CA_MD_TOO_WEAK:
+                return Error::SSL_CA_MD_TOO_WEAK;
+            case X509_V_ERR_CA_KEY_TOO_SMALL:
+                return Error::SSL_CA_KEY_TOO_SMALL;
+            default:
+                return Error::UNDEF;
+            }
+        }
+
+        /**
+          @brief Throws an OpenSSLException for a failed BIO operation
+          @param error_text what failed, prefixed to the OpenSSL error stack
+
+          Chain verification reports no more than SSL_R_CERTIFICATE_VERIFY_FAILED, and
+          it is the only check OpenSSL runs on a peer's chain: SSL_R_CA_MD_TOO_WEAK and
+          SSL_R_CA_KEY_TOO_SMALL are raised about our own chain, when it is loaded or
+          sent, and openssl/openssl#31271 drops the digest check even there, leaving the
+          peer as the only party to catch a weak signature. So go by the store context's
+          verdict rather than keeping a second opinion in step with it. peer-fingerprint
+          is the one check that replaces that verdict,
+          since it judges the leaf instead of the chain; the others leave it alone, so a
+          policy rejection still reports whatever the chain itself said.
+        */
+        [[noreturn]] void throw_ssl_error(const std::string &error_text) const
+        {
+            OpenSSLException exc{error_text};
+
+            // SSL_get_verify_result() outlives the verification it describes: a handshake
+            // that tolerated a bad chain, as SSLConst::NO_VERIFY_PEER does, leaves it set
+            // on a working session. Only the queue says this failure is that one.
+            if (const long cert_verify_error = SSL_get_verify_result(ssl);
+                exc.code() == Error::CERT_VERIFY_FAIL && cert_verify_error != X509_V_OK)
+            {
+                // Say which certificate and why whatever the reason was. Only a few of
+                // them have an Error::Type of their own, and the rest are worth naming
+                // too: a weak leaf key reports X509_V_ERR_EE_KEY_TOO_SMALL, an expired
+                // one X509_V_ERR_CERT_HAS_EXPIRED, neither of which has a code here.
+                exc.add_context(std::string(X509_verify_cert_error_string(cert_verify_error))
+                                + " at depth " + std::to_string(cert_verify_depth));
+
+                if (const Error::Type code = cert_verify_error_code(cert_verify_error); code != Error::UNDEF)
+                    exc.set_code(code, true);
+            }
+            throw exc;
+        }
+
         // Indicate no data available for our custom SSLv23 method
         static int ssl_pending_override(const ::SSL *)
         {
@@ -1153,6 +1208,7 @@ class OpenSSLContext : public SSLFactoryAPI
             overflow = false;
             called_did_full_handshake = false;
             sess_cache_key.reset();
+            cert_verify_depth = 0;
         }
 
         void ssl_erase()
@@ -1184,6 +1240,11 @@ class OpenSSLContext : public SSLFactoryAPI
             bmq_stream::memq_from_bio(bio)->set_frame(frame);
             return bio;
         }
+
+        // The depth SSL_get_verify_result()'s error was reported at, which the SSL object
+        // does not keep. Read only alongside that result, so it is no more stale than the
+        // result itself, which throw_ssl_error() is careful about.
+        int cert_verify_depth = 0;
 
         ::SSL *ssl;   // OpenSSL SSL object
         BIO *ssl_bio; // read/write cleartext from here
@@ -1607,6 +1668,24 @@ class OpenSSLContext : public SSLFactoryAPI
 
         authcert.defined_ = true;
     }
+
+    /**
+     * @brief verify_x509_cert_ku() on a PEM certificate.
+     */
+    static bool check_x509_cert_ku(const std::vector<unsigned int> &ku, const std::string &cert_txt)
+    {
+        const OpenSSLPKI::X509 cert(cert_txt, "OpenSSLContext::check_x509_cert_ku");
+        return verify_x509_cert_ku(ku, cert.obj());
+    }
+
+    /**
+     * @brief verify_x509_cert_eku() on a PEM certificate.
+     */
+    static bool check_x509_cert_eku(const std::string &eku, const std::string &cert_txt)
+    {
+        const OpenSSLPKI::X509 cert(cert_txt, "OpenSSLContext::check_x509_cert_eku");
+        return verify_x509_cert_eku(eku, cert.obj());
+    }
 #endif
 
   private:
@@ -1676,42 +1755,35 @@ class OpenSSLContext : public SSLFactoryAPI
         return !config->ku.empty();
     }
 
-    bool verify_x509_cert_ku(::X509 *cert) const
+    /**
+     * @brief Checks a peer certificate's key usage for remote-cert-ku.
+     *
+     * @return true if @p cert has a key usage extension and @p ku is
+     *         KUParse::KU_REQUIRED or holds a value whose bits it all has
+     */
+    static bool verify_x509_cert_ku(const std::vector<unsigned int> &ku, ::X509 *cert)
     {
-        bool found = false;
-        ASN1_BIT_STRING *ku = (ASN1_BIT_STRING *)X509_get_ext_d2i(cert, NID_key_usage, nullptr, nullptr);
+        ASN1_BIT_STRING *ku_ext = (ASN1_BIT_STRING *)X509_get_ext_d2i(cert, NID_key_usage, nullptr, nullptr);
+        if (!ku_ext)
+            return false;
 
-        if (ku)
+        unsigned int nku = 0;
+        for (int i = 0; i < 8; i++)
         {
-            // Extract key usage bits
-            unsigned int nku = 0;
-            {
-                for (int i = 0; i < 8; i++)
-                {
-                    if (ASN1_BIT_STRING_get_bit(ku, i))
-                        nku |= 1 << (7 - i);
-                }
-            }
-
-            // Fixup if no LSB bits
-            if ((nku & 0xff) == 0)
-                nku >>= 8;
-
-            // Validating certificate key usage
-            {
-                for (std::vector<unsigned int>::const_iterator i = config->ku.begin(); i != config->ku.end(); ++i)
-                {
-                    if (nku == *i)
-                    {
-                        found = true;
-                        break;
-                    }
-                }
-            }
-
-            ASN1_BIT_STRING_free(ku);
+            if (ASN1_BIT_STRING_get_bit(ku_ext, i))
+                nku |= 1 << (7 - i);
         }
-        return found;
+        ASN1_BIT_STRING_free(ku_ext);
+
+        if (!ku.empty() && ku.front() == KUParse::KU_REQUIRED)
+            return true;
+
+        for (const unsigned int v : ku)
+        {
+            if (v != 0 && (nku & v) == v)
+                return true;
+        }
+        return false;
     }
 
     // remote-cert-eku verification
@@ -1721,35 +1793,41 @@ class OpenSSLContext : public SSLFactoryAPI
         return !config->eku.empty();
     }
 
-    bool verify_x509_cert_eku(::X509 *cert) const
+    /**
+     * @brief Checks a peer certificate's extended key usage for remote-cert-eku.
+     *
+     * @param eku   the required usage, as its long name or dotted OID
+     * @param cert  the peer certificate
+     */
+    static bool verify_x509_cert_eku(const std::string &eku, ::X509 *cert)
     {
         bool found = false;
-        EXTENDED_KEY_USAGE *eku = (EXTENDED_KEY_USAGE *)X509_get_ext_d2i(cert, NID_ext_key_usage, nullptr, nullptr);
+        EXTENDED_KEY_USAGE *eku_ext = (EXTENDED_KEY_USAGE *)X509_get_ext_d2i(cert, NID_ext_key_usage, nullptr, nullptr);
 
-        if (eku)
+        if (eku_ext)
         {
             // Validating certificate extended key usage
-            for (int i = 0; !found && i < sk_ASN1_OBJECT_num(eku); i++)
+            for (int i = 0; !found && i < sk_ASN1_OBJECT_num(eku_ext); i++)
             {
-                ASN1_OBJECT *oid = sk_ASN1_OBJECT_value(eku, i);
+                ASN1_OBJECT *oid = sk_ASN1_OBJECT_value(eku_ext, i);
                 char oid_str[256];
 
                 if (!found && OBJ_obj2txt(oid_str, sizeof(oid_str), oid, 0) != -1)
                 {
                     // Compare EKU against string
-                    if (config->eku == oid_str)
+                    if (eku == oid_str)
                         found = true;
                 }
 
                 if (!found && OBJ_obj2txt(oid_str, sizeof(oid_str), oid, 1) != -1)
                 {
                     // Compare EKU against OID
-                    if (config->eku == oid_str)
+                    if (eku == oid_str)
                         found = true;
                 }
             }
 
-            sk_ASN1_OBJECT_pop_free(eku, ASN1_OBJECT_free);
+            sk_ASN1_OBJECT_pop_free(eku_ext, ASN1_OBJECT_free);
         }
         return found;
     }
@@ -1945,6 +2023,10 @@ class OpenSSLContext : public SSLFactoryAPI
         // Add warnings if Cert parameters are wrong
         self_ssl->tls_warnings |= self->check_cert_warnings(current_cert);
 
+        // The store context keeps the reason; remember only the depth it applies to
+        if (!preverify_ok)
+            self_ssl->cert_verify_depth = depth;
+
         // If a verification error occured in the certificate chain, we
         // never override the result of the verification.
         if (depth != 0)
@@ -1958,9 +2040,17 @@ class OpenSSLContext : public SSLFactoryAPI
             // since we only care about the fingerprint and not the
             // certificate chain.
             preverify_ok = self->config->peer_fingerprints.match(fp);
-            if (!preverify_ok)
+
+            // The chain's verdict was just discarded either way, so replace its reason
+            // too: a fingerprint mismatch is not whatever the chain tripped on.
+            if (preverify_ok)
+            {
+                X509_STORE_CTX_set_error(ctx, X509_V_OK);
+            }
+            else
             {
                 OVPN_LOG_INFO("VERIFY FAIL -- bad peer-fingerprint in leaf certificate");
+                X509_STORE_CTX_set_error(ctx, X509_V_ERR_UNABLE_TO_VERIFY_LEAF_SIGNATURE); // alert code: SSL_R_TLSV1_ALERT_UNKNOWN_CA
             }
         }
 
@@ -1972,14 +2062,14 @@ class OpenSSLContext : public SSLFactoryAPI
         }
 
         // verify X509 key usage
-        if (self->x509_cert_ku_defined() && !self->verify_x509_cert_ku(current_cert))
+        if (self->x509_cert_ku_defined() && !verify_x509_cert_ku(self->config->ku, current_cert))
         {
             OVPN_LOG_INFO("VERIFY FAIL -- bad X509 key usage in leaf certificate");
             preverify_ok = false;
         }
 
         // verify X509 extended key usage
-        if (self->x509_cert_eku_defined() && !self->verify_x509_cert_eku(current_cert))
+        if (self->x509_cert_eku_defined() && !verify_x509_cert_eku(self->config->eku, current_cert))
         {
             OVPN_LOG_INFO("VERIFY FAIL -- bad X509 extended key usage in leaf certificate");
             preverify_ok = false;
@@ -2053,6 +2143,10 @@ class OpenSSLContext : public SSLFactoryAPI
             }
         }
 
+        // throw_ssl_error() reports this depth for either role
+        if (!preverify_ok)
+            self_ssl->cert_verify_depth = depth;
+
         // record cert error in authcert
         if (!preverify_ok && self_ssl->authcert)
             self_ssl->authcert->add_fail(depth,
@@ -2101,7 +2195,7 @@ class OpenSSLContext : public SSLFactoryAPI
             }
 
             // verify X509 key usage
-            if (self->x509_cert_ku_defined() && !self->verify_x509_cert_ku(current_cert))
+            if (self->x509_cert_ku_defined() && !verify_x509_cert_ku(self->config->ku, current_cert))
             {
                 OVPN_LOG_INFO("VERIFY FAIL -- bad X509 key usage in leaf certificate");
                 if (self_ssl->authcert)
@@ -2113,7 +2207,7 @@ class OpenSSLContext : public SSLFactoryAPI
             }
 
             // verify X509 extended key usage
-            if (self->x509_cert_eku_defined() && !self->verify_x509_cert_eku(current_cert))
+            if (self->x509_cert_eku_defined() && !verify_x509_cert_eku(self->config->eku, current_cert))
             {
                 OVPN_LOG_INFO("VERIFY FAIL -- bad X509 extended key usage in leaf certificate");
                 if (self_ssl->authcert)

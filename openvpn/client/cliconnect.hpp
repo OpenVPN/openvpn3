@@ -540,6 +540,12 @@ class ClientConnect : ClientProto::NotifyCallback,
                 case Error::CERT_VERIFY_FAIL:
                     add_error_and_stop<ClientEvent::CertVerifyFail>(client.get());
                     break;
+                case Error::SSL_CA_MD_TOO_WEAK:
+                    add_error_and_stop<ClientEvent::SSLCAMDTooWeak>(client.get());
+                    break;
+                case Error::SSL_CA_KEY_TOO_SMALL:
+                    add_error_and_stop<ClientEvent::SSLCAKeyTooSmall>(client.get());
+                    break;
                 case Error::TLS_VERSION_MIN:
                     add_error_and_stop<ClientEvent::TLSVersionMinFail>(fatal_code);
                     break;

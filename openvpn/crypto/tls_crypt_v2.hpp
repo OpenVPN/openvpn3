@@ -4,20 +4,9 @@
 //               packet encryption, packet authentication, and
 //               packet compression.
 //
-//    Copyright (C) 2017-2018 OpenVPN Technologies, Inc.
+//    Copyright (C) 2017- OpenVPN Technologies, Inc.
 //
-//    This program is free software: you can redistribute it and/or modify
-//    it under the terms of the GNU General Public License Version 3
-//    as published by the Free Software Foundation.
-//
-//    This program is distributed in the hope that it will be useful,
-//    but WITHOUT ANY WARRANTY; without even the implied warranty of
-//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//    GNU General Public License for more details.
-//
-//    You should have received a copy of the GNU General Public License
-//    along with this program in the COPYING file.
-//    If not, see <http://www.gnu.org/licenses/>.
+//    SPDX-License-Identifier: MPL-2.0 OR AGPL-3.0-only WITH openvpn3-openssl-exception
 
 // Classes for handling OpenVPN tls-crypt-v2 internals
 

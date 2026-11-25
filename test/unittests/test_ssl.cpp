@@ -22,6 +22,25 @@ using namespace openvpn;
 #include <openssl/opensslv.h>
 #endif
 
+namespace {
+
+/**
+ * @brief Creates a FakeSecureRand out of line, hiding its size from the caller.
+ *
+ * gcc 16 speculatively devirtualizes the release of a StrongRandomAPI::Ptr to
+ * MbedTLSRandom's destructor. With the allocation in view, -Warray-bounds then
+ * flags that never-taken path, as a FakeSecureRand is smaller than an
+ * MbedTLSRandom, so the tests here create their RNGs through this.
+ *
+ * @return a new FakeSecureRand
+ */
+MTRAND_GCC_NO_INLINE StrongRandomAPI::Ptr fake_rng()
+{
+    return new FakeSecureRand;
+}
+
+} // namespace
+
 TEST(Ssl, Sslciphersuites)
 {
     SSLFactoryAPI::Ptr sslfact;
@@ -46,7 +65,7 @@ TEST(Ssl, Sslciphersuites)
 
 TEST(Ssl, Sslciphers)
 {
-    const StrongRandomAPI::Ptr rng(new FakeSecureRand);
+    const StrongRandomAPI::Ptr rng(fake_rng());
 
     const bool previousLogOutput = testLog->isStdoutEnabled();
     testLog->setPrintOutput(false);
@@ -67,7 +86,7 @@ TEST(Ssl, Sslciphers)
 
 TEST(Ssl, TlsGroups)
 {
-    const StrongRandomAPI::Ptr rng(new FakeSecureRand);
+    const StrongRandomAPI::Ptr rng(fake_rng());
 
     const SSLFactoryAPI::Ptr sslfact;
 
@@ -121,7 +140,7 @@ TEST(Ssl, TranslateCiphersOpenssl)
 #if defined(USE_OPENSSL) && OPENSSL_VERSION_NUMBER >= 0x30000000L
 TEST(Ssl, EnablelegacyProvider)
 {
-    const StrongRandomAPI::Ptr rng(new FakeSecureRand);
+    const StrongRandomAPI::Ptr rng(fake_rng());
 
     const SSLLib::SSLAPI::Config::Ptr sslcfg(new SSLLib::SSLAPI::Config);
     sslcfg->set_local_cert_enabled(false);

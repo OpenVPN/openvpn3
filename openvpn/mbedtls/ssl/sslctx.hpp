@@ -322,8 +322,20 @@ class MbedTLSContext : public SSLFactoryAPI
             flags = flags_arg;
         }
 
+        /**
+         * @brief Sets the ns-cert-type check. With mbed TLS 3 it refuses any
+         *        check, as OpenVPN 2.x does: that version has no public accessor
+         *        for the Netscape certificate type.
+         *
+         * @throws option_error with mbed TLS 3 unless @p ns_cert_type_arg is
+         *         NSCert::NONE
+         */
         void set_ns_cert_type(const NSCert::Type ns_cert_type_arg) override
         {
+#if MBEDTLS_VERSION_NUMBER >= 0x03000000
+            if (ns_cert_type_arg != NSCert::NONE)
+                throw option_error(ERR_INVALID_OPTION_CRYPTO, "ns-cert-type is not supported with mbed TLS 3, use remote-cert-tls");
+#endif
             ns_cert_type = ns_cert_type_arg;
         }
 
@@ -488,12 +500,10 @@ class MbedTLSContext : public SSLFactoryAPI
                 relay_prefix = "relay-";
 
             // parse ns-cert-type
-            ns_cert_type = NSCert::ns_cert_type(opt, relay_prefix);
+            set_ns_cert_type(NSCert::ns_cert_type(opt, relay_prefix));
 
             // parse remote-cert-x options
-            KUParse::remote_cert_tls(opt, relay_prefix, ku, eku);
-            KUParse::remote_cert_ku(opt, relay_prefix, ku);
-            KUParse::remote_cert_eku(opt, relay_prefix, eku);
+            KUParse::remote_cert(opt, relay_prefix, ku, eku);
 
             // parse tls-remote
             tls_remote = opt.get_optional(relay_prefix + "tls-remote", 1, 256);
@@ -1128,6 +1138,24 @@ class MbedTLSContext : public SSLFactoryAPI
 
         authcert.defined_ = true;
     }
+
+    /**
+     * @brief verify_x509_cert_ku() on a PEM certificate.
+     */
+    static bool check_x509_cert_ku(const std::vector<unsigned int> &ku, const std::string &cert_txt)
+    {
+        const MbedTLSPKI::X509Cert cert(cert_txt, "MbedTLSContext::check_x509_cert_ku", true);
+        return verify_x509_cert_ku(ku, cert.get());
+    }
+
+    /**
+     * @brief verify_x509_cert_eku() on a PEM certificate.
+     */
+    static bool check_x509_cert_eku(const std::string &eku, const std::string &cert_txt)
+    {
+        const MbedTLSPKI::X509Cert cert(cert_txt, "MbedTLSContext::check_x509_cert_eku", true);
+        return verify_x509_cert_eku(eku, cert.get());
+    }
 #endif
 
   protected:
@@ -1167,15 +1195,25 @@ class MbedTLSContext : public SSLFactoryAPI
         return config->ku.size() > 0;
     }
 
-    bool verify_x509_cert_ku(const mbedtls_x509_crt *cert)
+    /**
+     * @brief Checks a peer certificate's key usage for remote-cert-ku.
+     *
+     * @return true if @p cert has a key usage extension and @p ku is
+     *         KUParse::KU_REQUIRED or holds a value whose bits it all has
+     */
+    static bool verify_x509_cert_ku(const std::vector<unsigned int> &ku, const mbedtls_x509_crt *cert)
     {
-        if (mbedtls_x509_crt_has_ext_type(cert, MBEDTLS_OID_X509_EXT_EXTENDED_KEY_USAGE))
+        if (!mbedtls_x509_crt_has_ext_type(cert, MBEDTLS_X509_EXT_KEY_USAGE))
+            return false;
+
+        if (!ku.empty() && ku.front() == KUParse::KU_REQUIRED)
+            return true;
+
+        for (const unsigned int v : ku)
         {
-            for (std::vector<unsigned int>::const_iterator i = config->ku.begin(); i != config->ku.end(); ++i)
-            {
-                if (mbedtls_x509_crt_check_key_usage(cert, *i))
-                    return true;
-            }
+            // 0 means every bit of v is set in the certificate
+            if (v != 0 && mbedtls_x509_crt_check_key_usage(cert, v) == 0)
+                return true;
         }
         return false;
     }
@@ -1187,20 +1225,26 @@ class MbedTLSContext : public SSLFactoryAPI
         return !config->eku.empty();
     }
 
-    bool verify_x509_cert_eku(mbedtls_x509_crt *cert)
+    /**
+     * @brief Checks a peer certificate's extended key usage for remote-cert-eku.
+     *
+     * @param eku   the required usage, as its long name or dotted OID
+     * @param cert  the peer certificate
+     */
+    static bool verify_x509_cert_eku(const std::string &eku, const mbedtls_x509_crt *cert)
     {
-        if (mbedtls_x509_crt_has_ext_type(cert, MBEDTLS_OID_X509_EXT_EXTENDED_KEY_USAGE))
+        if (mbedtls_x509_crt_has_ext_type(cert, MBEDTLS_X509_EXT_EXTENDED_KEY_USAGE))
         {
-            mbedtls_x509_sequence *oid_seq = &cert->ext_key_usage;
+            const mbedtls_x509_sequence *oid_seq = &cert->ext_key_usage;
             while (oid_seq != nullptr)
             {
-                mbedtls_x509_buf *oid = &oid_seq->buf;
+                const mbedtls_x509_buf *oid = &oid_seq->buf;
 
                 // first compare against description
                 {
                     const char *oid_str;
                     const int status = mbedtls_oid_get_extended_key_usage(oid, &oid_str);
-                    if (status >= 0 && config->eku == oid_str)
+                    if (status >= 0 && eku == oid_str)
                         return true;
                 }
 
@@ -1208,7 +1252,7 @@ class MbedTLSContext : public SSLFactoryAPI
                 {
                     char oid_num_str[256];
                     const int status = mbedtls_oid_get_numeric_string(oid_num_str, sizeof(oid_num_str), oid);
-                    if (status >= 0 && config->eku == oid_num_str)
+                    if (status >= 0 && eku == oid_num_str)
                         return true;
                 }
                 oid_seq = oid_seq->next;
@@ -1253,14 +1297,14 @@ class MbedTLSContext : public SSLFactoryAPI
             }
 
             // verify X509 key usage
-            if (self->x509_cert_ku_defined() && !self->verify_x509_cert_ku(cert))
+            if (self->x509_cert_ku_defined() && !verify_x509_cert_ku(self->config->ku, cert))
             {
                 OVPN_LOG_INFO("VERIFY FAIL -- bad X509 key usage in leaf certificate");
                 fail = true;
             }
 
             // verify X509 extended key usage
-            if (self->x509_cert_eku_defined() && !self->verify_x509_cert_eku(cert))
+            if (self->x509_cert_eku_defined() && !verify_x509_cert_eku(self->config->eku, cert))
             {
                 OVPN_LOG_INFO("VERIFY FAIL -- bad X509 extended key usage in leaf certificate");
                 fail = true;
@@ -1339,14 +1383,14 @@ class MbedTLSContext : public SSLFactoryAPI
             }
 
             // verify X509 key usage
-            if (self->x509_cert_ku_defined() && !self->verify_x509_cert_ku(cert))
+            if (self->x509_cert_ku_defined() && !verify_x509_cert_ku(self->config->ku, cert))
             {
                 OVPN_LOG_INFO("VERIFY FAIL -- bad X509 key usage in leaf certificate");
                 fail = true;
             }
 
             // verify X509 extended key usage
-            if (self->x509_cert_eku_defined() && !self->verify_x509_cert_eku(cert))
+            if (self->x509_cert_eku_defined() && !verify_x509_cert_eku(self->config->eku, cert))
             {
                 OVPN_LOG_INFO("VERIFY FAIL -- bad X509 extended key usage in leaf certificate");
                 fail = true;

@@ -40,6 +40,8 @@ add_executable(coreUnitTests
         test_comp.cpp
         test_b64.cpp
         test_verify_x509_name.cpp
+        test_kuparse.cpp
+        test_remote_cert.cpp
         test_ssl.cpp
         test_sslctx.cpp
         test_continuation.cpp
