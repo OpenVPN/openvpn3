@@ -366,6 +366,17 @@ class OMI : public OMICore, public ClientAPI::LogReceiver
             if (eval.windowsDriver == "wintun")
                 config->wintun = true;
 
+            // Like openvpn2, use ovpn-dco-win only if the profile allows it,
+            // otherwise fall back to the TAP or Wintun driver instead of
+            // failing the connection. windows-driver only picks the fallback
+            // driver: Wintun adapters are often missing (openvpn 2.7 dropped
+            // Wintun), and the core used DCO for such profiles before.
+            if (config->dco && !eval.dcoCompatible)
+            {
+                OPENVPN_LOG("DCO disabled: " << eval.dcoIncompatibilityReason);
+                config->dco = false;
+            }
+
             if (!eval.autologin && management_query_passwords && !creds)
                 query_username_password("Auth", !dc_cookie.empty(), eval.staticChallenge, eval.staticChallengeEcho);
             else if (proxy_need_creds)
